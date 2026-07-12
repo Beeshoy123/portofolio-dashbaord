@@ -4,6 +4,7 @@ A personal finance dashboard that tracks gold holdings, money-market/property fu
 
 ## Run & Operate
 
+- First-time setup after cloning/importing this project: run `pnpm install` at the repo root, then `pnpm --filter @workspace/db run push` to create the Postgres schema (both workflows below will 500/fail to start until this is done). An empty DB after push is expected — there's no seed script by design; the API returns `404 NOT_SEEDED` and the dashboard shows an empty state until real data is restored (see `backups/`).
 - `artifacts/api-server: API Server` workflow — runs the Express API on port 8080
 - `artifacts/portfolio: web` workflow — runs the Vite dev server for the dashboard (port 21113, served at `/`)
 - `pnpm run typecheck` — full typecheck across all packages
