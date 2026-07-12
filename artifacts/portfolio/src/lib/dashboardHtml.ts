@@ -138,6 +138,21 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   const goldPnlSubLabel = d.gold.pnlAvailable
     ? `${pctStr(d.gold.pnlPct!)} raw · ${fmt2(d.gold.cashbackPerGram)} EGP/g cashback on sell`
     : `Cashback rate on file: ${fmt2(d.gold.cashbackPerGram)} EGP/g (applied on sell)`;
+  // Spot-check line: my weighted avg cost per gram vs. what I'd actually
+  // net per gram if I sold right now (live sell price + cashback).
+  const goldEffectiveSellPerGram = d.gold.pnlAvailable
+    ? d.gold.livePricePerGram! + d.gold.cashbackPerGram
+    : null;
+  const goldAvgVsSellColor =
+    goldEffectiveSellPerGram !== null
+      ? goldEffectiveSellPerGram >= d.gold.avgCostPerGram
+        ? "var(--teal)"
+        : "var(--coral)"
+      : "var(--dim)";
+  const goldAvgVsSellLabel =
+    goldEffectiveSellPerGram !== null
+      ? `My Avg: ${fmt2(d.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: ${fmt2(goldEffectiveSellPerGram)} EGP/g`
+      : `My Avg: ${fmt2(d.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: live price pending`;
   // Gold row in the P&L breakdown list.
   const goldPnlRowRight = d.gold.pnlAvailable
     ? `<div class="pnl-row-val" style="color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"}">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</div><div style="font-size:9.5px;color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.gold.pnlPct!)} (sell + cashback)</div>`
@@ -231,6 +246,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       <div style="font-size:22px;margin-bottom:6px" id="perf-pnl-icon">🥇</div>
       <div style="font-family:Sora,sans-serif;font-size:20px;font-weight:800;color:${goldPnlColor}" id="gold-pnl">${goldPnlLabel}</div>
       <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)" id="gold-pnl-pct">${goldPnlSubLabel}</div>
+      <div style="font-size:10.5px;font-weight:600;margin-top:3px;color:${goldAvgVsSellColor}" id="gold-avg-vs-sell">${goldAvgVsSellLabel}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;position:relative">
         <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)">Breakdown</div>
         <button class="sort-btn" id="pnl-sort-btn" onclick="toggleSortMenu(event)" title="Sort positions">

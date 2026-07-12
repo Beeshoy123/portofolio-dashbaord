@@ -341,9 +341,33 @@ export function initDashboardBehavior(
     const icon = el("perf-pnl-icon");
     const headline = el("gold-pnl");
     const sub = el("gold-pnl-pct");
+    const avgVsSell = el("gold-avg-vs-sell");
     const rows = document.querySelectorAll<HTMLElement>(
       "#pnl-rows .pnl-row[data-perf-group]",
     );
+
+    // Spot-check line (my avg cost/g vs. live sell + cashback/g) only makes
+    // sense while gold's headline is showing — hide it for the liquid view.
+    if (avgVsSell) {
+      if (view === "liquid") {
+        avgVsSell.style.display = "none";
+      } else {
+        avgVsSell.style.display = "";
+        const effectiveSell = derived.gold.pnlAvailable
+          ? derived.gold.livePricePerGram! + derived.gold.cashbackPerGram
+          : null;
+        avgVsSell.textContent =
+          effectiveSell !== null
+            ? `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: ${fmt2(effectiveSell)} EGP/g`
+            : `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: live price pending`;
+        (avgVsSell as HTMLElement).style.color =
+          effectiveSell !== null
+            ? effectiveSell >= derived.gold.avgCostPerGram
+              ? "var(--teal)"
+              : "var(--coral)"
+            : "var(--dim)";
+      }
+    }
 
     if (view === "gold") {
       if (icon) icon.textContent = "🥇";
