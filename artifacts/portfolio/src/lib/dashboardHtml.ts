@@ -206,6 +206,8 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
 <div class="live-bar" id="live-bar" style="${liveBarStyle}">
   <span class="${goldDotClass}" id="dot-gold"></span>
   <span class="live-pill">Gold 24K: <b id="live-gold">${goldSubMkt}</b> <span id="gold-status" class="${goldBadgeClass}">${goldBadgeText}</span></span>
+  <span class="live-dot" id="dot-xau"></span>
+  <span class="live-pill">XAU: <b id="live-xau">—</b> <span style="font-size:9px;color:var(--dim)">USD/oz</span> <span id="xau-status" class="status-badge"></span></span>
   <span class="${usdDotClass}" id="dot-usd"></span>
   <span class="live-pill">USD/EGP: <b id="live-usd">${fmt2(d.settings.usdEgpRate)}</b> <span id="usd-status" class="${usdBadgeClass}">${usdBadgeText}</span></span>
   <span class="live-time" id="live-time"></span>

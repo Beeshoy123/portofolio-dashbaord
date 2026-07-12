@@ -604,6 +604,8 @@ export function initDashboardBehavior(
           buyPrice21k?: number;
           sellPrice21k?: number;
           status?: string;
+          globalGoldUsdPerOz?: number | null;
+          globalGoldStatus?: string | null;
         };
         const status = gp.status ?? "unavailable";
         const isLive = status === "live";
@@ -630,6 +632,27 @@ export function initDashboardBehavior(
         if (gp.buyPrice21k) liveGoldPrices.buyPrice21k = gp.buyPrice21k;
         if (gp.sellPrice21k) liveGoldPrices.sellPrice21k = gp.sellPrice21k;
         goldLive = isLive && hasPrices;
+
+        // Global XAU/USD price (Swissquote — piggybacked on the same fetch).
+        const xauPrice = gp.globalGoldUsdPerOz;
+        const xauStatus = gp.globalGoldStatus ?? "unavailable";
+        const xauIsLive = xauStatus === "live";
+        const dotXau = el("dot-xau");
+        if (dotXau)
+          dotXau.className = xauIsLive && xauPrice ? "live-dot ok" : "live-dot warn";
+        const xauEl = el("live-xau");
+        if (xauEl && xauPrice)
+          xauEl.textContent = xauPrice.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          });
+        const xauStatusEl = el("xau-status");
+        if (xauStatusEl) {
+          xauStatusEl.textContent = xauIsLive ? "live" : xauStatus;
+          xauStatusEl.className = xauIsLive
+            ? "status-badge status-live"
+            : "status-badge status-fallback";
+        }
       }
     } catch {
       /* keep fallback */
@@ -1159,6 +1182,10 @@ export function initDashboardBehavior(
   // Auto-run the DCA calculator with whatever prices came in the
   // initial portfolio fetch (liveGoldPrices already seeded above).
   (win.calcGoldDca as () => void)();
+
+  // Fetch live prices immediately on load so the XAU/USD pill (and any
+  // stale EGP prices) are updated without waiting for the user to click 🔄.
+  void (win.doRefresh as () => Promise<void>)();
 
   return () => {
     clearInterval(timeInterval);

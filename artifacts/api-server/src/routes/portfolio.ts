@@ -10,6 +10,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { getGoldPrices } from "../lib/goldPriceCache";
+import { getGlobalGoldPrice } from "../lib/globalGoldCache";
 import { getUsdEgpRate } from "../lib/usdEgpCache";
 import {
   db,
@@ -325,11 +326,20 @@ router.get("/portfolio/usd-rate", (_req, res) => {
 // scraper cache (status: 'live' | 'fallback' | 'unavailable').
 router.get("/portfolio/gold-prices", (_req, res) => {
   const prices = getGoldPrices();
+  const global = getGlobalGoldPrice();
   if (!prices) {
-    res.json({ status: "unavailable" });
+    res.json({
+      status: "unavailable",
+      globalGoldUsdPerOz: global?.priceUsdPerOz ?? null,
+      globalGoldStatus: global?.status ?? null,
+    });
     return;
   }
-  res.json(prices);
+  res.json({
+    ...prices,
+    globalGoldUsdPerOz: global?.priceUsdPerOz ?? null,
+    globalGoldStatus: global?.status ?? null,
+  });
 });
 
 router.post("/portfolio/snapshots", async (req, res) => {
