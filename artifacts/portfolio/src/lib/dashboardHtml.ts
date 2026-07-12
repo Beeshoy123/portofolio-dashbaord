@@ -150,7 +150,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   <div class="math-line"><span class="math-label">Raw P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">${d.gold.rawPnl! >= 0 ? "+" : ""}${fmt(d.gold.rawPnl!)} EGP</span></div>
   <div class="math-line"><span class="math-label">Sell Cashback:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt2(d.gold.cashbackPerGram)} EGP/g</span><span class="math-result">= ${fmt(d.gold.cashback!)} EGP (refunded on sell)</span></div>
   <div class="math-divider"></div>
-  <div class="math-line math-total"><span class="math-label">Net P&amp;L:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</span></div>`
+  <div class="math-line math-total${d.gold.netPnl! >= 0 ? "" : " neg"}"><span class="math-label">Net P&amp;L:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</span></div>`
     : `<div class="math-line"><span class="math-label">Current Value:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubMkt}</span><span class="math-result">${GOLD_PRICE_UNAVAILABLE}</span></div>
   <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubCost} EGP/g</span><span class="math-result">= ${fmt(d.gold.cost)} EGP (mfg fee included)</span></div>
   <div class="math-line"><span class="math-label">Raw P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">N/A</span></div>

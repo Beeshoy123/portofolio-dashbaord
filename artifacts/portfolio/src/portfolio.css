@@ -351,6 +351,8 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 .math-result { color: var(--ink); font-weight: 700; text-align: right; }
 .math-line.math-total .math-label,
 .math-line.math-total .math-result { color: var(--teal); }
+.math-line.math-total.neg .math-label,
+.math-line.math-total.neg .math-result { color: var(--coral); }
 .math-divider { height: 1px; background: var(--edge); margin: 5px 0; }
 
 /* ── Wallet Health ─────────────────────────────────────────────────── */

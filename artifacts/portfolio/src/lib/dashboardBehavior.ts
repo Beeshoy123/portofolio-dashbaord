@@ -93,7 +93,7 @@ export function initDashboardBehavior(
           ml("Raw P&amp;L:", "value − cost", `${derived.gold.rawPnl! >= 0 ? "+" : ""}${fmt(derived.gold.rawPnl!)} EGP`),
           ml("Sell Cashback:", `${fmt(derived.gold.gramsHeld)}g × ${fmt2(derived.gold.cashbackPerGram)} EGP/g`, `= ${fmt(derived.gold.cashback!)} EGP (refunded on sell)`),
           divider(),
-          ml("Net P&amp;L:", "(value + cashback) − cost", `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP`, "math-total"),
+          ml("Net P&amp;L:", "(value + cashback) − cost", `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP`, derived.gold.netPnl! >= 0 ? "math-total" : "math-total neg"),
         ].join("");
       }
       return [
@@ -150,7 +150,7 @@ export function initDashboardBehavior(
           "P&amp;L:",
           `${fmt(derived.liquid.value)} − ${fmt(derived.liquid.cost)}`,
           `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP (${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
-          "math-total",
+          derived.liquid.pnl >= 0 ? "math-total" : "math-total neg",
         ),
       ].join("");
     }
@@ -188,7 +188,7 @@ export function initDashboardBehavior(
         "P&amp;L:",
         "",
         `${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} (${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
-        "math-total",
+        derived.total.pnl >= 0 ? "math-total" : "math-total neg",
       ),
     ].join("");
   }
