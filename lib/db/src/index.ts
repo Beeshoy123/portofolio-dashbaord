@@ -13,6 +13,16 @@ import * as schema from "./schema";
 // data. Once DATABASE_URL is provided and the service restarts, it will
 // pick up the real connection automatically — there is nothing else to
 // wire up.
+//
+// RESTORING REAL DATA: the user's real balances/prices/transactions only
+// ever get restored by loading their own offline SQL backup directly into
+// this Postgres database (psql/db tooling) — never by typing numbers into
+// a .ts/.tsx file. If a grep of the source tree ever turns up a real
+// financial literal (a gold price, a fund NAV, a balance, etc.) instead of
+// a DB read, that is a policy violation: delete it immediately and replace
+// it with a live query or an explicit empty/error state. Do not restore
+// from a backup file found in git history or a checkpoint on your own
+// initiative — wait for the user to hand you the specific backup to use.
 // ─────────────────────────────────────────────────────────────────────────
 
 const { Pool } = pg;
