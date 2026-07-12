@@ -199,23 +199,19 @@ export function initDashboardBehavior(
   > = {
     total: {
       title: "Total Portfolio Value",
-      sub: "Total Balance · EGP",
-      val: `${fmt(derived.total.value)} EGP`,
-      chg: `▲ ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} vs cost (${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
+      sub: "Total Cost Basis · EGP",
+      val: `${fmt(derived.total.cost)} EGP`,
+      chg: `▲ Market Value: ${fmt(derived.total.value)} EGP (${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)}, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`
         : `Gold: Live price unavailable<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`,
     },
     gold: {
       title: "Gold 24K · Physical",
-      sub: derived.gold.pnlAvailable
-        ? "Market Value · EGP (24K sell price, live)"
-        : "Cost Basis · EGP (live price pending)",
-      val: derived.gold.pnlAvailable
-        ? `${fmt(derived.gold.value!)} EGP`
-        : `${fmt(derived.gold.cost)} EGP`,
+      sub: "Cost Basis · EGP (mfg fee incl.)",
+      val: `${fmt(derived.gold.cost)} EGP`,
       chg: derived.gold.pnlAvailable
-        ? `${derived.gold.netPnl! >= 0 ? "▲" : "▼"} ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net P&L (${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
+        ? `${derived.gold.netPnl! >= 0 ? "▲" : "▼"} Market Value: ${fmt(derived.gold.value!)} EGP (net P&L ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP, ${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
         : "PnL unavailable — live price feature in development",
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>Cashback: ${fmt2(derived.gold.cashbackPerGram)} EGP/g on sell`
@@ -223,9 +219,9 @@ export function initDashboardBehavior(
     },
     liquid: {
       title: "Liquid Assets · Funds",
-      sub: "Combined NAV · EGP",
-      val: `${fmt(derived.liquid.value)} EGP`,
-      chg: `▲ ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP vs cost (${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
+      sub: "Cost Basis · EGP",
+      val: `${fmt(derived.liquid.cost)} EGP`,
+      chg: `▲ Market Value: ${fmt(derived.liquid.value)} EGP (${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)}, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
       rates: `Bareeq NAV: ${derived.abr.nav.toFixed(2)}/cert<br>Real Estate: ${derived.re.nav.toFixed(2)}/cert`,
     },
     certs: {
