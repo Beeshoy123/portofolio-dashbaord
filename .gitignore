@@ -48,3 +48,5 @@ Thumbs.db
 .cache/
 .local/
 backups/
+exports/
+*.sql
