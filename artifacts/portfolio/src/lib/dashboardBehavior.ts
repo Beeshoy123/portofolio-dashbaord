@@ -528,7 +528,15 @@ export function initDashboardBehavior(
   };
 
   win.togglePerfMath = () => {
-    const id = `math-${currentPerf === "pnl" ? "gold" : currentPerf}`;
+    let id: string;
+    if (currentPerf === "pnl") {
+      id = currentView === "liquid" ? "math-liquid" : "math-gold";
+    } else {
+      id = `math-${currentPerf}`;
+    }
+    // Close the other PnL math section so only one is open at a time.
+    const other = id === "math-liquid" ? "math-gold" : "math-liquid";
+    el(other)?.classList.remove("open");
     const sec = el(id);
     if (sec) sec.classList.toggle("open");
   };

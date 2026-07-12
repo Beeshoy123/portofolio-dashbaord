@@ -269,6 +269,17 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       <div class="math-section" id="math-gold">
         ${mathGoldRows}
       </div>
+      <div class="math-section" id="math-liquid">
+        <div class="math-line"><span class="math-label">Bareeq:</span><span class="math-calc">${fmt(d.abr.unitsHeld)} units × ${fmt2(d.abr.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.abr.value))} EGP</span></div>
+        <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.abr.costBasisTotal)} EGP</span></div>
+        <div class="math-line math-total${d.abr.pnl < 0 ? " neg" : ""}"><span class="math-label">Bareeq P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">${d.abr.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.abr.pnl))} EGP (${pctStr(d.abr.pnlPct)})</span></div>
+        <div class="math-divider"></div>
+        <div class="math-line"><span class="math-label">Real Est.:</span><span class="math-calc">${fmt(d.re.unitsHeld)} units × ${fmt2(d.re.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.re.value))} EGP</span></div>
+        <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.re.costBasisTotal)} EGP</span></div>
+        <div class="math-line math-total${d.re.pnl < 0 ? " neg" : ""}"><span class="math-label">Real Est. P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">${d.re.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.re.pnl))} EGP (${pctStr(d.re.pnlPct)})</span></div>
+        <div class="math-divider"></div>
+        <div class="math-line math-total${d.liquid.pnl < 0 ? " neg" : ""}"><span class="math-label">Net P&amp;L:</span><span class="math-calc">Bareeq + Real Est. combined</span><span class="math-result">${d.liquid.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.liquid.pnl))} EGP (${pctStr(d.liquid.pnlPct)})</span></div>
+      </div>
     </div>
 
     <!-- YIELD VIEW -->
