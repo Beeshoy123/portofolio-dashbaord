@@ -260,8 +260,8 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 }
 
 /* ── Colors ─────────────────────────────────────────────────────────── */
-.pos { color: #3dae6e !important; }
-.neg { color: var(--teal) !important; }
+.pos { color: var(--teal) !important; }
+.neg { color: var(--coral) !important; }
 .neu { color: var(--dim) !important; }
 
 /* ── Performance pills ──────────────────────────────────────────────── */
