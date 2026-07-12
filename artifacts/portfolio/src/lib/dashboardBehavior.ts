@@ -312,9 +312,83 @@ export function initDashboardBehavior(
     const mathBody = el("hero-math-body");
     if (mathBody) mathBody.innerHTML = heroMath(view);
 
+    updatePerfPnlForView(view);
     renderHoldingsForView(view);
     applyTxChipsForView(view);
   };
+
+  // The P&L tab of the Performance card defaults to a portfolio-wide
+  // headline (gold P&L) with every position in the breakdown — that stays
+  // as-is for the "total" (and "certs") views. For "gold" and "liquid" we
+  // narrow both the headline figure and the breakdown rows to just that
+  // asset group, so the widget reflects the toggle you're looking at.
+  function updatePerfPnlForView(view: string) {
+    const icon = el("perf-pnl-icon");
+    const headline = el("gold-pnl");
+    const sub = el("gold-pnl-pct");
+    const rows = document.querySelectorAll<HTMLElement>(
+      "#pnl-rows .pnl-row[data-perf-group]",
+    );
+
+    if (view === "gold") {
+      if (icon) icon.textContent = "🥇";
+      if (headline) {
+        headline.textContent = derived.gold.pnlAvailable
+          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
+          : "PnL unavailable";
+        (headline as HTMLElement).style.color = derived.gold.pnlAvailable
+          ? derived.gold.netPnl! >= 0
+            ? "var(--teal)"
+            : "var(--coral)"
+          : "var(--dim)";
+      }
+      if (sub) {
+        sub.textContent = derived.gold.pnlAvailable
+          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
+          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`;
+      }
+      rows.forEach((row) => {
+        row.style.display =
+          row.getAttribute("data-perf-group") === "gold" ? "flex" : "none";
+      });
+    } else if (view === "liquid") {
+      if (icon) icon.textContent = "💧";
+      if (headline) {
+        headline.textContent = `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net`;
+        (headline as HTMLElement).style.color =
+          derived.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)";
+      }
+      if (sub) {
+        sub.textContent = `${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}% · Bareeq + Real Estate combined`;
+      }
+      rows.forEach((row) => {
+        row.style.display =
+          row.getAttribute("data-perf-group") === "liquid" ? "flex" : "none";
+      });
+    } else {
+      // total / certs: restore the default portfolio-wide headline and show
+      // every position in the breakdown.
+      if (icon) icon.textContent = "🥇";
+      if (headline) {
+        headline.textContent = derived.gold.pnlAvailable
+          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
+          : "PnL unavailable";
+        (headline as HTMLElement).style.color = derived.gold.pnlAvailable
+          ? derived.gold.netPnl! >= 0
+            ? "var(--teal)"
+            : "var(--coral)"
+          : "var(--dim)";
+      }
+      if (sub) {
+        sub.textContent = derived.gold.pnlAvailable
+          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
+          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`;
+      }
+      rows.forEach((row) => {
+        row.style.display = "flex";
+      });
+    }
+  }
 
   win.switchPerf = (type: string) => {
     currentPerf = type;

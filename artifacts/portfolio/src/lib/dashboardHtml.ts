@@ -228,7 +228,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
 
     <!-- P&L VIEW -->
     <div id="perf-pnl">
-      <div style="font-size:22px;margin-bottom:6px">🥇</div>
+      <div style="font-size:22px;margin-bottom:6px" id="perf-pnl-icon">🥇</div>
       <div style="font-family:Sora,sans-serif;font-size:20px;font-weight:800;color:${goldPnlColor}" id="gold-pnl">${goldPnlLabel}</div>
       <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)" id="gold-pnl-pct">${goldPnlSubLabel}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;position:relative">
@@ -245,10 +245,10 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
         </div>
       </div>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px" id="pnl-rows">
-        <div class="pnl-row"><div><div class="pnl-row-name">🥇 Gold 24K</div><div class="pnl-row-sub">${fmt(d.gold.gramsHeld)}g physical</div></div><div style="text-align:right">${goldPnlRowRight}</div></div>
-        <div class="pnl-row"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub">ABR · money market</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--teal)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--teal);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
-        <div class="pnl-row"><div><div class="pnl-row-name">🏢 Real Est.</div><div class="pnl-row-sub">BRE · property fund</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"}">${signedFmt(d.re.pnl)} EGP</div><div style="font-size:9.5px;color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.re.pnlPct)}</div></div></div>
-        <div class="pnl-row"><div><div class="pnl-row-name">📜 Certificates</div><div class="pnl-row-sub">NBE · interest income</div></div><div style="text-align:right"><div class="pnl-row-val" id="cert-pnl-val" style="color:var(--teal)">${signedFmt(d.certTotals.annualYield)} EGP/yr</div><div style="font-size:9.5px;color:var(--teal);font-weight:600" id="cert-pnl-pct">${pctStr(d.certTotals.weightedAvgRate)} APY</div></div></div>
+        <div class="pnl-row" data-perf-group="gold"><div><div class="pnl-row-name">🥇 Gold 24K</div><div class="pnl-row-sub">${fmt(d.gold.gramsHeld)}g physical</div></div><div style="text-align:right">${goldPnlRowRight}</div></div>
+        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub">ABR · money market</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--teal)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--teal);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
+        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏢 Real Est.</div><div class="pnl-row-sub">BRE · property fund</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"}">${signedFmt(d.re.pnl)} EGP</div><div style="font-size:9.5px;color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.re.pnlPct)}</div></div></div>
+        <div class="pnl-row" data-perf-group="certs"><div><div class="pnl-row-name">📜 Certificates</div><div class="pnl-row-sub">NBE · interest income</div></div><div style="text-align:right"><div class="pnl-row-val" id="cert-pnl-val" style="color:var(--teal)">${signedFmt(d.certTotals.annualYield)} EGP/yr</div><div style="font-size:9.5px;color:var(--teal);font-weight:600" id="cert-pnl-pct">${pctStr(d.certTotals.weightedAvgRate)} APY</div></div></div>
       </div>
       <div class="math-section" id="math-gold">
         ${mathGoldRows}
