@@ -1,0 +1,414 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: portfolio
+    description: Portfolio operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /portfolio:
+    get:
+      operationId: getPortfolio
+      tags: [portfolio]
+      summary: Get full portfolio snapshot
+      description: Returns gold, funds, certificates, transactions, growth snapshots and settings
+      responses:
+        "200":
+          description: Portfolio snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Portfolio"
+  /portfolio/gold/settings:
+    patch:
+      operationId: updateGoldSettings
+      tags: [portfolio]
+      summary: Update gold settings (currently just the cashback rate)
+      description: >-
+        Grams held, cost basis and avg cost per gram are always derived live
+        from gold transaction history and cannot be set directly.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGoldSettings"
+      responses:
+        "200":
+          description: Updated gold position (recomputed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoldPosition"
+  /portfolio/gold/transactions:
+    post:
+      operationId: createGoldTransaction
+      tags: [portfolio]
+      summary: Record a new physical gold purchase
+      description: >-
+        Adds a transaction row; gramsHeld / costBasis / avgCostPerGram are
+        then recomputed live from the full transaction history, so no manual
+        recalculation is ever needed.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoldTransaction"
+      responses:
+        "201":
+          description: Updated gold position (recomputed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GoldPosition"
+  /portfolio/funds/{key}:
+    patch:
+      operationId: updateFund
+      tags: [portfolio]
+      summary: Update a fund position (NAV / units held)
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFund"
+      responses:
+        "200":
+          description: Updated fund
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fund"
+  /portfolio/snapshots:
+    post:
+      operationId: createGrowthSnapshot
+      tags: [portfolio]
+      summary: Save a liquid-savings growth snapshot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGrowthSnapshot"
+      responses:
+        "201":
+          description: Created snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GrowthSnapshot"
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    GoldTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+          format: date
+        quantity:
+          type: integer
+        weightPerUnitGrams:
+          type: number
+        totalWeightGrams:
+          type: number
+        karat:
+          type: integer
+        spotPricePerGram:
+          type: number
+        manufacturingFeePerGram:
+          type: number
+        totalPaid:
+          type: number
+      required:
+        - id
+        - date
+        - quantity
+        - weightPerUnitGrams
+        - totalWeightGrams
+        - karat
+        - spotPricePerGram
+        - manufacturingFeePerGram
+        - totalPaid
+    CreateGoldTransaction:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        quantity:
+          type: integer
+        weightPerUnitGrams:
+          type: number
+        karat:
+          type: integer
+        spotPricePerGram:
+          type: number
+        manufacturingFeePerGram:
+          type: number
+        totalPaid:
+          type: number
+      required:
+        - date
+        - quantity
+        - weightPerUnitGrams
+        - karat
+        - spotPricePerGram
+        - manufacturingFeePerGram
+        - totalPaid
+    GoldPosition:
+      type: object
+      description: >-
+        gramsHeld, costBasis and avgCostPerGram are always computed live from
+        gold transaction history, never stored as a static number.
+        livePricePerGram is the 24K sell price scraped from goldbullioneg.com
+        (null if scrape has not succeeded yet). currentValue and pnl (net,
+        including cashback) are derived from livePricePerGram.
+        buyPrice24k / sellPrice24k / buyPrice21k / sellPrice21k are all
+        EGP-per-gram values from the same scrape. goldPriceStatus is 'live'
+        when the latest scrape succeeded, 'fallback' when using stale cached
+        prices, or null if no scrape has completed yet.
+      properties:
+        gramsHeld:
+          type: number
+        costBasis:
+          type: number
+        avgCostPerGram:
+          type: number
+        cashbackPerGram:
+          type: number
+        livePricePerGram:
+          type: number
+          nullable: true
+        currentValue:
+          type: number
+          nullable: true
+        pnl:
+          type: number
+          nullable: true
+        buyPrice24k:
+          type: number
+          nullable: true
+        sellPrice24k:
+          type: number
+          nullable: true
+        buyPrice21k:
+          type: number
+          nullable: true
+        sellPrice21k:
+          type: number
+          nullable: true
+        goldPriceStatus:
+          type: string
+          nullable: true
+          description: "'live' | 'fallback' | null"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/GoldTransaction"
+      required:
+        - gramsHeld
+        - costBasis
+        - avgCostPerGram
+        - cashbackPerGram
+        - livePricePerGram
+        - currentValue
+        - pnl
+        - buyPrice24k
+        - sellPrice24k
+        - buyPrice21k
+        - sellPrice21k
+        - goldPriceStatus
+        - transactions
+    UpdateGoldSettings:
+      type: object
+      properties:
+        cashbackPerGram:
+          type: number
+    Fund:
+      type: object
+      properties:
+        id:
+          type: integer
+        key:
+          type: string
+        name:
+          type: string
+        ticker:
+          type: string
+        icon:
+          type: string
+        unitsHeld:
+          type: number
+        costBasisTotal:
+          type: number
+        nav:
+          type: number
+        apyPercent:
+          type: number
+          nullable: true
+      required:
+        - id
+        - key
+        - name
+        - ticker
+        - icon
+        - unitsHeld
+        - costBasisTotal
+        - nav
+    UpdateFund:
+      type: object
+      properties:
+        unitsHeld:
+          type: number
+        nav:
+          type: number
+    Certificate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        value:
+          type: number
+        ratePercent:
+          type: number
+        maturityDate:
+          type: string
+          format: date
+      required:
+        - id
+        - name
+        - value
+        - ratePercent
+        - maturityDate
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        assetType:
+          type: string
+          enum: [gold, abr, re]
+        name:
+          type: string
+        meta:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        amount:
+          type: number
+        txType:
+          type: string
+          enum: [buy, sell]
+      required:
+        - id
+        - assetType
+        - name
+        - meta
+        - occurredAt
+        - amount
+        - txType
+    GrowthSnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+        snapshotDate:
+          type: string
+          format: date
+        value:
+          type: number
+      required:
+        - id
+        - snapshotDate
+        - value
+    CreateGrowthSnapshot:
+      type: object
+      properties:
+        value:
+          type: number
+      required:
+        - value
+    PortfolioSettings:
+      type: object
+      properties:
+        emergencyFundTarget:
+          type: number
+        usdEgpRate:
+          type: number
+        usdEgpStatus:
+          type: string
+          nullable: true
+          description: "'live' = fetched from open.er-api.com; 'fallback' = stale cache; null = not yet fetched"
+      required:
+        - emergencyFundTarget
+        - usdEgpRate
+        - usdEgpStatus
+    Portfolio:
+      type: object
+      properties:
+        gold:
+          $ref: "#/components/schemas/GoldPosition"
+        funds:
+          type: array
+          items:
+            $ref: "#/components/schemas/Fund"
+        certificates:
+          type: array
+          items:
+            $ref: "#/components/schemas/Certificate"
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/GrowthSnapshot"
+        settings:
+          $ref: "#/components/schemas/PortfolioSettings"
+      required:
+        - gold
+        - funds
+        - certificates
+        - transactions
+        - snapshots
+        - settings

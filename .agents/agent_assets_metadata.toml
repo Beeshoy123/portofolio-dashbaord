@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "CiZcLBRRGmJvDkZfAk2qo"
+uri = "file://backups/db_backup_20260711_140726.sql"
+type = "unspecified"
+title = "Database backup (SQL) — 2026-07-11"
+
+[[outputs]]
+id = "dr3H7Pny1fBAc35LAC-Cw"
+uri = "file://exports/backup_20260711_194849.sql"
+type = "unspecified"
+title = "Database backup (all tables)"

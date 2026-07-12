@@ -1,0 +1,3 @@
+- [Orval generated names](orval-generated-names.md) — generated types/schemas are named from `operationId`+Body/Response, not the OpenAPI component schema name.
+- [Artifact workflows can go missing](artifact-workflow-missing.md) — an artifact can have a valid `artifact.toml` on disk with no registered workflow; check `listWorkflows()` before assuming preview is live.
+- [Gold fee schedule & purity blending](gold-fee-schedule-and-purity-blending.md) — dealer fee/cashback rates vary by bar size/karat and are intentionally hardcoded; multi-karat averaging must use pure-gram conversion.

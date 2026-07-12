@@ -1,0 +1,27 @@
+Here's the full implementation plan, combining both pieces of work we discussed. Nothing will run until you confirm.
+
+1. Widget visibility per toggle (VIEW_CONFIG.cards)
+
+Widget	Total	Gold	Liquid	Certificates
+Performance	✅	✅	✅	unchanged
+ABR Goal Progress	✅	❌	✅	unchanged
+Wallet Health	✅	❌	❌	unchanged
+Wallet Segments	✅	❌	❌	unchanged
+Heatmap	✅	❌	❌	unchanged
+DCA Calculator	❌	✅	❌	unchanged
+Activity & Holdings	❌	✅ (filtered)	✅ (filtered)	unchanged
+2. Bug fix for "wrong widget shows after clicking a toggle"
+
+Make the card-visibility function loop over every data-view-card element and explicitly set display each time setView() runs (not just a partial diff) — so nothing can persist from the previous view.
+Call setView(activeView) once on initial page load, so Total's correct widget set shows immediately, before any click.
+3. Activity & Holdings content filtering
+
+Add an asset-group concept (gold vs liquid = abr+azs+re) driven by activeView.
+Holdings table: filter allRows to only the asset group matching the current view before rendering (Gold view → Gold row only; Liquid view → Bareeq/AZ Savings/Real Estate rows only). Certificates view untouched.
+Transactions list: filter TRANSACTIONS by tag matching the asset group the same way, and default activeTxFilter to match.
+Filter chips: hide the chip buttons that don't apply to the current view (Gold view → hide ABR/AZS/RE/All, show just Gold or no chip bar at all since there's only one option; Liquid view → hide the Gold chip, keep All/ABR/AZS/RE).
+Re-run this filtering logic every time setView() fires, so switching toggles updates the widget live.
+4. Verification
+
+Restart the workflow, click through Total → Gold → Liquid → Certificates → back to Total, and screenshot each to confirm only the intended widgets/rows appear and nothing "sticks" from the previous view.
+This only touches visibility/filtering logic in portfolio-script.js (VIEW_CONFIG, setView, renderHoldingsTable, renderTransactions, filterTx) plus chip markup toggling — no restructuring of existing widgets, no changes to Certificates view. Confirm and I'll implement it.
