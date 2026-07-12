@@ -13,8 +13,12 @@ runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
-mode = "parallel"
+mode = "sequential"
 author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash scripts/startup.sh"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"

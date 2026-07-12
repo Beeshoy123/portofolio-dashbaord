@@ -2,9 +2,22 @@
 
 A personal finance dashboard that tracks gold holdings, money-market/property funds, bank certificates, and transactions — all backed by a Postgres database instead of hardcoded numbers.
 
-## Run & Operate
+## Startup sequence (automatic, every run)
 
-- First-time setup after cloning/importing this project: run `pnpm install` at the repo root, then `pnpm --filter @workspace/db run push` to create the Postgres schema (both workflows below will 500/fail to start until this is done). An empty DB after push is expected — there's no seed script by design; the API returns `404 NOT_SEEDED` and the dashboard shows an empty state until real data is restored (see `backups/`).
+The **Project** run button executes these steps in order every time — not just on first run:
+
+1. **`bash scripts/startup.sh`** — runs before either workflow starts:
+   - Installs dependencies (`pnpm install`) if `node_modules` is absent. No-op if already present.
+   - Pushes the Drizzle schema (`pnpm --filter @workspace/db run push`). Idempotent — only creates tables that don't exist; never touches existing data.
+2. **`artifacts/api-server: API Server`** — Express API on port 8080. Starts only after step 1 succeeds.
+3. **`artifacts/portfolio: web`** — Vite dev server on port 21113 (`/`). Starts only after step 2 is up.
+
+**Empty state is expected and correct.** After schema push, the database has empty tables. The API returns `404 NOT_SEEDED` and the dashboard shows "No data found" until you explicitly import your SQL backup. The startup script never seeds, restores, or touches data — that's intentional.
+
+To restore data: upload your offline SQL backup and ask the agent to import it.
+
+## Workflows
+
 - `artifacts/api-server: API Server` workflow — runs the Express API on port 8080
 - `artifacts/portfolio: web` workflow — runs the Vite dev server for the dashboard (port 21113, served at `/`)
 - `pnpm run typecheck` — full typecheck across all packages
