@@ -205,7 +205,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
         <div class="card-lbl"><span id="hero-title">Total Portfolio Value</span> <span class="info-icon" onclick="toggleMath('math-total')" title="Show calculation">ℹ</span></div>
         <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px" id="hero-sublabel">Total Cost Basis · EGP</div>
         <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em" id="s-total">${fmt(d.total.cost)} EGP</div>
-        <div style="font-size:12px;font-weight:600;margin-top:10px;color:var(--teal)" id="s-total-chg" class="neg">▲ Market Value: ${fmt(d.total.value)} EGP (${pctStr(d.total.pnlPct)})</div>
+        <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} Market Value: ${fmt(d.total.value)} EGP (${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)}, ${pctStr(d.total.pnlPct)})</div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>
       </div>
       <div style="text-align:right;flex-shrink:0">

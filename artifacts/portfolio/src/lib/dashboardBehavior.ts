@@ -193,44 +193,74 @@ export function initDashboardBehavior(
     ].join("");
   }
 
+  // `sentiment` drives both the arrow (▲/▼) and the color of the hero
+  // "chg" line — "up" and "down" are true P&L signals, "neutral" is used
+  // for the certificates view (a fixed-rate yield line, not a P&L figure)
+  // where an up/down arrow would be misleading.
   const HERO_CFG: Record<
     string,
-    { title: string; sub: string; val: string; chg: string; rates: string }
+    {
+      title: string;
+      sub: string;
+      val: string;
+      chg: string;
+      rates: string;
+      sentiment: "up" | "down" | "neutral";
+    }
   > = {
     total: {
       title: "Total Portfolio Value",
       sub: "Total Cost Basis · EGP",
       val: `${fmt(derived.total.cost)} EGP`,
-      chg: `▲ Market Value: ${fmt(derived.total.value)} EGP (${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)}, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
+      chg: `Market Value: ${fmt(derived.total.value)} EGP (${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)}, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`
         : `Gold: Live price unavailable<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`,
+      sentiment: derived.total.pnl >= 0 ? "up" : "down",
     },
     gold: {
       title: "Gold 24K · Physical",
       sub: "Cost Basis · EGP (mfg fee incl.)",
       val: `${fmt(derived.gold.cost)} EGP`,
       chg: derived.gold.pnlAvailable
-        ? `${derived.gold.netPnl! >= 0 ? "▲" : "▼"} Market Value: ${fmt(derived.gold.value!)} EGP (net P&L ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP, ${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
+        ? `Market Value: ${fmt(derived.gold.value!)} EGP (net P&L ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP, ${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
         : "PnL unavailable — live price feature in development",
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>Cashback: ${fmt2(derived.gold.cashbackPerGram)} EGP/g on sell`
         : `Avg cost: ${fmt(derived.gold.avgCostPerGram)} EGP/g (mfg fee incl.)<br>Market: Live price unavailable<br>Cashback: ${fmt2(derived.gold.cashbackPerGram)} EGP/g on sell`,
+      sentiment: !derived.gold.pnlAvailable
+        ? "neutral"
+        : derived.gold.netPnl! >= 0
+          ? "up"
+          : "down",
     },
     liquid: {
       title: "Liquid Assets · Funds",
       sub: "Cost Basis · EGP",
       val: `${fmt(derived.liquid.cost)} EGP`,
-      chg: `▲ Market Value: ${fmt(derived.liquid.value)} EGP (${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)}, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
+      chg: `Market Value: ${fmt(derived.liquid.value)} EGP (${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)}, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
       rates: `Bareeq NAV: ${derived.abr.nav.toFixed(2)}/cert<br>Real Estate: ${derived.re.nav.toFixed(2)}/cert`,
+      sentiment: derived.liquid.pnl >= 0 ? "up" : "down",
     },
     certs: {
       title: "NBE Certificates",
       sub: "Principal Balance · EGP",
       val: `${fmt(derived.certTotals.totalPrincipal)} EGP`,
-      chg: `↑ ${derived.certTotals.weightedAvgRate.toFixed(1)}% avg APY · +${fmt(derived.certTotals.totalMonthly)} EGP/mo`,
+      chg: `${derived.certTotals.weightedAvgRate.toFixed(1)}% avg APY · +${fmt(derived.certTotals.totalMonthly)} EGP/mo`,
       rates: `Avg APY: ${derived.certTotals.weightedAvgRate.toFixed(1)}%<br>Monthly yield: ${fmt(derived.certTotals.totalMonthly)} EGP`,
+      sentiment: "neutral",
     },
+  };
+
+  const SENTIMENT_ARROW: Record<"up" | "down" | "neutral", string> = {
+    up: "▲",
+    down: "▼",
+    neutral: "↑",
+  };
+  const SENTIMENT_COLOR: Record<"up" | "down" | "neutral", string> = {
+    up: "var(--teal)",
+    down: "var(--coral)",
+    neutral: "var(--teal)",
   };
 
   win.setView = (view: string) => {
@@ -271,7 +301,12 @@ export function initDashboardBehavior(
     const heroVal = el("s-total");
     if (heroVal) heroVal.textContent = hcfg.val;
     const heroChg = el("s-total-chg");
-    if (heroChg) heroChg.textContent = hcfg.chg;
+    if (heroChg) {
+      heroChg.textContent = `${SENTIMENT_ARROW[hcfg.sentiment]} ${hcfg.chg}`;
+      heroChg.style.color = SENTIMENT_COLOR[hcfg.sentiment];
+      heroChg.classList.toggle("pos", hcfg.sentiment !== "down");
+      heroChg.classList.toggle("neg", hcfg.sentiment === "down");
+    }
     const rateBox = el("rate-box");
     if (rateBox) rateBox.innerHTML = hcfg.rates;
     const mathBody = el("hero-math-body");
