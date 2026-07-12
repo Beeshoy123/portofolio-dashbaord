@@ -1,15 +1,18 @@
 ---
-name: Financial data restore policy (portfolio-tracker style apps)
-description: Rules for restoring real user financial data after an import/reset, and how Replit checkpoints differ from GitHub history.
+name: Financial data restore policy
+description: Rules for handling SQL backups and real financial numbers — no files left on disk, DB only.
 ---
 
-For apps with a "no hardcoded/placeholder financial numbers" policy (e.g. the Beeshoy portfolio tracker), restoring real data after an import/reset has two hard rules:
+Never create backup or restore files in this repo. No `.sql` dumps, no `backups/` directory, no restore scripts, no seed files containing real numbers — nothing that could reach git or Replit history.
 
-1. **DB only, never inline in source.** Real balances/prices/transactions get loaded via `psql`/DB tooling straight into Postgres — never typed as literals into `.ts`/`.tsx`/route files, even temporarily. If a real financial number ever turns up hardcoded in source, delete it immediately and replace with a live query or explicit empty/error state.
-2. **Wait for the user's specific backup file — don't self-serve one from history.** Don't restore from a backup found in git history or a Replit checkpoint on your own initiative; confirm with the user which backup/version is authoritative first.
+**Restore flow:**
+1. User uploads their SQL backup file.
+2. Pipe it directly into `psql "$DATABASE_URL"` — do not copy it to a project path first.
+3. Delete the uploaded file immediately after import (`rm <path>`).
+4. Confirm row counts via `executeSql`, then take a screenshot.
 
-**Why:** these apps intentionally ship with no seed script and an explicit `NOT_SEEDED` empty state; the temptation during "make it look right" work is to paste in a plausible-looking number, which silently reintroduces fake data the policy exists to prevent.
+**Why:** The user's financial data must never appear in git history or Replit checkpoints that could be shared. The live Postgres database is the only acceptable home for real numbers.
 
-**Checkpoints vs. GitHub — do not conflate:** Replit's checkpoint system auto-snapshots the codebase *and* the Replit-managed Postgres database, but it is private to the repl — never pushed to GitHub, not visible to anyone the repo is shared with. Git/GitHub history has no DB rows at all. "Restore from git history" and "restore from a checkpoint" are different systems with different data and different audiences — clarify which one the user means before acting on a rollback/restore request.
+**How to apply:** Any time a restore or import is requested, follow the pipe-and-delete flow above. Never `cp`, `mv`, or write the SQL to `attached_assets/`, `backups/`, `scripts/`, or anywhere else in the workspace.
 
-**How to apply:** whenever a task involves restoring or re-seeding real financial/user data after a reset, re-read this before touching the DB or any source file that renders numbers.
+**Gold transactions:** Gold is tracked as individual purchase rows in `gold_transactions` (karat, weight, spot price, manufacturing fee per gram, total paid). Do not collapse these into a summary — the per-transaction ledger is intentional and enables accurate avg-cost and P&L calculations. When the user buys more gold, they add a new row to `gold_transactions`; the maths derive from that automatically.
