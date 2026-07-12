@@ -61,14 +61,18 @@ export default function App() {
 
     if (notSeeded) {
       return (
-        <div className="portfolio-loading-screen">
-          <div style={{ fontSize: 32 }}>📭</div>
-          <div>No portfolio data found — please import your data.</div>
-          <div style={{ fontSize: 12, color: '#8a9a95' }}>
-            The database is empty. Restore your data from a SQL backup, then
-            reload this page.
+        <>
+          <div className="portfolio-alert-banner">
+            ⚠️ No data found — the database is empty.
           </div>
-        </div>
+          <div className="portfolio-loading-screen" style={{ minHeight: 'calc(100vh - 41px)' }}>
+            <div style={{ fontSize: 32 }}>📭</div>
+            <div>No portfolio data found.</div>
+            <div style={{ fontSize: 12, color: '#8a9a95' }}>
+              Add your holdings to start tracking your portfolio.
+            </div>
+          </div>
+        </>
       );
     }
 

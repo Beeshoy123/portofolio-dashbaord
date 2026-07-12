@@ -711,6 +711,24 @@ footer {
   border-top: 1px solid var(--edge);
 }
 
+/* ── Top alert banner ──────────────────────────────────────────────── */
+.portfolio-alert-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #3a2a12;
+  border-bottom: 1px solid #6b4a1a;
+  color: #f0c675;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
 /* ── Loading / error screen ────────────────────────────────────────── */
 .portfolio-loading-screen {
   min-height: 100vh;
