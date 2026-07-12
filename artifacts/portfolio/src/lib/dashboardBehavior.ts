@@ -313,9 +313,24 @@ export function initDashboardBehavior(
     if (mathBody) mathBody.innerHTML = heroMath(view);
 
     updatePerfPnlForView(view);
+    updatePerfTabsForView(view);
     renderHoldingsForView(view);
     applyTxChipsForView(view);
   };
+
+  // Physical gold isn't yield-bearing or tracked for growth — it just sits
+  // until it's sold — so the Yield/Growth tabs of the Performance card only
+  // make sense outside the gold view. Hide them there and fall back to P&L.
+  function updatePerfTabsForView(view: string) {
+    const isGold = view === "gold";
+    const pillYield = el("pill-yield");
+    const pillGrowth = el("pill-growth");
+    if (pillYield) pillYield.style.display = isGold ? "none" : "";
+    if (pillGrowth) pillGrowth.style.display = isGold ? "none" : "";
+    if (isGold && currentPerf !== "pnl") {
+      (win.switchPerf as (type: string) => void)("pnl");
+    }
+  }
 
   // The P&L tab of the Performance card defaults to a portfolio-wide
   // headline (gold P&L) with every position in the breakdown — that stays
