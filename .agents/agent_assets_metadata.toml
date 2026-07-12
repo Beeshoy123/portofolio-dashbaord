@@ -12,3 +12,9 @@ id = "dr3H7Pny1fBAc35LAC-Cw"
 uri = "file://exports/backup_20260711_194849.sql"
 type = "unspecified"
 title = "Database backup (all tables)"
+
+[[outputs]]
+id = "r6qqEBGbkhS62XIzZRyfC"
+uri = "file://backups/database_backup_20260712_110439.sql"
+type = "unspecified"
+title = "Database Backup (SQL export)"
