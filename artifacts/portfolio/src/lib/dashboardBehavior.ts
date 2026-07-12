@@ -212,7 +212,7 @@ export function initDashboardBehavior(
       title: "Total Portfolio Value",
       sub: "Total Cost Basis · EGP",
       val: `${fmt(derived.total.cost)} EGP`,
-      chg: `Market Value: ${fmt(derived.total.value)} EGP (${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)}, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
+      chg: `Market Value: ${fmt(derived.total.value)} EGP (net P&L ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} EGP, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`
         : `Gold: Live price unavailable<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`,
@@ -238,7 +238,7 @@ export function initDashboardBehavior(
       title: "Liquid Assets · Funds",
       sub: "Cost Basis · EGP",
       val: `${fmt(derived.liquid.cost)} EGP`,
-      chg: `Market Value: ${fmt(derived.liquid.value)} EGP (${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)}, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
+      chg: `Market Value: ${fmt(derived.liquid.value)} EGP (net P&L ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
       rates: `Bareeq NAV: ${derived.abr.nav.toFixed(2)}/cert<br>Real Estate: ${derived.re.nav.toFixed(2)}/cert`,
       sentiment: derived.liquid.pnl >= 0 ? "up" : "down",
     },
