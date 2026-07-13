@@ -239,7 +239,7 @@ export function initDashboardBehavior(
       sub: "Cost Basis · EGP",
       val: `${fmt(derived.liquid.cost)} EGP`,
       chg: `Market Value: ${fmt(derived.liquid.value)} EGP (net P&L ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
-      rates: `Bareeq NAV: ${derived.abr.nav.toFixed(2)}/cert<br>Real Estate: ${derived.re.nav.toFixed(2)}/cert`,
+      rates: ``,
       sentiment: derived.liquid.pnl >= 0 ? "up" : "down",
     },
     certs: {
@@ -309,6 +309,8 @@ export function initDashboardBehavior(
     }
     const rateBox = el("rate-box");
     if (rateBox) rateBox.innerHTML = hcfg.rates;
+    const rateBoxContainer = el("rate-box-container");
+    if (rateBoxContainer) rateBoxContainer.style.display = view === "liquid" ? "none" : "";
     const mathBody = el("hero-math-body");
     if (mathBody) mathBody.innerHTML = heroMath(view);
 
