@@ -318,171 +318,190 @@ export function initDashboardBehavior(
     applyTxChipsForView(view);
   };
 
-  // Pill label sets: Total view gets its own semantic names; all others use
-  // the standard P&L / Yield / Growth labels.
-  const PILL_LABELS_TOTAL = ["Capital", "Income", "Growth"];
-  const PILL_LABELS_STD   = ["P&L",    "Yield",  "Growth"];
+  // Panel ID tuples — one entry per pill in [pnl, yield, growth] order.
+  const TOTAL_PERF_PANELS: [string, string, string] = ["perf-total-capital", "perf-total-income", "perf-total-growth"];
+  const STD_PERF_PANELS:   [string, string, string] = ["perf-pnl",           "perf-yield",        "perf-growth"];
 
-  // Total-specific panel IDs corresponding to the three pills.
-  const TOTAL_PERF_PANELS = ["perf-total-capital", "perf-total-income", "perf-total-growth"];
-  const STD_PERF_PANELS   = ["perf-pnl",           "perf-yield",        "perf-growth"];
+  // ── Single source of truth for the Performance card per view ─────────────
+  // To add/change a view's behaviour, edit ONE entry here.  The four functions
+  // below (updatePerfTabsForView, updatePerfPnlForView, switchPerf,
+  // togglePerfMath) are now thin loops over this config.
+  interface PerfViewConfig {
+    /** Panel IDs mapped to [pnl, yield, growth] pills. */
+    panels: [string, string, string];
+    /** Display text for the three pills. */
+    pillLabels: [string, string, string];
+    /** pill-* IDs to hide for this view. */
+    hiddenPillIds: string[];
+    /** Math section to open per pill; null = no section for that tab. */
+    mathIds: Record<"pnl" | "yield" | "growth", string | null>;
+    /**
+     * How to mutate the shared perf-pnl panel.
+     * null = skip — this view has its own dedicated panels.
+     */
+    pnlUpdate: null | {
+      icon: string;
+      headline: () => string;
+      headlineColor: () => string;
+      sub: () => string;
+      rowFilter: "all" | "gold" | "liquid" | "certs";
+      showAvgVsSell: boolean;
+    };
+  }
+
+  const PERF_CFG: Record<string, PerfViewConfig> = {
+    total: {
+      panels: TOTAL_PERF_PANELS,
+      pillLabels: ["Capital", "Income", "Growth"],
+      hiddenPillIds: [],
+      mathIds: { pnl: "math-total-capital", yield: "math-total-income", growth: null },
+      pnlUpdate: null, // Total has its own dedicated panels; skip perf-pnl mutation.
+    },
+    gold: {
+      panels: STD_PERF_PANELS,
+      pillLabels: ["P&L", "Yield", "Growth"],
+      hiddenPillIds: ["pill-yield", "pill-growth"],
+      mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
+      pnlUpdate: {
+        icon: "🥇",
+        headline: () => derived.gold.pnlAvailable
+          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
+          : "PnL unavailable",
+        headlineColor: () => derived.gold.pnlAvailable
+          ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
+          : "var(--dim)",
+        sub: () => derived.gold.pnlAvailable
+          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
+          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`,
+        rowFilter: "gold",
+        showAvgVsSell: true,
+      },
+    },
+    liquid: {
+      panels: STD_PERF_PANELS,
+      pillLabels: ["P&L", "Yield", "Growth"],
+      hiddenPillIds: [],
+      mathIds: { pnl: "math-liquid", yield: "math-yield", growth: null },
+      pnlUpdate: {
+        icon: "💧",
+        headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net`,
+        headlineColor: () => derived.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)",
+        sub: () => `${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}% · Bareeq + Real Estate combined`,
+        rowFilter: "liquid",
+        showAvgVsSell: false,
+      },
+    },
+    certs: {
+      // Note: VIEW_CONFIG.certs.cards is [], so the perf card is hidden for
+      // Certs. This entry is defensive — it should never be reached in practice.
+      panels: STD_PERF_PANELS,
+      pillLabels: ["P&L", "Yield", "Growth"],
+      hiddenPillIds: [],
+      mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
+      pnlUpdate: {
+        icon: "🥇",
+        headline: () => derived.gold.pnlAvailable
+          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
+          : "PnL unavailable",
+        headlineColor: () => derived.gold.pnlAvailable
+          ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
+          : "var(--dim)",
+        sub: () => derived.gold.pnlAvailable
+          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
+          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`,
+        rowFilter: "all",
+        showAvgVsSell: true,
+      },
+    },
+  };
+
+  const PILL_KEYS = ["pnl", "yield", "growth"] as const;
 
   function updatePerfTabsForView(view: string) {
-    const isGold  = view === "gold";
-    const isTotal = view === "total";
+    const cfg = PERF_CFG[view] ?? PERF_CFG.total;
 
-    const pillPnl    = el("pill-pnl");
-    const pillYield  = el("pill-yield");
-    const pillGrowth = el("pill-growth");
+    // 1. Relabel and show/hide pills.
+    PILL_KEYS.forEach((key, i) => {
+      const pill = el(`pill-${key}`);
+      if (!pill) return;
+      pill.innerHTML = cfg.pillLabels[i];
+      pill.style.display = cfg.hiddenPillIds.includes(`pill-${key}`) ? "none" : "";
+    });
 
-    if (isTotal) {
-      // Relabel pills, hide standard panels, show Total-specific panels.
-      if (pillPnl)    pillPnl.innerHTML    = PILL_LABELS_TOTAL[0];
-      if (pillYield)  pillYield.innerHTML  = PILL_LABELS_TOTAL[1];
-      if (pillGrowth) pillGrowth.innerHTML = PILL_LABELS_TOTAL[2];
-      if (pillYield)  pillYield.style.display  = "";
-      if (pillGrowth) pillGrowth.style.display = "";
-      STD_PERF_PANELS.forEach(id => { const p = el(id); if (p) p.style.display = "none"; });
-      // Show whichever Total panel corresponds to the current pill.
-      TOTAL_PERF_PANELS.forEach((id, i) => {
-        const p = el(id);
-        if (p) p.style.display = (["pnl","yield","growth"][i] === currentPerf) ? "block" : "none";
-      });
-    } else {
-      // Restore standard labels, hide Total-specific panels, show standard panels.
-      if (pillPnl)    pillPnl.innerHTML    = PILL_LABELS_STD[0];
-      if (pillYield)  pillYield.innerHTML  = PILL_LABELS_STD[1];
-      if (pillGrowth) pillGrowth.innerHTML = PILL_LABELS_STD[2];
-      TOTAL_PERF_PANELS.forEach(id => { const p = el(id); if (p) p.style.display = "none"; });
-      STD_PERF_PANELS.forEach((id, i) => {
-        const p = el(id);
-        if (p) p.style.display = (["pnl","yield","growth"][i] === currentPerf) ? "block" : "none";
-      });
-      // Gold hides Yield/Growth tabs.
-      if (pillYield)  pillYield.style.display  = isGold ? "none" : "";
-      if (pillGrowth) pillGrowth.style.display = isGold ? "none" : "";
-      if (isGold && currentPerf !== "pnl") {
-        (win.switchPerf as (type: string) => void)("pnl");
-      }
+    // 2. If the active pill is now hidden, reset to pnl.
+    //    switchPerf will handle the panel visibility update, so we can return.
+    if (cfg.hiddenPillIds.includes(`pill-${currentPerf}`)) {
+      (win.switchPerf as (type: string) => void)("pnl");
+      return;
+    }
+
+    // 3. Hide all panels from both sets, then reveal the one that matches the
+    //    active pill for this view.
+    [...TOTAL_PERF_PANELS, ...STD_PERF_PANELS].forEach(id => {
+      const p = el(id); if (p) p.style.display = "none";
+    });
+    const activeIdx = PILL_KEYS.indexOf(currentPerf as (typeof PILL_KEYS)[number]);
+    if (activeIdx >= 0) {
+      const p = el(cfg.panels[activeIdx]);
+      if (p) p.style.display = "block";
     }
   }
 
-  // The P&L tab of the Performance card defaults to a portfolio-wide
-  // headline (gold P&L) with every position in the breakdown — that stays
-  // as-is for the "total" (and "certs") views. For "gold" and "liquid" we
-  // narrow both the headline figure and the breakdown rows to just that
-  // asset group, so the widget reflects the toggle you're looking at.
   function updatePerfPnlForView(view: string) {
-    const icon = el("perf-pnl-icon");
-    const headline = el("gold-pnl");
-    const sub = el("gold-pnl-pct");
-    const avgVsSell = el("gold-avg-vs-sell");
-    const rows = document.querySelectorAll<HTMLElement>(
-      "#pnl-rows .pnl-row[data-perf-group]",
-    );
+    const cfg = PERF_CFG[view] ?? PERF_CFG.total;
+    if (!cfg.pnlUpdate) return; // view has its own dedicated panels
 
-    // Spot-check line (my avg cost/g vs. live sell + cashback/g) only makes
-    // sense while gold's headline is showing — hide it for the liquid view.
+    const { icon: iconChar, headline, headlineColor, sub, rowFilter, showAvgVsSell } = cfg.pnlUpdate;
+
+    const iconEl    = el("perf-pnl-icon");
+    const headlineEl = el("gold-pnl");
+    const subEl     = el("gold-pnl-pct");
+    const avgVsSell = el("gold-avg-vs-sell");
+    const rows      = document.querySelectorAll<HTMLElement>("#pnl-rows .pnl-row[data-perf-group]");
+
+    if (iconEl) iconEl.textContent = iconChar;
+    if (headlineEl) {
+      headlineEl.textContent = headline();
+      (headlineEl as HTMLElement).style.color = headlineColor();
+    }
+    if (subEl) subEl.textContent = sub();
+
     if (avgVsSell) {
-      if (view === "liquid") {
+      if (!showAvgVsSell) {
         avgVsSell.style.display = "none";
       } else {
         avgVsSell.style.display = "";
         const effectiveSell = derived.gold.pnlAvailable
           ? derived.gold.livePricePerGram! + derived.gold.cashbackPerGram
           : null;
-        avgVsSell.textContent =
-          effectiveSell !== null
-            ? `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: ${fmt2(effectiveSell)} EGP/g`
-            : `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: live price pending`;
-        (avgVsSell as HTMLElement).style.color =
-          effectiveSell !== null
-            ? effectiveSell >= derived.gold.avgCostPerGram
-              ? "var(--teal)"
-              : "var(--coral)"
-            : "var(--dim)";
+        avgVsSell.textContent = effectiveSell !== null
+          ? `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: ${fmt2(effectiveSell)} EGP/g`
+          : `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: live price pending`;
+        (avgVsSell as HTMLElement).style.color = effectiveSell !== null
+          ? effectiveSell >= derived.gold.avgCostPerGram ? "var(--teal)" : "var(--coral)"
+          : "var(--dim)";
       }
     }
 
-    if (view === "gold") {
-      if (icon) icon.textContent = "🥇";
-      if (headline) {
-        headline.textContent = derived.gold.pnlAvailable
-          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
-          : "PnL unavailable";
-        (headline as HTMLElement).style.color = derived.gold.pnlAvailable
-          ? derived.gold.netPnl! >= 0
-            ? "var(--teal)"
-            : "var(--coral)"
-          : "var(--dim)";
-      }
-      if (sub) {
-        sub.textContent = derived.gold.pnlAvailable
-          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
-          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`;
-      }
-      rows.forEach((row) => {
-        row.style.display =
-          row.getAttribute("data-perf-group") === "gold" ? "flex" : "none";
-      });
-    } else if (view === "liquid") {
-      if (icon) icon.textContent = "💧";
-      if (headline) {
-        headline.textContent = `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net`;
-        (headline as HTMLElement).style.color =
-          derived.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)";
-      }
-      if (sub) {
-        sub.textContent = `${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}% · Bareeq + Real Estate combined`;
-      }
-      rows.forEach((row) => {
-        row.style.display =
-          row.getAttribute("data-perf-group") === "liquid" ? "flex" : "none";
-      });
-    } else if (view === "total") {
-      // Total view renders its own Capital/Income/Growth panels — nothing to
-      // update inside the standard perf-pnl panel for this case.
-      return;
-    } else {
-      // certs: restore the default portfolio-wide headline and show every row.
-      if (icon) icon.textContent = "🥇";
-      if (headline) {
-        headline.textContent = derived.gold.pnlAvailable
-          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
-          : "PnL unavailable";
-        (headline as HTMLElement).style.color = derived.gold.pnlAvailable
-          ? derived.gold.netPnl! >= 0
-            ? "var(--teal)"
-            : "var(--coral)"
-          : "var(--dim)";
-      }
-      if (sub) {
-        sub.textContent = derived.gold.pnlAvailable
-          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
-          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`;
-      }
-      rows.forEach((row) => {
-        row.style.display = "flex";
-      });
-    }
+    rows.forEach((row) => {
+      const group = row.getAttribute("data-perf-group");
+      row.style.display = rowFilter === "all" || group === rowFilter ? "flex" : "none";
+    });
   }
 
   win.switchPerf = (type: string) => {
     currentPerf = type;
-    const keys = ["pnl", "yield", "growth"];
-    if (currentView === "total") {
-      // Route to Total-specific panels; standard panels stay hidden.
-      keys.forEach((t, i) => {
-        const p = el(TOTAL_PERF_PANELS[i]);
-        if (p) p.style.display = t === type ? "block" : "none";
-        el(`pill-${t}`)?.classList.toggle("active", t === type);
-      });
-    } else {
-      keys.forEach((t) => {
-        el(`perf-${t}`)!.style.display = t === type ? "block" : "none";
-        el(`pill-${t}`)?.classList.toggle("active", t === type);
-      });
+    const cfg = PERF_CFG[currentView] ?? PERF_CFG.total;
+    // Hide every panel from both sets, then reveal the one that matches the pill.
+    [...TOTAL_PERF_PANELS, ...STD_PERF_PANELS].forEach(id => {
+      const p = el(id); if (p) p.style.display = "none";
+    });
+    const activeIdx = PILL_KEYS.indexOf(type as (typeof PILL_KEYS)[number]);
+    if (activeIdx >= 0) {
+      const p = el(cfg.panels[activeIdx]);
+      if (p) p.style.display = "block";
     }
+    PILL_KEYS.forEach(t => el(`pill-${t}`)?.classList.toggle("active", t === type));
   };
 
   win.switchTab = (tab: string) => {
@@ -576,16 +595,9 @@ export function initDashboardBehavior(
   };
 
   win.togglePerfMath = () => {
-    let id: string;
-    if (currentView === "total") {
-      if (currentPerf === "pnl")    id = "math-total-capital";
-      else if (currentPerf === "yield") id = "math-total-income";
-      else return; // growth tab has no math section
-    } else if (currentPerf === "pnl") {
-      id = currentView === "liquid" ? "math-liquid" : "math-gold";
-    } else {
-      id = `math-${currentPerf}`;
-    }
+    const cfg = PERF_CFG[currentView] ?? PERF_CFG.total;
+    const id = cfg.mathIds[currentPerf as (typeof PILL_KEYS)[number]];
+    if (!id) return; // no math section for this tab
     // Close all math sections so only one is open at a time.
     ["math-gold", "math-liquid", "math-yield", "math-total-capital", "math-total-income"].forEach(
       (o) => { if (o !== id) el(o)?.classList.remove("open"); },
