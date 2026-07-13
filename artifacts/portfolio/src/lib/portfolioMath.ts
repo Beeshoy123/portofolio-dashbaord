@@ -76,6 +76,22 @@ export interface Derived {
     cost: number;
     pnl: number;
     pnlPct: number;
+    /** Unrealized capital gains: gold net PnL + liquid PnL (funds only, excl. certs at face value) */
+    capitalPnl: number;
+    /** Annual income from yield-bearing assets: cert interest + fund APY */
+    incomePnl: number;
+    /** (totalAnnualYield / totalValue) × 100 — portfolio-wide blended yield rate */
+    blendedYieldPct: number;
+    contributions: {
+      /** Gold's share of total capitalPnl (0 when live price unavailable) */
+      goldCapitalPct: number;
+      /** Liquid funds' share of total capitalPnl */
+      liquidCapitalPct: number;
+      /** ABR fund's share of total annual income */
+      abrIncomePct: number;
+      /** Certificates' share of total annual income */
+      certIncomePct: number;
+    };
   };
   yield: {
     totalMonthly: number;
@@ -191,6 +207,26 @@ export function computeDerived(portfolio: Portfolio): Derived {
 
   const totalYieldMonthly = abrMonthlyYield + totalMonthly;
 
+  // ── Whole-wallet performance fields (Total toggle) ───────────────────────
+  // Capital P&L: unrealized gains from price-appreciating assets only.
+  // Certs are always at face value, so their capital contribution is zero.
+  const capitalPnl = (goldNetPnl ?? 0) + liquidPnl;
+  const abrAnnualIncome = abrMonthlyYield * 12;
+  // Income P&L: what the wallet earns annually from yield-bearing assets.
+  const incomePnl = abrAnnualIncome + annualYield;
+  const totalBlendedYieldPct =
+    totalValue > 0 ? round1((totalYieldMonthly * 12 / totalValue) * 100) : 0;
+  // Attribution: each bucket's share of capitalPnl / incomePnl.
+  // Guarded against divide-by-zero and sign-flip edge cases.
+  const goldCapitalPct =
+    capitalPnl !== 0 ? ((goldNetPnl ?? 0) / capitalPnl) * 100 : 0;
+  const liquidCapitalPct =
+    capitalPnl !== 0 ? (liquidPnl / capitalPnl) * 100 : 0;
+  const abrIncomePct =
+    incomePnl > 0 ? (abrAnnualIncome / incomePnl) * 100 : 0;
+  const certIncomePct =
+    incomePnl > 0 ? (annualYield / incomePnl) * 100 : 0;
+
   const goldConcentrationPct = totalValue > 0 ? (goldValueForTotals / totalValue) * 100 : 0;
   const diversityScore = Math.max(0, Math.min(100, 100 - goldConcentrationPct));
 
@@ -264,6 +300,15 @@ export function computeDerived(portfolio: Portfolio): Derived {
       cost: totalCost,
       pnl: totalPnl,
       pnlPct: totalPnlPct,
+      capitalPnl,
+      incomePnl,
+      blendedYieldPct: totalBlendedYieldPct,
+      contributions: {
+        goldCapitalPct,
+        liquidCapitalPct,
+        abrIncomePct,
+        certIncomePct,
+      },
     },
     yield: {
       totalMonthly: totalYieldMonthly,
