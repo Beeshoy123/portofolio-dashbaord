@@ -109,7 +109,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     : GOLD_PRICE_UNAVAILABLE;
   // "Value" always falls back to cost basis when the live price isn't
   // available yet, so we never fabricate a market value.
-  const goldValueDisplay = fmt2(d.gold.value ?? d.gold.cost);
+  const goldValueDisplay = fmt2(d.gold.cost);
   const goldPnlPctDisplay = d.gold.pnlAvailable
     ? pctStr(d.gold.pnlPct!, 2)
     : "N/A";
