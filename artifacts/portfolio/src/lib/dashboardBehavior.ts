@@ -391,9 +391,9 @@ export function initDashboardBehavior(
       growthLabel: "Savings Growth · Month over Month",
       pnlUpdate: {
         icon: "💧",
-        headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net`,
+        headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net · ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%`,
         headlineColor: () => derived.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)",
-        sub: () => `${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}% · Bareeq + Real Estate combined`,
+        sub: () => ``,
         rowFilter: "liquid",
         showAvgVsSell: false,
       },
@@ -480,7 +480,11 @@ export function initDashboardBehavior(
       headlineEl.textContent = headline();
       (headlineEl as HTMLElement).style.color = headlineColor();
     }
-    if (subEl) subEl.textContent = sub();
+    const subText = sub();
+    if (subEl) {
+      subEl.textContent = subText;
+      subEl.style.display = subText ? "" : "none";
+    }
 
     if (avgVsSell) {
       if (!showAvgVsSell) {
