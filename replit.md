@@ -12,9 +12,11 @@ The **Project** run button executes these steps in order every time — not just
 2. **`artifacts/api-server: API Server`** — Express API on port 8080. Starts only after step 1 succeeds.
 3. **`artifacts/portfolio: web`** — Vite dev server on port 21113 (`/`). Starts only after step 2 is up.
 
-**Empty state is expected and correct.** After schema push, the database has empty tables. The API returns `404 NOT_SEEDED` and the dashboard shows "No data found" until data is imported. The startup script never seeds, restores, or touches data — that's intentional.
+**Empty state is expected and correct — waiting for offline SQL backup.** After schema push, the database has empty tables. The API returns `404 NOT_SEEDED` and the dashboard shows "No data found — the database is empty" with placeholder zeros. This is the correct state until the real backup is imported. The startup script never seeds, restores, or touches data — that's intentional.
 
-To restore data: upload your offline SQL backup, ask the agent to import it directly into the database, then **delete the uploaded file immediately**. The agent must never keep the SQL file on disk after importing.
+**Current status: awaiting the user's offline SQL backup.** Do not seed, fabricate, or populate any data. Just run the project as-is and wait.
+
+To restore data when ready: the user will upload their offline `.sql` backup file, then ask the agent to pipe it directly into Postgres via `psql $DATABASE_URL`, then delete the uploaded file immediately. The agent must never keep the SQL file on disk after importing.
 
 To export data: ask the agent to generate a temporary SQL dump, download it, then ask the agent to delete it. Temporary export files generated on request are fine — they just must not be committed to GitHub or left in the project long-term.
 
