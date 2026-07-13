@@ -265,6 +265,9 @@ export function initDashboardBehavior(
 
   win.setView = (view: string) => {
     currentView = view;
+    ["math-gold", "math-liquid", "math-yield", "math-total-capital", "math-total-income", "math-total"].forEach(
+      (id) => el(id)?.classList.remove("open"),
+    );
     const cfg = VIEW_CONFIG[view] || VIEW_CONFIG.total;
     el("view-label")!.textContent = cfg.label;
 
