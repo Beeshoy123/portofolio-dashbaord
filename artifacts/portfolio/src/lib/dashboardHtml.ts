@@ -196,16 +196,16 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     ? `<div class="math-line"><span class="math-label">Sell Price:</span><span class="math-calc">24K · goldbullioneg.com</span><span class="math-result">${fmt(d.gold.livePricePerGram!)} EGP/g</span></div>
   <div class="math-line"><span class="math-label">Current Value:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt(d.gold.livePricePerGram!)} EGP/g</span><span class="math-result">= ${fmt(d.gold.value!)} EGP</span></div>
   <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubCost} EGP/g</span><span class="math-result">= ${fmt(d.gold.cost)} EGP (mfg fee included)</span></div>
-  <div class="math-line"><span class="math-label">Raw P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">${d.gold.rawPnl! >= 0 ? "+" : ""}${fmt(d.gold.rawPnl!)} EGP</span></div>
+  <div class="math-line"><span class="math-label">Raw PnL:</span><span class="math-calc">value − cost</span><span class="math-result">${d.gold.rawPnl! >= 0 ? "+" : ""}${fmt(d.gold.rawPnl!)} EGP</span></div>
   <div class="math-line"><span class="math-label">Sell Cashback:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt2(d.gold.cashbackPerGram)} EGP/g</span><span class="math-result">= ${fmt(d.gold.cashback!)} EGP (refunded on sell)</span></div>
   <div class="math-divider"></div>
-  <div class="math-line math-total${d.gold.netPnl! >= 0 ? "" : " neg"}"><span class="math-label">Net P&amp;L:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</span></div>`
+  <div class="math-line math-total${d.gold.netPnl! >= 0 ? "" : " neg"}"><span class="math-label">Net PnL:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</span></div>`
     : `<div class="math-line"><span class="math-label">Current Value:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubMkt}</span><span class="math-result">${GOLD_PRICE_UNAVAILABLE}</span></div>
   <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubCost} EGP/g</span><span class="math-result">= ${fmt(d.gold.cost)} EGP (mfg fee included)</span></div>
-  <div class="math-line"><span class="math-label">Raw P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">N/A</span></div>
+  <div class="math-line"><span class="math-label">Raw PnL:</span><span class="math-calc">value − cost</span><span class="math-result">N/A</span></div>
   <div class="math-line"><span class="math-label">Sell Cashback:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt2(d.gold.cashbackPerGram)} EGP/g</span><span class="math-result">added on sell, not cost basis</span></div>
   <div class="math-divider"></div>
-  <div class="math-line math-total"><span class="math-label">Net P&amp;L:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${GOLD_PNL_UNAVAILABLE}</span></div>`;
+  <div class="math-line math-total"><span class="math-label">Net PnL:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${GOLD_PNL_UNAVAILABLE}</span></div>`;
 
   return `
 <div id="dashboard-root">
@@ -256,7 +256,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
         <div class="card-lbl"><span id="hero-title">Total Portfolio Value</span> <span class="info-icon" onclick="toggleMath('math-total')" title="Show calculation">ℹ</span></div>
         <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px" id="hero-sublabel">Total Cost Basis · EGP</div>
         <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em" id="s-total">${fmt(d.total.cost)} EGP</div>
-        <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} Market Value: ${fmt(d.total.value)} EGP (net P&amp;L ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
+        <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} Market Value: ${fmt(d.total.value)} EGP (net PnL ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>
       </div>
       <div id="rate-box-container" style="text-align:right;flex-shrink:0">
@@ -271,7 +271,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="card-lbl">Performance <span class="info-icon" id="perf-info-btn" onclick="togglePerfMath()" title="Show calculation">ℹ</span></div>
       <div style="display:flex;gap:0;background:var(--bg);border-radius:20px;padding:3px">
-        <button class="perf-pill active" id="pill-pnl" onclick="switchPerf('pnl')">P&amp;L</button>
+        <button class="perf-pill active" id="pill-pnl" onclick="switchPerf('pnl')">PnL</button>
         <button class="perf-pill" id="pill-yield" onclick="switchPerf('yield')">Yield</button>
         <button class="perf-pill" id="pill-growth" onclick="switchPerf('growth')">Growth</button>
       </div>
@@ -308,13 +308,13 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       <div class="math-section" id="math-liquid">
         <div class="math-line"><span class="math-label">Bareeq:</span><span class="math-calc">${fmt(d.abr.unitsHeld)} units × ${fmt2(d.abr.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.abr.value))} EGP</span></div>
         <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.abr.costBasisTotal)} EGP</span></div>
-        <div class="math-line math-total${d.abr.pnl < 0 ? " neg" : ""}"><span class="math-label">Bareeq P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">${d.abr.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.abr.pnl))} EGP (${pctStr(d.abr.pnlPct)})</span></div>
+        <div class="math-line math-total${d.abr.pnl < 0 ? " neg" : ""}"><span class="math-label">Bareeq PnL:</span><span class="math-calc">value − cost</span><span class="math-result">${d.abr.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.abr.pnl))} EGP (${pctStr(d.abr.pnlPct)})</span></div>
         <div class="math-divider"></div>
         <div class="math-line"><span class="math-label">Real Est.:</span><span class="math-calc">${fmt(d.re.unitsHeld)} units × ${fmt2(d.re.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.re.value))} EGP</span></div>
         <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.re.costBasisTotal)} EGP</span></div>
-        <div class="math-line math-total${d.re.pnl < 0 ? " neg" : ""}"><span class="math-label">Real Est. P&amp;L:</span><span class="math-calc">value − cost</span><span class="math-result">${d.re.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.re.pnl))} EGP (${pctStr(d.re.pnlPct)})</span></div>
+        <div class="math-line math-total${d.re.pnl < 0 ? " neg" : ""}"><span class="math-label">Real Est. PnL:</span><span class="math-calc">value − cost</span><span class="math-result">${d.re.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.re.pnl))} EGP (${pctStr(d.re.pnlPct)})</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total${d.liquid.pnl < 0 ? " neg" : ""}"><span class="math-label">Net P&amp;L:</span><span class="math-calc">Bareeq + Real Est. combined</span><span class="math-result">${d.liquid.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.liquid.pnl))} EGP (${pctStr(d.liquid.pnlPct)})</span></div>
+        <div class="math-line math-total${d.liquid.pnl < 0 ? " neg" : ""}"><span class="math-label">Net PnL:</span><span class="math-calc">Bareeq + Real Est. combined</span><span class="math-result">${d.liquid.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.liquid.pnl))} EGP (${pctStr(d.liquid.pnlPct)})</span></div>
       </div>
     </div>
 
@@ -364,11 +364,11 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       <div style="font-size:9.5px;color:var(--dim);margin-top:4px;padding:6px 0 0;border-top:1px solid var(--edge)">📜 Certificates · held at face value — interest income is in the Income tab</div>
       <div class="math-section" id="math-total-capital">
         ${d.gold.pnlAvailable
-          ? `<div class="math-line"><span class="math-label">Gold P&amp;L:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result" style="color:${goldCapColor}">${goldCapLabel}</span></div>`
-          : `<div class="math-line"><span class="math-label">Gold P&amp;L:</span><span class="math-calc">live price pending</span><span class="math-result" style="color:var(--dim)">N/A</span></div>`}
-        <div class="math-line"><span class="math-label">Liquid P&amp;L:</span><span class="math-calc">Bareeq + Real Estate combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
+          ? `<div class="math-line"><span class="math-label">Gold PnL:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result" style="color:${goldCapColor}">${goldCapLabel}</span></div>`
+          : `<div class="math-line"><span class="math-label">Gold PnL:</span><span class="math-calc">live price pending</span><span class="math-result" style="color:var(--dim)">N/A</span></div>`}
+        <div class="math-line"><span class="math-label">Liquid PnL:</span><span class="math-calc">Bareeq + Real Estate combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total${d.total.pnl < 0 ? " neg" : ""}"><span class="math-label">Total Capital P&amp;L:</span><span class="math-calc">gold + liquid</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
+        <div class="math-line math-total${d.total.pnl < 0 ? " neg" : ""}"><span class="math-label">Total Capital PnL:</span><span class="math-calc">gold + liquid</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
       </div>
     </div>
 

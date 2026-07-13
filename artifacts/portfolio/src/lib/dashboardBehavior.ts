@@ -90,10 +90,10 @@ export function initDashboardBehavior(
           ml("Sell Price:", "24K · goldbullioneg.com", `${fmt(derived.gold.livePricePerGram!)} EGP/g`),
           ml("Current Value:", `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.livePricePerGram!)} EGP/g`, `= ${fmt(derived.gold.value!)} EGP`),
           ml("Cost Basis:", `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`, `= ${fmt(derived.gold.cost)} EGP (mfg fee incl.)`),
-          ml("Raw P&amp;L:", "value − cost", `${derived.gold.rawPnl! >= 0 ? "+" : ""}${fmt(derived.gold.rawPnl!)} EGP`),
+          ml("Raw PnL:", "value − cost", `${derived.gold.rawPnl! >= 0 ? "+" : ""}${fmt(derived.gold.rawPnl!)} EGP`),
           ml("Sell Cashback:", `${fmt(derived.gold.gramsHeld)}g × ${fmt2(derived.gold.cashbackPerGram)} EGP/g`, `= ${fmt(derived.gold.cashback!)} EGP (refunded on sell)`),
           divider(),
-          ml("Net P&amp;L:", "(value + cashback) − cost", `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP`, derived.gold.netPnl! >= 0 ? "math-total" : "math-total neg"),
+          ml("Net PnL:", "(value + cashback) − cost", `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP`, derived.gold.netPnl! >= 0 ? "math-total" : "math-total neg"),
         ].join("");
       }
       return [
@@ -107,7 +107,7 @@ export function initDashboardBehavior(
           `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`,
           `= ${fmt(derived.gold.cost)} EGP (mfg fee included, paid at purchase)`,
         ),
-        ml("Raw P&amp;L:", "value − cost", "N/A"),
+        ml("Raw PnL:", "value − cost", "N/A"),
         ml(
           "Sell Cashback:",
           `${fmt(derived.gold.gramsHeld)}g × ${derived.gold.cashbackPerGram} EGP/g`,
@@ -115,7 +115,7 @@ export function initDashboardBehavior(
         ),
         divider(),
         ml(
-          "Net P&amp;L:",
+          "Net PnL:",
           "(value + cashback) − cost",
           "PnL unavailable — live price feature in development",
           "math-total",
@@ -147,7 +147,7 @@ export function initDashboardBehavior(
           `= ${fmt(derived.liquid.cost)} EGP`,
         ),
         ml(
-          "P&amp;L:",
+          "PnL:",
           `${fmt(derived.liquid.value)} − ${fmt(derived.liquid.cost)}`,
           `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP (${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
           derived.liquid.pnl >= 0 ? "math-total" : "math-total neg",
@@ -185,7 +185,7 @@ export function initDashboardBehavior(
       ml("Total Value:", "", `${fmt(derived.total.value)} EGP`, "math-total"),
       ml("Total Cost:", "", `~${fmt(derived.total.cost)} EGP`),
       ml(
-        "P&amp;L:",
+        "PnL:",
         "",
         `${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} (${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
         derived.total.pnl >= 0 ? "math-total" : "math-total neg",
@@ -212,7 +212,7 @@ export function initDashboardBehavior(
       title: "Total Portfolio Value",
       sub: "Total Cost Basis · EGP",
       val: `${fmt(derived.total.cost)} EGP`,
-      chg: `Market Value: ${fmt(derived.total.value)} EGP (net P&L ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} EGP, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
+      chg: `Market Value: ${fmt(derived.total.value)} EGP (net PnL ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} EGP, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`
         : `Gold: Live price unavailable<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`,
@@ -223,7 +223,7 @@ export function initDashboardBehavior(
       sub: "Cost Basis · EGP (mfg fee incl.)",
       val: `${fmt(derived.gold.cost)} EGP`,
       chg: derived.gold.pnlAvailable
-        ? `Market Value: ${fmt(derived.gold.value!)} EGP (net P&L ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP, ${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
+        ? `Market Value: ${fmt(derived.gold.value!)} EGP (net PnL ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP, ${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
         : "PnL unavailable — live price feature in development",
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>Cashback: ${fmt2(derived.gold.cashbackPerGram)} EGP/g on sell`
@@ -238,7 +238,7 @@ export function initDashboardBehavior(
       title: "Liquid Assets · Funds",
       sub: "Cost Basis · EGP",
       val: `${fmt(derived.liquid.cost)} EGP`,
-      chg: `Market Value: ${fmt(derived.liquid.value)} EGP (net P&L ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
+      chg: `Market Value: ${fmt(derived.liquid.value)} EGP (net PnL ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
       rates: ``,
       sentiment: derived.liquid.pnl >= 0 ? "up" : "down",
     },
@@ -364,7 +364,7 @@ export function initDashboardBehavior(
     },
     gold: {
       panels: STD_PERF_PANELS,
-      pillLabels: ["P&L", "Yield", "Growth"],
+      pillLabels: ["PnL", "Yield", "Growth"],
       hiddenPillIds: ["pill-yield", "pill-growth"],
       mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
@@ -383,7 +383,7 @@ export function initDashboardBehavior(
     },
     liquid: {
       panels: STD_PERF_PANELS,
-      pillLabels: ["P&L", "Yield", "Growth"],
+      pillLabels: ["PnL", "Yield", "Growth"],
       hiddenPillIds: ["pill-yield"],
       mathIds: { pnl: "math-liquid", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
@@ -400,7 +400,7 @@ export function initDashboardBehavior(
       // VIEW_CONFIG.certs.cards is [] — perf card is hidden for Certs.
       // This entry is defensive; it should never be reached in practice.
       panels: STD_PERF_PANELS,
-      pillLabels: ["P&L", "Yield", "Growth"],
+      pillLabels: ["PnL", "Yield", "Growth"],
       hiddenPillIds: [],
       mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
@@ -799,7 +799,7 @@ export function initDashboardBehavior(
     const label = el("pnl-sort-label");
     const labels: Record<string, string> = {
       value: "By Value",
-      pnl: "By P&L",
+      pnl: "By PnL",
       pct: "By %",
       name: "By Name",
     };
