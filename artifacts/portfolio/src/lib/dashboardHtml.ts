@@ -259,10 +259,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
         <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} Market Value: ${fmt(d.total.value)} EGP (net PnL ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>
       </div>
-      <div id="rate-box-container" style="text-align:right;flex-shrink:0">
-        <div style="font-size:10px;color:#5a7a74;text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:4px">Live Rates</div>
-        <div style="font-size:11px;color:#c8d4cf;line-height:1.9" id="rate-box">${rateBoxContent}</div>
-      </div>
+      <div id="rate-box-container" style="display:none"></div>
     </div>
   </div>
 

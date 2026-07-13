@@ -307,10 +307,6 @@ export function initDashboardBehavior(
       heroChg.classList.toggle("pos", hcfg.sentiment !== "down");
       heroChg.classList.toggle("neg", hcfg.sentiment === "down");
     }
-    const rateBox = el("rate-box");
-    if (rateBox) rateBox.innerHTML = hcfg.rates;
-    const rateBoxContainer = el("rate-box-container");
-    if (rateBoxContainer) rateBoxContainer.style.display = view === "liquid" ? "none" : "";
     const mathBody = el("hero-math-body");
     if (mathBody) mathBody.innerHTML = heroMath(view);
 
