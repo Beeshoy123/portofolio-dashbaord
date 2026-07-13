@@ -334,7 +334,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     <!-- GROWTH VIEW -->
     <div id="perf-growth" style="display:none">
       <div style="margin-bottom:10px">
-        <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">Savings Growth · Month over Month</div>
+        <div id="growth-view-label" style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">Savings Growth · Month over Month</div>
         <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;margin-top:4px" id="growth-latest" class="pos">${fmt(d.abr.value)} EGP</div>
         <div style="font-size:10.5px;color:var(--teal);margin-top:2px" id="growth-delta"></div>
       </div>
@@ -391,27 +391,6 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       </div>
     </div>
 
-    <!-- TOTAL: GROWTH VIEW — total wallet value tracked via snapshots -->
-    <div id="perf-total-growth" style="display:none">
-      <div style="margin-bottom:10px">
-        <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">Total Wallet · Month over Month</div>
-        <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;margin-top:4px" id="total-growth-latest" class="pos">${fmt(d.total.value)} EGP</div>
-        <div style="font-size:10.5px;color:var(--teal);margin-top:2px" id="total-growth-delta"></div>
-      </div>
-      <div style="position:relative;width:100%">
-        <svg id="sparkline-svg-total" width="100%" height="90" viewBox="0 0 300 90" preserveAspectRatio="none" style="overflow:visible;display:block">
-          <defs><linearGradient id="sparkGrad-total" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0f6a5e" stop-opacity=".5"></stop><stop offset="100%" stop-color="#0f6a5e" stop-opacity="0"></stop></linearGradient></defs>
-          <path id="spark-fill-total" d="M 8 78 C 150 78, 150 14, 292 14 L 292 90 L 8 90 Z" fill="url(#sparkGrad-total)"></path>
-          <path id="spark-line-total" d="M 8 78 C 150 78, 150 14, 292 14" fill="none" stroke="#0f6a5e" stroke-width="2.5" stroke-linecap="round"></path>
-          <circle id="spark-dot-total" cx="292" cy="14" r="4" fill="#0f6a5e"></circle>
-        </svg>
-        <div id="spark-labels-total" style="display:flex;justify-content:space-between;margin-top:4px"></div>
-      </div>
-      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:9.5px;color:var(--dim)" id="total-growth-snapcount">${p.snapshots.length} snapshots</div>
-        <button onclick="saveGrowthSnapshot()" style="border:none;background:var(--teal-soft);color:var(--teal);border-radius:8px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer">+ Save Snapshot</button>
-      </div>
-    </div>
   </div>
 
   <!-- ③ WALLET HEALTH -->

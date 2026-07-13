@@ -319,13 +319,13 @@ export function initDashboardBehavior(
   };
 
   // Panel ID tuples — one entry per pill in [pnl, yield, growth] order.
-  const TOTAL_PERF_PANELS: [string, string, string] = ["perf-total-capital", "perf-total-income", "perf-total-growth"];
+  // Both Total and standard views share the single perf-growth panel;
+  // its heading text is swapped by refreshGrowthLabel() on toggle.
+  const TOTAL_PERF_PANELS: [string, string, string] = ["perf-total-capital", "perf-total-income", "perf-growth"];
   const STD_PERF_PANELS:   [string, string, string] = ["perf-pnl",           "perf-yield",        "perf-growth"];
 
   // ── Single source of truth for the Performance card per view ─────────────
-  // To add/change a view's behaviour, edit ONE entry here.  The four functions
-  // below (updatePerfTabsForView, updatePerfPnlForView, switchPerf,
-  // togglePerfMath) are now thin loops over this config.
+  // To add/change a view's behaviour, edit ONE entry here.
   interface PerfViewConfig {
     /** Panel IDs mapped to [pnl, yield, growth] pills. */
     panels: [string, string, string];
@@ -335,6 +335,8 @@ export function initDashboardBehavior(
     hiddenPillIds: string[];
     /** Math section to open per pill; null = no section for that tab. */
     mathIds: Record<"pnl" | "yield" | "growth", string | null>;
+    /** Heading shown inside the shared growth panel for this view. */
+    growthLabel: string;
     /**
      * How to mutate the shared perf-pnl panel.
      * null = skip — this view has its own dedicated panels.
@@ -355,13 +357,15 @@ export function initDashboardBehavior(
       pillLabels: ["Capital", "Income", "Growth"],
       hiddenPillIds: [],
       mathIds: { pnl: "math-total-capital", yield: "math-total-income", growth: null },
-      pnlUpdate: null, // Total has its own dedicated panels; skip perf-pnl mutation.
+      growthLabel: "Total Wallet · Month over Month",
+      pnlUpdate: null,
     },
     gold: {
       panels: STD_PERF_PANELS,
       pillLabels: ["P&L", "Yield", "Growth"],
       hiddenPillIds: ["pill-yield", "pill-growth"],
       mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
+      growthLabel: "Savings Growth · Month over Month",
       pnlUpdate: {
         icon: "🥇",
         headline: () => derived.gold.pnlAvailable
@@ -382,6 +386,7 @@ export function initDashboardBehavior(
       pillLabels: ["P&L", "Yield", "Growth"],
       hiddenPillIds: [],
       mathIds: { pnl: "math-liquid", yield: "math-yield", growth: null },
+      growthLabel: "Savings Growth · Month over Month",
       pnlUpdate: {
         icon: "💧",
         headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net`,
@@ -392,12 +397,13 @@ export function initDashboardBehavior(
       },
     },
     certs: {
-      // Note: VIEW_CONFIG.certs.cards is [], so the perf card is hidden for
-      // Certs. This entry is defensive — it should never be reached in practice.
+      // VIEW_CONFIG.certs.cards is [] — perf card is hidden for Certs.
+      // This entry is defensive; it should never be reached in practice.
       panels: STD_PERF_PANELS,
       pillLabels: ["P&L", "Yield", "Growth"],
       hiddenPillIds: [],
       mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
+      growthLabel: "Savings Growth · Month over Month",
       pnlUpdate: {
         icon: "🥇",
         headline: () => derived.gold.pnlAvailable
@@ -416,6 +422,12 @@ export function initDashboardBehavior(
   };
 
   const PILL_KEYS = ["pnl", "yield", "growth"] as const;
+
+  /** Swaps the heading text inside the shared growth panel to match the active view. */
+  function refreshGrowthLabel() {
+    const labelEl = el("growth-view-label");
+    if (labelEl) labelEl.textContent = (PERF_CFG[currentView] ?? PERF_CFG.total).growthLabel;
+  }
 
   function updatePerfTabsForView(view: string) {
     const cfg = PERF_CFG[view] ?? PERF_CFG.total;
@@ -445,6 +457,8 @@ export function initDashboardBehavior(
       const p = el(cfg.panels[activeIdx]);
       if (p) p.style.display = "block";
     }
+    // Keep growth panel label in sync whenever the view changes.
+    if (currentPerf === "growth") refreshGrowthLabel();
   }
 
   function updatePerfPnlForView(view: string) {
@@ -502,6 +516,7 @@ export function initDashboardBehavior(
       if (p) p.style.display = "block";
     }
     PILL_KEYS.forEach(t => el(`pill-${t}`)?.classList.toggle("active", t === type));
+    if (type === "growth") refreshGrowthLabel();
   };
 
   win.switchTab = (tab: string) => {
@@ -882,17 +897,14 @@ export function initDashboardBehavior(
   };
 
   win.saveGrowthSnapshot = async () => {
-    // Disable the Save button in whichever growth panel is currently visible.
-    const btns = document.querySelectorAll<HTMLButtonElement>(
-      "#perf-growth button, #perf-total-growth button",
-    );
-    btns.forEach((b) => { b.disabled = true; });
+    const btn = document.querySelector<HTMLButtonElement>("#perf-growth button");
+    if (btn) btn.disabled = true;
     try {
-      // Total view saves the whole-wallet value; Liquid view saves ABR value.
+      // Total view saves the whole-wallet value; other views save ABR value.
       const snapValue = currentView === "total" ? derived.total.value : derived.abr.value;
       await callbacks.createSnapshot(snapValue);
     } finally {
-      btns.forEach((b) => { b.disabled = false; });
+      if (btn) btn.disabled = false;
     }
   };
 
@@ -1089,15 +1101,15 @@ export function initDashboardBehavior(
   }
 
   type SnapRow = { snapshotDate: string; value: number };
-  function renderSparklineInto(idPrefix: string, snaps: SnapRow[]) {
+  function renderSparklineInto(snaps: SnapRow[]) {
     if (snaps.length === 0) return;
 
     const latest = snaps[snaps.length - 1];
     const prev   = snaps.length > 1 ? snaps[snaps.length - 2] : null;
 
-    const latestEl = el(`${idPrefix}growth-latest`);
+    const latestEl = el("growth-latest");
     if (latestEl) latestEl.textContent = `${fmt(latest.value)} EGP`;
-    const deltaEl = el(`${idPrefix}growth-delta`);
+    const deltaEl = el("growth-delta");
     if (deltaEl) {
       if (prev) {
         const delta = latest.value - prev.value;
@@ -1107,7 +1119,7 @@ export function initDashboardBehavior(
         deltaEl.textContent = "First snapshot recorded";
       }
     }
-    const snapCountEl = el(`${idPrefix}growth-snapcount`);
+    const snapCountEl = el("growth-snapcount");
     if (snapCountEl) snapCountEl.textContent = `${snaps.length} snapshots`;
 
     const values = snaps.map((s) => s.value);
@@ -1122,22 +1134,21 @@ export function initDashboardBehavior(
       y: height - padBottom - ((s.value - min) / range) * (height - padTop - padBottom),
     }));
 
-    const suffix = idPrefix === "total-" ? "-total" : "";
     const linePath = points
       .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
       .join(" ");
     const fillPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${height} L ${points[0].x.toFixed(1)} ${height} Z`;
 
-    el(`spark-line${suffix}`)?.setAttribute("d", linePath);
-    el(`spark-fill${suffix}`)?.setAttribute("d", fillPath);
-    const dotEl = el(`spark-dot${suffix}`);
+    el("spark-line")?.setAttribute("d", linePath);
+    el("spark-fill")?.setAttribute("d", fillPath);
+    const dotEl = el("spark-dot");
     if (dotEl) {
       dotEl.setAttribute("cx", String(points[points.length - 1].x));
       dotEl.setAttribute("cy", String(points[points.length - 1].y));
     }
     const fmtDate = (s: string) =>
       new Date(s).toLocaleDateString("en-US", { month: "short", year: "2-digit" });
-    const labelsEl = el(`spark-labels${suffix}`);
+    const labelsEl = el("spark-labels");
     if (labelsEl) {
       labelsEl.innerHTML =
         `<span style="font-size:9px;color:var(--dim);font-weight:600">${fmtDate(snaps[0].snapshotDate)}</span>` +
@@ -1149,9 +1160,7 @@ export function initDashboardBehavior(
     const snaps = [...portfolio.snapshots].sort(
       (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
     );
-    // Render into both the standard Liquid growth panel and the Total growth panel.
-    renderSparklineInto("", snaps);
-    renderSparklineInto("total-", snaps);
+    renderSparklineInto(snaps);
   }
 
   function animateRings() {
