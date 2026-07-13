@@ -22,6 +22,24 @@ function heatColor(pct: number): string {
   return "#c94035";
 }
 
+/** Horizontal attribution bar row used in the Total-view Capital and Income panels. */
+function attribBar(
+  icon: string, label: string, sub: string,
+  barPct: number, valLabel: string, valColor: string,
+): string {
+  const w = Math.min(100, Math.abs(barPct));
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+    <div style="width:68px;flex-shrink:0">
+      <div style="font-size:10.5px;font-weight:700;color:var(--fg)">${icon} ${label}</div>
+      <div style="font-size:9px;color:var(--dim);margin-top:1px">${sub}</div>
+    </div>
+    <div style="flex:1;background:var(--edge);border-radius:4px;height:5px;overflow:hidden">
+      <div style="height:100%;width:${w}%;background:${valColor};border-radius:4px;transition:width .5s ease"></div>
+    </div>
+    <div style="min-width:88px;text-align:right;font-size:10px;font-weight:700;color:${valColor}">${valLabel}</div>
+  </div>`;
+}
+
 // Donut ring built from four segments (gold, abr, re, cert) as fractions of
 // a circle with r=28 (circumference ≈ 175.93).
 function buildDonutRing(d: Derived): string {
@@ -157,6 +175,22 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   const goldPnlRowRight = d.gold.pnlAvailable
     ? `<div class="pnl-row-val" style="color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"}">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</div><div style="font-size:9.5px;color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.gold.pnlPct!)} (sell + cashback)</div>`
     : `<div class="pnl-row-val" style="color:var(--dim)">N/A</div><div style="font-size:9.5px;color:var(--dim);font-weight:600">live price pending</div>`;
+  // ── Total-view performance panel helpers ─────────────────────────────────
+  const totCapColor = d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)";
+  const totCapLabel = `${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP net`;
+  const totCapPctStr = pctStr(d.total.pnlPct);
+  const goldCapLabel = d.gold.pnlAvailable
+    ? `${(d.gold.netPnl ?? 0) >= 0 ? "+" : ""}${fmt(d.gold.netPnl ?? 0)} EGP`
+    : "live price pending";
+  const goldCapColor = d.gold.pnlAvailable
+    ? (d.gold.netPnl ?? 0) >= 0 ? "var(--teal)" : "var(--coral)"
+    : "var(--dim)";
+  const liquidCapLabel = `${d.liquid.pnl >= 0 ? "+" : ""}${fmt(d.liquid.pnl)} EGP`;
+  const liquidCapColor = d.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)";
+  const abrAnnualIncEgp = fmt(Math.round(d.abr.monthlyYield * 12));
+  const certAnnualIncEgp = fmt(Math.round(d.certTotals.annualYield));
+  const totIncomeMonthly = `${d.yield.totalMonthly >= 0 ? "+" : ""}${fmt(Math.round(d.yield.totalMonthly))}`;
+
   // math-gold expandable section.
   const mathGoldRows = d.gold.pnlAvailable
     ? `<div class="math-line"><span class="math-label">Sell Price:</span><span class="math-calc">24K · goldbullioneg.com</span><span class="math-result">${fmt(d.gold.livePricePerGram!)} EGP/g</span></div>
@@ -315,6 +349,66 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       </div>
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:9.5px;color:var(--dim)" id="growth-snapcount">${p.snapshots.length} snapshots</div>
+        <button onclick="saveGrowthSnapshot()" style="border:none;background:var(--teal-soft);color:var(--teal);border-radius:8px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer">+ Save Snapshot</button>
+      </div>
+    </div>
+
+    <!-- TOTAL: CAPITAL VIEW — whole-wallet capital gains, shown only when Total toggle is active -->
+    <div id="perf-total-capital" style="display:none">
+      <div style="font-size:22px;margin-bottom:6px">💼</div>
+      <div style="font-family:Sora,sans-serif;font-size:20px;font-weight:800;color:${totCapColor}">${totCapLabel}</div>
+      <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">${totCapPctStr} · vs ${fmt(d.total.cost)} EGP deployed</div>
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px">Return Attribution</div>
+      ${attribBar("🥇", "Gold", d.gold.pnlAvailable ? `${fmt(d.gold.gramsHeld)}g physical` : "live price pending", d.total.contributions.goldCapitalPct, goldCapLabel, goldCapColor)}
+      ${attribBar("💧", "Liquid", "Bareeq + Real Est.", d.total.contributions.liquidCapitalPct, liquidCapLabel, liquidCapColor)}
+      <div style="font-size:9.5px;color:var(--dim);margin-top:4px;padding:6px 0 0;border-top:1px solid var(--edge)">📜 Certificates · held at face value — interest income is in the Income tab</div>
+      <div class="math-section" id="math-total-capital">
+        ${d.gold.pnlAvailable
+          ? `<div class="math-line"><span class="math-label">Gold P&amp;L:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result" style="color:${goldCapColor}">${goldCapLabel}</span></div>`
+          : `<div class="math-line"><span class="math-label">Gold P&amp;L:</span><span class="math-calc">live price pending</span><span class="math-result" style="color:var(--dim)">N/A</span></div>`}
+        <div class="math-line"><span class="math-label">Liquid P&amp;L:</span><span class="math-calc">Bareeq + Real Estate combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
+        <div class="math-divider"></div>
+        <div class="math-line math-total${d.total.pnl < 0 ? " neg" : ""}"><span class="math-label">Total Capital P&amp;L:</span><span class="math-calc">gold + liquid</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
+      </div>
+    </div>
+
+    <!-- TOTAL: INCOME VIEW — yield breakdown across all income-bearing assets -->
+    <div id="perf-total-income" style="display:none">
+      <div style="font-size:22px;margin-bottom:6px">💹</div>
+      <div style="font-family:'Sora',sans-serif;font-size:28px;font-weight:800;color:var(--teal)">${totIncomeMonthly} EGP/mo</div>
+      <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">ABR ${fmt(d.abr.apyPercent)}% + NBE ${d.certTotals.weightedAvgRate.toFixed(1)}% (weighted avg)</div>
+      <div style="font-size:10.5px;font-weight:700;margin-top:4px;color:var(--teal)">${d.total.blendedYieldPct.toFixed(1)}% blended annual yield on total wallet</div>
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px">Income Breakdown</div>
+      ${attribBar("🏦", "Bareeq", `${fmt(d.abr.apyPercent)}% APY`, d.total.contributions.abrIncomePct, `${abrAnnualIncEgp} EGP/yr`, "var(--teal)")}
+      ${attribBar("📜", "Certs", `${d.certTotals.weightedAvgRate.toFixed(1)}% avg APY`, d.total.contributions.certIncomePct, `${certAnnualIncEgp} EGP/yr`, "#8b6fb0")}
+      <div class="math-section" id="math-total-income">
+        <div class="math-line"><span class="math-label">Bareeq:</span><span class="math-calc">${fmt(d.abr.value)} × ${fmt(d.abr.apyPercent)}% ÷ 12</span><span class="math-result">= ${fmt2(d.abr.monthlyYield)} EGP/mo</span></div>
+        <div class="math-line"><span class="math-label">NBE Certs:</span><span class="math-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% ÷ 12</span><span class="math-result">= ${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
+        <div class="math-divider"></div>
+        <div class="math-line math-total"><span class="math-label">Monthly Income:</span><span class="math-calc"></span><span class="math-result">${fmt(Math.round(d.yield.totalMonthly))} EGP/mo</span></div>
+        <div class="math-line"><span class="math-label">Annual Income:</span><span class="math-calc">× 12</span><span class="math-result">${fmt(Math.round(d.yield.totalMonthly * 12))} EGP/yr</span></div>
+        <div class="math-line"><span class="math-label">Blended Yield:</span><span class="math-calc">annual income ÷ total wallet</span><span class="math-result">${d.total.blendedYieldPct.toFixed(1)}%</span></div>
+      </div>
+    </div>
+
+    <!-- TOTAL: GROWTH VIEW — total wallet value tracked via snapshots -->
+    <div id="perf-total-growth" style="display:none">
+      <div style="margin-bottom:10px">
+        <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">Total Wallet · Month over Month</div>
+        <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;margin-top:4px" id="total-growth-latest" class="pos">${fmt(d.total.value)} EGP</div>
+        <div style="font-size:10.5px;color:var(--teal);margin-top:2px" id="total-growth-delta"></div>
+      </div>
+      <div style="position:relative;width:100%">
+        <svg id="sparkline-svg-total" width="100%" height="90" viewBox="0 0 300 90" preserveAspectRatio="none" style="overflow:visible;display:block">
+          <defs><linearGradient id="sparkGrad-total" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#0f6a5e" stop-opacity=".5"></stop><stop offset="100%" stop-color="#0f6a5e" stop-opacity="0"></stop></linearGradient></defs>
+          <path id="spark-fill-total" d="M 8 78 C 150 78, 150 14, 292 14 L 292 90 L 8 90 Z" fill="url(#sparkGrad-total)"></path>
+          <path id="spark-line-total" d="M 8 78 C 150 78, 150 14, 292 14" fill="none" stroke="#0f6a5e" stroke-width="2.5" stroke-linecap="round"></path>
+          <circle id="spark-dot-total" cx="292" cy="14" r="4" fill="#0f6a5e"></circle>
+        </svg>
+        <div id="spark-labels-total" style="display:flex;justify-content:space-between;margin-top:4px"></div>
+      </div>
+      <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:9.5px;color:var(--dim)" id="total-growth-snapcount">${p.snapshots.length} snapshots</div>
         <button onclick="saveGrowthSnapshot()" style="border:none;background:var(--teal-soft);color:var(--teal);border-radius:8px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer">+ Save Snapshot</button>
       </div>
     </div>

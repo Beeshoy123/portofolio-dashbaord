@@ -318,17 +318,52 @@ export function initDashboardBehavior(
     applyTxChipsForView(view);
   };
 
-  // Physical gold isn't yield-bearing or tracked for growth — it just sits
-  // until it's sold — so the Yield/Growth tabs of the Performance card only
-  // make sense outside the gold view. Hide them there and fall back to P&L.
+  // Pill label sets: Total view gets its own semantic names; all others use
+  // the standard P&L / Yield / Growth labels.
+  const PILL_LABELS_TOTAL = ["Capital", "Income", "Growth"];
+  const PILL_LABELS_STD   = ["P&L",    "Yield",  "Growth"];
+
+  // Total-specific panel IDs corresponding to the three pills.
+  const TOTAL_PERF_PANELS = ["perf-total-capital", "perf-total-income", "perf-total-growth"];
+  const STD_PERF_PANELS   = ["perf-pnl",           "perf-yield",        "perf-growth"];
+
   function updatePerfTabsForView(view: string) {
-    const isGold = view === "gold";
-    const pillYield = el("pill-yield");
+    const isGold  = view === "gold";
+    const isTotal = view === "total";
+
+    const pillPnl    = el("pill-pnl");
+    const pillYield  = el("pill-yield");
     const pillGrowth = el("pill-growth");
-    if (pillYield) pillYield.style.display = isGold ? "none" : "";
-    if (pillGrowth) pillGrowth.style.display = isGold ? "none" : "";
-    if (isGold && currentPerf !== "pnl") {
-      (win.switchPerf as (type: string) => void)("pnl");
+
+    if (isTotal) {
+      // Relabel pills, hide standard panels, show Total-specific panels.
+      if (pillPnl)    pillPnl.innerHTML    = PILL_LABELS_TOTAL[0];
+      if (pillYield)  pillYield.innerHTML  = PILL_LABELS_TOTAL[1];
+      if (pillGrowth) pillGrowth.innerHTML = PILL_LABELS_TOTAL[2];
+      if (pillYield)  pillYield.style.display  = "";
+      if (pillGrowth) pillGrowth.style.display = "";
+      STD_PERF_PANELS.forEach(id => { const p = el(id); if (p) p.style.display = "none"; });
+      // Show whichever Total panel corresponds to the current pill.
+      TOTAL_PERF_PANELS.forEach((id, i) => {
+        const p = el(id);
+        if (p) p.style.display = (["pnl","yield","growth"][i] === currentPerf) ? "block" : "none";
+      });
+    } else {
+      // Restore standard labels, hide Total-specific panels, show standard panels.
+      if (pillPnl)    pillPnl.innerHTML    = PILL_LABELS_STD[0];
+      if (pillYield)  pillYield.innerHTML  = PILL_LABELS_STD[1];
+      if (pillGrowth) pillGrowth.innerHTML = PILL_LABELS_STD[2];
+      TOTAL_PERF_PANELS.forEach(id => { const p = el(id); if (p) p.style.display = "none"; });
+      STD_PERF_PANELS.forEach((id, i) => {
+        const p = el(id);
+        if (p) p.style.display = (["pnl","yield","growth"][i] === currentPerf) ? "block" : "none";
+      });
+      // Gold hides Yield/Growth tabs.
+      if (pillYield)  pillYield.style.display  = isGold ? "none" : "";
+      if (pillGrowth) pillGrowth.style.display = isGold ? "none" : "";
+      if (isGold && currentPerf !== "pnl") {
+        (win.switchPerf as (type: string) => void)("pnl");
+      }
     }
   }
 
@@ -404,9 +439,12 @@ export function initDashboardBehavior(
         row.style.display =
           row.getAttribute("data-perf-group") === "liquid" ? "flex" : "none";
       });
+    } else if (view === "total") {
+      // Total view renders its own Capital/Income/Growth panels — nothing to
+      // update inside the standard perf-pnl panel for this case.
+      return;
     } else {
-      // total / certs: restore the default portfolio-wide headline and show
-      // every position in the breakdown.
+      // certs: restore the default portfolio-wide headline and show every row.
       if (icon) icon.textContent = "🥇";
       if (headline) {
         headline.textContent = derived.gold.pnlAvailable
@@ -431,10 +469,20 @@ export function initDashboardBehavior(
 
   win.switchPerf = (type: string) => {
     currentPerf = type;
-    ["pnl", "yield", "growth"].forEach((t) => {
-      el(`perf-${t}`)!.style.display = t === type ? "block" : "none";
-      el(`pill-${t}`)?.classList.toggle("active", t === type);
-    });
+    const keys = ["pnl", "yield", "growth"];
+    if (currentView === "total") {
+      // Route to Total-specific panels; standard panels stay hidden.
+      keys.forEach((t, i) => {
+        const p = el(TOTAL_PERF_PANELS[i]);
+        if (p) p.style.display = t === type ? "block" : "none";
+        el(`pill-${t}`)?.classList.toggle("active", t === type);
+      });
+    } else {
+      keys.forEach((t) => {
+        el(`perf-${t}`)!.style.display = t === type ? "block" : "none";
+        el(`pill-${t}`)?.classList.toggle("active", t === type);
+      });
+    }
   };
 
   win.switchTab = (tab: string) => {
@@ -529,16 +577,20 @@ export function initDashboardBehavior(
 
   win.togglePerfMath = () => {
     let id: string;
-    if (currentPerf === "pnl") {
+    if (currentView === "total") {
+      if (currentPerf === "pnl")    id = "math-total-capital";
+      else if (currentPerf === "yield") id = "math-total-income";
+      else return; // growth tab has no math section
+    } else if (currentPerf === "pnl") {
       id = currentView === "liquid" ? "math-liquid" : "math-gold";
     } else {
       id = `math-${currentPerf}`;
     }
-    // Close the other PnL math section so only one is open at a time.
-    const other = id === "math-liquid" ? "math-gold" : "math-liquid";
-    el(other)?.classList.remove("open");
-    const sec = el(id);
-    if (sec) sec.classList.toggle("open");
+    // Close all math sections so only one is open at a time.
+    ["math-gold", "math-liquid", "math-yield", "math-total-capital", "math-total-income"].forEach(
+      (o) => { if (o !== id) el(o)?.classList.remove("open"); },
+    );
+    el(id)?.classList.toggle("open");
   };
 
   win.toggleDark = () => {
@@ -818,14 +870,17 @@ export function initDashboardBehavior(
   };
 
   win.saveGrowthSnapshot = async () => {
-    const btn = document.querySelector<HTMLButtonElement>(
-      "#perf-growth button",
+    // Disable the Save button in whichever growth panel is currently visible.
+    const btns = document.querySelectorAll<HTMLButtonElement>(
+      "#perf-growth button, #perf-total-growth button",
     );
-    if (btn) btn.disabled = true;
+    btns.forEach((b) => { b.disabled = true; });
     try {
-      await callbacks.createSnapshot(derived.abr.value);
+      // Total view saves the whole-wallet value; Liquid view saves ABR value.
+      const snapValue = currentView === "total" ? derived.total.value : derived.abr.value;
+      await callbacks.createSnapshot(snapValue);
     } finally {
-      if (btn) btn.disabled = false;
+      btns.forEach((b) => { b.disabled = false; });
     }
   };
 
@@ -1021,19 +1076,16 @@ export function initDashboardBehavior(
       .join("");
   }
 
-  function renderGrowthSparkline() {
-    const snaps = [...portfolio.snapshots].sort(
-      (a, b) =>
-        new Date(a.snapshotDate).getTime() -
-        new Date(b.snapshotDate).getTime(),
-    );
+  type SnapRow = { snapshotDate: string; value: number };
+  function renderSparklineInto(idPrefix: string, snaps: SnapRow[]) {
     if (snaps.length === 0) return;
 
     const latest = snaps[snaps.length - 1];
-    const prev = snaps.length > 1 ? snaps[snaps.length - 2] : null;
-    const latestEl = el("growth-latest");
+    const prev   = snaps.length > 1 ? snaps[snaps.length - 2] : null;
+
+    const latestEl = el(`${idPrefix}growth-latest`);
     if (latestEl) latestEl.textContent = `${fmt(latest.value)} EGP`;
-    const deltaEl = el("growth-delta");
+    const deltaEl = el(`${idPrefix}growth-delta`);
     if (deltaEl) {
       if (prev) {
         const delta = latest.value - prev.value;
@@ -1043,52 +1095,51 @@ export function initDashboardBehavior(
         deltaEl.textContent = "First snapshot recorded";
       }
     }
+    const snapCountEl = el(`${idPrefix}growth-snapcount`);
+    if (snapCountEl) snapCountEl.textContent = `${snaps.length} snapshots`;
 
     const values = snaps.map((s) => s.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const range = max - min || 1;
-    const width = 300;
-    const height = 90;
-    const padX = 8;
-    const padTop = 14;
-    const padBottom = 12;
-    const points = snaps.map((s, i) => {
-      const x =
-        snaps.length === 1
-          ? width / 2
-          : padX + (i / (snaps.length - 1)) * (width - padX * 2);
-      const y =
-        height -
-        padBottom -
-        ((s.value - min) / range) * (height - padTop - padBottom);
-      return { x, y };
-    });
+    const width = 300, height = 90, padX = 8, padTop = 14, padBottom = 12;
+    const points = snaps.map((s, i) => ({
+      x: snaps.length === 1
+        ? width / 2
+        : padX + (i / (snaps.length - 1)) * (width - padX * 2),
+      y: height - padBottom - ((s.value - min) / range) * (height - padTop - padBottom),
+    }));
 
+    const suffix = idPrefix === "total-" ? "-total" : "";
     const linePath = points
       .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
       .join(" ");
     const fillPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${height} L ${points[0].x.toFixed(1)} ${height} Z`;
 
-    const lineEl = el("spark-line");
-    if (lineEl) lineEl.setAttribute("d", linePath);
-    const fillEl = el("spark-fill");
-    if (fillEl) fillEl.setAttribute("d", fillPath);
-    const dotEl = el("spark-dot");
+    el(`spark-line${suffix}`)?.setAttribute("d", linePath);
+    el(`spark-fill${suffix}`)?.setAttribute("d", fillPath);
+    const dotEl = el(`spark-dot${suffix}`);
     if (dotEl) {
       dotEl.setAttribute("cx", String(points[points.length - 1].x));
       dotEl.setAttribute("cy", String(points[points.length - 1].y));
     }
-
-    const labels = el("spark-labels");
-    if (labels) {
-      const fmtDate = (s: string) =>
-        new Date(s).toLocaleDateString("en-US", {
-          month: "short",
-          year: "2-digit",
-        });
-      labels.innerHTML = `<span style="font-size:9px;color:var(--dim);font-weight:600">${fmtDate(snaps[0].snapshotDate)}</span><span style="font-size:9px;color:var(--dim);font-weight:600">${fmtDate(snaps[snaps.length - 1].snapshotDate)}</span>`;
+    const fmtDate = (s: string) =>
+      new Date(s).toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+    const labelsEl = el(`spark-labels${suffix}`);
+    if (labelsEl) {
+      labelsEl.innerHTML =
+        `<span style="font-size:9px;color:var(--dim);font-weight:600">${fmtDate(snaps[0].snapshotDate)}</span>` +
+        `<span style="font-size:9px;color:var(--dim);font-weight:600">${fmtDate(snaps[snaps.length - 1].snapshotDate)}</span>`;
     }
+  }
+
+  function renderGrowthSparkline() {
+    const snaps = [...portfolio.snapshots].sort(
+      (a, b) => new Date(a.snapshotDate).getTime() - new Date(b.snapshotDate).getTime(),
+    );
+    // Render into both the standard Liquid growth panel and the Total growth panel.
+    renderSparklineInto("", snaps);
+    renderSparklineInto("total-", snaps);
   }
 
   function animateRings() {
