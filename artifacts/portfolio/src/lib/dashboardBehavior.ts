@@ -376,9 +376,7 @@ export function initDashboardBehavior(
         headlineColor: () => derived.gold.pnlAvailable
           ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
           : "var(--dim)",
-        sub: () => derived.gold.pnlAvailable
-          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
-          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`,
+        sub: () => ``,
         rowFilter: "gold",
         showAvgVsSell: true,
       },
@@ -414,9 +412,7 @@ export function initDashboardBehavior(
         headlineColor: () => derived.gold.pnlAvailable
           ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
           : "var(--dim)",
-        sub: () => derived.gold.pnlAvailable
-          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% raw · ${fmt2(derived.gold.cashbackPerGram)} EGP/g cashback on sell`
-          : `Cashback rate on file: ${fmt2(derived.gold.cashbackPerGram)} EGP/g (applied on sell)`,
+        sub: () => ``,
         rowFilter: "all",
         showAvgVsSell: true,
       },
