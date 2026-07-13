@@ -16,6 +16,8 @@ The **Project** run button executes these steps in order every time — not just
 
 To restore data: upload your offline SQL backup, ask the agent to import it directly into the database, then **delete the uploaded file immediately**. The agent must never keep the SQL file on disk after importing.
 
+To export data: ask the agent to generate a temporary SQL dump, download it, then ask the agent to delete it. Temporary export files generated on request are fine — they just must not be committed to GitHub or left in the project long-term.
+
 ## Workflows
 
 - `artifacts/api-server: API Server` workflow — runs the Express API on port 8080
