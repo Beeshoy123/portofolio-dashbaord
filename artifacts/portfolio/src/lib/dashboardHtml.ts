@@ -325,7 +325,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       <div style="font-size:10.5px;font-weight:600;margin-top:5px" class="neu" id="yield-sub">ABR ${fmt(d.abr.apyPercent)}% + NBE ${d.certTotals.weightedAvgRate.toFixed(1)}% (weighted avg)</div>
       <div class="math-section" id="math-yield">
         <div class="math-line"><span class="math-label">Bareeq:</span><span class="math-calc">${fmt(d.abr.value)} × ${fmt(d.abr.apyPercent)}% ÷ 12</span><span class="math-result">= ${fmt2(d.abr.monthlyYield)} EGP/mo</span></div>
-        <div class="math-line"><span class="math-label">NBE Certs:</span><span id="yield-cert-calc" class="math-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% ÷ 12</span><span id="yield-cert-result" class="math-result">= ${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
+        <div id="yield-cert-row" class="math-line"><span class="math-label">NBE Certs:</span><span id="yield-cert-calc" class="math-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% ÷ 12</span><span id="yield-cert-result" class="math-result">= ${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
         <div class="math-divider"></div>
         <div class="math-line math-total"><span class="math-label">Total Yield:</span><span class="math-calc"></span><span id="yield-total-result" class="math-result">${fmt(Math.round(d.yield.totalMonthly))} EGP/mo</span></div>
       </div>

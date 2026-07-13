@@ -384,7 +384,7 @@ export function initDashboardBehavior(
     liquid: {
       panels: STD_PERF_PANELS,
       pillLabels: ["P&L", "Yield", "Growth"],
-      hiddenPillIds: [],
+      hiddenPillIds: ["pill-yield"],
       mathIds: { pnl: "math-liquid", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
       pnlUpdate: {
@@ -457,6 +457,8 @@ export function initDashboardBehavior(
     }
     // Keep growth panel label in sync whenever the view changes.
     if (currentPerf === "growth") refreshGrowthLabel();
+    // Keep yield panel data scoped to the active view.
+    updatePerfYieldForView(view);
   }
 
   function updatePerfPnlForView(view: string) {
@@ -503,6 +505,28 @@ export function initDashboardBehavior(
       const group = row.getAttribute("data-perf-group");
       row.style.display = rowFilter === "all" || group === rowFilter ? "flex" : "none";
     });
+  }
+
+  function updatePerfYieldForView(view: string) {
+    const yieldEl   = el("s-yield");
+    const subEl     = el("yield-sub");
+    const certRow   = el("yield-cert-row");
+    const totalRes  = el("yield-total-result");
+
+    if (view === "liquid") {
+      // Liquid: funds-only yield (no certificates)
+      const fundsMonthly = derived.abr.monthlyYield;
+      if (yieldEl) yieldEl.textContent = `+${fmt(Math.round(fundsMonthly))} EGP/mo`;
+      if (subEl)   subEl.textContent   = `ABR ${fmt(derived.abr.apyPercent)}% · funds only`;
+      if (certRow) certRow.style.display = "none";
+      if (totalRes) totalRes.textContent = `${fmt(Math.round(fundsMonthly))} EGP/mo`;
+    } else {
+      // All other views: combined fund + certificates
+      if (yieldEl) yieldEl.textContent = `+${fmt(Math.round(derived.yield.totalMonthly))} EGP/mo`;
+      if (subEl)   subEl.textContent   = `ABR ${fmt(derived.abr.apyPercent)}% + NBE ${derived.certTotals.weightedAvgRate.toFixed(1)}% (weighted avg)`;
+      if (certRow) certRow.style.display = "";
+      if (totalRes) totalRes.textContent = `${fmt(Math.round(derived.yield.totalMonthly))} EGP/mo`;
+    }
   }
 
   win.switchPerf = (type: string) => {
