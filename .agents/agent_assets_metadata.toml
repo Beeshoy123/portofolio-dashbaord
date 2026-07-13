@@ -18,3 +18,9 @@ id = "r6qqEBGbkhS62XIzZRyfC"
 uri = "file://backups/database_backup_20260712_110439.sql"
 type = "unspecified"
 title = "Database Backup (SQL export)"
+
+[[outputs]]
+id = "CpUORpVa-udUedFrsTxhy"
+uri = "file://portfolio_backup.zip"
+type = "unspecified"
+title = "Portfolio Database Backup (SQL)"
