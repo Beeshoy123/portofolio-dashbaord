@@ -137,6 +137,13 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   const usdDotClass = usdStatus === "live" ? "live-dot ok" : "live-dot err";
   const usdBadgeClass = usdStatus === "live" ? "status-badge status-live" : "status-badge status-fallback";
   const usdBadgeText = usdStatus === "live" ? "live" : usdStatus === "fallback" ? "fallback" : "unavail";
+  // EUR/EGP rate fields.
+  const eurStatus = (p.settings as any).eurEgpStatus as string | null;
+  const eurRate = (p.settings as any).eurEgpRate as number | null;
+  const eurDotClass = eurStatus === "live" ? "live-dot ok" : eurStatus === "fallback" ? "live-dot warn" : "live-dot err";
+  const eurBadgeClass = eurStatus === "live" ? "status-badge status-live" : "status-badge status-fallback";
+  const eurBadgeText = eurStatus === "live" ? "live" : eurStatus === "fallback" ? "fallback" : "unavail";
+  const eurRateLabel = eurRate != null ? eurRate.toFixed(2) : "—";
   // Show the live-bar immediately if either feed has data.
   const liveBarStyle = (goldPriceStatus || usdStatus) ? "display:flex" : "display:none";
   // Upper-right "Live Rates" box content.
@@ -244,6 +251,8 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   <span class="live-pill">XAU: <b id="live-xau">—</b> <span style="font-size:9px;color:var(--dim)">USD/oz</span> <span id="xau-status" class="status-badge"></span></span>
   <span class="${usdDotClass}" id="dot-usd"></span>
   <span class="live-pill">USD/EGP: <b id="live-usd">${fmt2(d.settings.usdEgpRate)}</b> <span id="usd-status" class="${usdBadgeClass}">${usdBadgeText}</span></span>
+  <span class="${eurDotClass}" id="dot-eur"></span>
+  <span class="live-pill">EUR/EGP: <b id="live-eur">${eurRateLabel}</b> <span id="eur-status" class="${eurBadgeClass}">${eurBadgeText}</span></span>
   <span class="live-time" id="live-time"></span>
 </div>
 

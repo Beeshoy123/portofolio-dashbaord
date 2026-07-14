@@ -664,8 +664,8 @@ export function initDashboardBehavior(
     if (btn) btn.textContent = "⏳";
     el("live-bar")!.style.display = "flex";
 
-    // 1. Fetch USD/EGP rate from the backend cache (open.er-api.com fetch
-    //    runs server-side; the Replit preview iframe blocks external
+    // 1. Fetch USD/EGP and EUR/EGP rates from the backend cache (open.er-api.com
+    //    fetch runs server-side; the Replit preview iframe blocks external
     //    browser fetches to that domain).
     let usdLive = false;
     try {
@@ -687,6 +687,30 @@ export function initDashboardBehavior(
             usdStatusEl.className = status === "live" ? "status-badge status-live" : "status-badge status-fallback";
           }
           usdLive = status === "live";
+        }
+      }
+    } catch {
+      /* keep fallback */
+    }
+
+    try {
+      const eurResp = await fetch("/api/portfolio/eur-rate", {
+        signal: AbortSignal.timeout(8_000),
+      });
+      if (eurResp.ok) {
+        const data = (await eurResp.json()) as { rate?: number; status?: string };
+        const rate = data?.rate;
+        const status = data?.status ?? "unavailable";
+        if (rate && rate > 0) {
+          const eurEl = el("live-eur");
+          if (eurEl) eurEl.textContent = rate.toFixed(2);
+          const dotEur = el("dot-eur");
+          if (dotEur) dotEur.className = status === "live" ? "live-dot ok" : "live-dot warn";
+          const eurStatusEl = el("eur-status");
+          if (eurStatusEl) {
+            eurStatusEl.textContent = status;
+            eurStatusEl.className = status === "live" ? "status-badge status-live" : "status-badge status-fallback";
+          }
         }
       }
     } catch {

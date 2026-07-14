@@ -5,6 +5,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { startGoldPriceScheduler } from "./lib/goldPriceCache";
 import { startUsdEgpScheduler } from "./lib/usdEgpCache";
+import { startEurEgpScheduler } from "./lib/eurEgpCache";
 import { startGlobalGoldScheduler } from "./lib/globalGoldCache";
 
 const app: Express = express();
@@ -37,7 +38,8 @@ app.use("/api", router);
 // Start background scrapers. Both run immediately on startup so the
 // first /portfolio request already has live data in the in-memory cache.
 startGoldPriceScheduler();    // goldbullioneg.com — every 5 min
-startUsdEgpScheduler();       // open.er-api.com   — every 30 min
+startUsdEgpScheduler();       // open.er-api.com USD/EGP — every 30 min
+startEurEgpScheduler();       // open.er-api.com EUR/EGP — every 30 min
 startGlobalGoldScheduler();   // swissquote XAU/USD — every 5 min
 
 export default app;

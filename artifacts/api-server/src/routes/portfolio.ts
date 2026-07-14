@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { getGoldPrices } from "../lib/goldPriceCache";
 import { getGlobalGoldPrice } from "../lib/globalGoldCache";
 import { getUsdEgpRate } from "../lib/usdEgpCache";
+import { getEurEgpRate } from "../lib/eurEgpCache";
 import {
   db,
   goldSettingsTable,
@@ -198,10 +199,13 @@ router.get("/portfolio", async (_req, res) => {
       // Prefer the live server-side rate; fall back to the DB value if
       // the first fetch hasn't completed yet (cold start race window).
       const liveUsd = getUsdEgpRate();
+      const liveEur = getEurEgpRate();
       return {
         emergencyFundTarget: Number(settings.emergencyFundTarget),
         usdEgpRate: liveUsd?.rate ?? Number(settings.usdEgpRate),
         usdEgpStatus: liveUsd?.status ?? null,
+        eurEgpRate: liveEur?.rate ?? null,
+        eurEgpStatus: liveEur?.status ?? null,
       };
     })(),
   });
@@ -314,6 +318,17 @@ router.patch("/portfolio/funds/:key", async (req, res) => {
 // without re-fetching the entire portfolio.
 router.get("/portfolio/usd-rate", (_req, res) => {
   const r = getUsdEgpRate();
+  if (!r) {
+    res.json({ status: "unavailable" });
+    return;
+  }
+  res.json(r);
+});
+
+// Lightweight endpoint so the client can poll for a fresh EUR/EGP rate
+// without re-fetching the entire portfolio.
+router.get("/portfolio/eur-rate", (_req, res) => {
+  const r = getEurEgpRate();
   if (!r) {
     res.json({ status: "unavailable" });
     return;

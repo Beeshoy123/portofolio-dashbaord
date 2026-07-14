@@ -378,6 +378,14 @@ components:
           type: string
           nullable: true
           description: "'live' = fetched from open.er-api.com; 'fallback' = stale cache; null = not yet fetched"
+        eurEgpRate:
+          type: number
+          nullable: true
+          description: "EUR/EGP exchange rate from open.er-api.com; null if not yet fetched"
+        eurEgpStatus:
+          type: string
+          nullable: true
+          description: "'live' = fetched from open.er-api.com; 'fallback' = stale cache; null = not yet fetched"
       required:
         - emergencyFundTarget
         - usdEgpRate
