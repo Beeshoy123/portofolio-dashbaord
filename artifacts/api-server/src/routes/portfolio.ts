@@ -357,6 +357,99 @@ router.get("/portfolio/gold-prices", (_req, res) => {
   });
 });
 
+// ── AI Scanner proxy ─────────────────────────────────────────────────────────
+// Calls Gemini from the server so the request originates from Replit's
+// infrastructure, bypassing regional free-tier quota restrictions.
+router.post("/portfolio/scan", async (req, res) => {
+  const { image, mimeType, mode, apiKey } = req.body as {
+    image?: string;
+    mimeType?: string;
+    mode?: string;
+    apiKey?: string;
+  };
+
+  if (!image || !mimeType || !mode || !apiKey) {
+    res.status(400).json({ error: "Missing required fields: image, mimeType, mode, apiKey" });
+    return;
+  }
+
+  const prompt =
+    mode === "order"
+      ? `You are analyzing a Thndr (Egyptian investment app) order confirmation screenshot.
+Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
+{
+  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
+  "nav": <number: NAV per unit shown on screen, e.g. 1.2345>,
+  "unitsHeld": <number: total units/certificates held AFTER this transaction>
+}
+Omit any field you cannot read confidently. Return ONLY the JSON.`
+      : `You are analyzing an Egyptian investment fund NAV or price page screenshot.
+Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
+{
+  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
+  "nav": <number: current NAV per unit shown on screen, e.g. 1.2345>
+}
+Omit any field you cannot read confidently. Return ONLY the JSON.`;
+
+  const geminiRes = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: mimeType, data: image } },
+            ],
+          },
+        ],
+        generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
+      }),
+    },
+  );
+
+  if (!geminiRes.ok) {
+    const errData = (await geminiRes.json().catch(() => ({}))) as {
+      error?: { message?: string };
+    };
+    res
+      .status(geminiRes.status)
+      .json({ error: errData?.error?.message ?? `Gemini error ${geminiRes.status}` });
+    return;
+  }
+
+  const data = (await geminiRes.json()) as {
+    candidates?: { content?: { parts?: { text?: string }[] } }[];
+  };
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+  const cleaned = raw
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/```\s*$/i, "")
+    .trim();
+
+  let parsed: { fund?: unknown; nav?: unknown; unitsHeld?: unknown };
+  try {
+    parsed = JSON.parse(cleaned) as typeof parsed;
+  } catch {
+    res.status(422).json({ error: "Gemini returned unreadable data. Try a clearer screenshot." });
+    return;
+  }
+
+  if (!parsed.fund || !["abr", "re"].includes(parsed.fund as string)) {
+    res.status(422).json({ error: "Could not identify the fund (ABR or RE). Try a clearer screenshot." });
+    return;
+  }
+
+  res.json({
+    fund: parsed.fund,
+    nav: parsed.nav != null ? Number(parsed.nav) : undefined,
+    unitsHeld: parsed.unitsHeld != null ? Number(parsed.unitsHeld) : undefined,
+  });
+});
+
 router.post("/portfolio/snapshots", async (req, res) => {
   const body = CreateGrowthSnapshotBody.parse(req.body);
   const [created] = await db

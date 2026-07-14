@@ -1094,61 +1094,33 @@ Extract ONLY these fields as a raw JSON object — no markdown, no code fences, 
 Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: prompt },
-                  { inline_data: { mime_type: mimeType, data: base64 } },
-                ],
-              },
-            ],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
-          }),
-        },
-      );
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        const msg =
-          (errData as { error?: { message?: string } })?.error?.message ||
-          `Gemini API error ${response.status}`;
-        throw new Error(msg);
-      }
+      const response = await fetch("/api/portfolio/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, mimeType, mode: currentScanMode, apiKey }),
+      });
 
       const data = (await response.json()) as {
-        candidates?: { content?: { parts?: { text?: string }[] } }[];
-      };
-      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
-      // Strip markdown code fences if Gemini wraps anyway
-      const cleaned = raw
-        .replace(/^```json\s*/i, "")
-        .replace(/^```\s*/i, "")
-        .replace(/```\s*$/i, "")
-        .trim();
-
-      const parsed = JSON.parse(cleaned) as {
         fund?: unknown;
         nav?: unknown;
         unitsHeld?: unknown;
+        error?: string;
       };
 
-      if (!parsed.fund || !["abr", "re"].includes(parsed.fund as string)) {
+      if (!response.ok) {
+        throw new Error(data.error ?? `Scan error ${response.status}`);
+      }
+
+      if (!data.fund || !["abr", "re"].includes(data.fund as string)) {
         throw new Error(
           "Could not identify the fund (ABR or RE). Try uploading a clearer screenshot.",
         );
       }
 
       pendingScanResult = {
-        fund: parsed.fund as "abr" | "re",
-        nav: parsed.nav != null ? Number(parsed.nav) : undefined,
-        unitsHeld:
-          parsed.unitsHeld != null ? Number(parsed.unitsHeld) : undefined,
+        fund: data.fund as "abr" | "re",
+        nav: data.nav != null ? Number(data.nav) : undefined,
+        unitsHeld: data.unitsHeld != null ? Number(data.unitsHeld) : undefined,
       };
 
       // Show result panel
