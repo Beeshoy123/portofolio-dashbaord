@@ -1034,7 +1034,155 @@ export function initDashboardBehavior(
     el("apikey-overlay")?.classList.remove("open");
   };
 
+  // ── AI Scanner state ──────────────────────────────────────────────────────
+  let currentScanMode = "";
+  let pendingScanResult: {
+    fund: "abr" | "re";
+    nav?: number;
+    unitsHeld?: number;
+  } | null = null;
+
+  function showScanError(msg: string) {
+    const errorEl = el("scan-error");
+    if (!errorEl) return;
+    errorEl.textContent = "⚠️ " + msg;
+    (errorEl as HTMLElement).style.display = "block";
+  }
+
+  async function runScan(dataUrl: string) {
+    const apiKey = localStorage.getItem("gemini_api_key");
+    if (!apiKey) {
+      showScanError("Please set your Gemini API key first (⚙️ Set API Key below).");
+      return;
+    }
+    if (!currentScanMode) {
+      showScanError("Please select a scan mode (Order Confirmation or Fund NAV) first.");
+      return;
+    }
+
+    const processingEl = el("scan-processing");
+    const errorEl = el("scan-error");
+    const resultEl = el("scan-result");
+    const actionsEl = el("scan-actions");
+
+    // Reset UI
+    if (processingEl) (processingEl as HTMLElement).style.display = "flex";
+    if (errorEl) { (errorEl as HTMLElement).style.display = "none"; errorEl.textContent = ""; }
+    if (resultEl) (resultEl as HTMLElement).style.display = "none";
+    if (actionsEl) (actionsEl as HTMLElement).style.display = "none";
+    pendingScanResult = null;
+
+    const base64 = dataUrl.split(",")[1];
+    const mimeType = dataUrl.split(";")[0].split(":")[1] || "image/jpeg";
+
+    const prompt =
+      currentScanMode === "order"
+        ? `You are analyzing a Thndr (Egyptian investment app) order confirmation screenshot.
+Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
+{
+  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
+  "nav": <number: NAV per unit shown on screen, e.g. 1.2345>,
+  "unitsHeld": <number: total units/certificates held AFTER this transaction>
+}
+Omit any field you cannot read confidently. Return ONLY the JSON.`
+        : `You are analyzing an Egyptian investment fund NAV or price page screenshot.
+Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
+{
+  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
+  "nav": <number: current NAV per unit shown on screen, e.g. 1.2345>
+}
+Omit any field you cannot read confidently. Return ONLY the JSON.`;
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [
+                  { text: prompt },
+                  { inline_data: { mime_type: mimeType, data: base64 } },
+                ],
+              },
+            ],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const msg =
+          (errData as { error?: { message?: string } })?.error?.message ||
+          `Gemini API error ${response.status}`;
+        throw new Error(msg);
+      }
+
+      const data = (await response.json()) as {
+        candidates?: { content?: { parts?: { text?: string }[] } }[];
+      };
+      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+      // Strip markdown code fences if Gemini wraps anyway
+      const cleaned = raw
+        .replace(/^```json\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+
+      const parsed = JSON.parse(cleaned) as {
+        fund?: unknown;
+        nav?: unknown;
+        unitsHeld?: unknown;
+      };
+
+      if (!parsed.fund || !["abr", "re"].includes(parsed.fund as string)) {
+        throw new Error(
+          "Could not identify the fund (ABR or RE). Try uploading a clearer screenshot.",
+        );
+      }
+
+      pendingScanResult = {
+        fund: parsed.fund as "abr" | "re",
+        nav: parsed.nav != null ? Number(parsed.nav) : undefined,
+        unitsHeld:
+          parsed.unitsHeld != null ? Number(parsed.unitsHeld) : undefined,
+      };
+
+      // Show result panel
+      if (processingEl) (processingEl as HTMLElement).style.display = "none";
+      if (resultEl) {
+        (resultEl as HTMLElement).style.display = "block";
+        const body = el("scan-result-body");
+        if (body) {
+          const fundName =
+            pendingScanResult.fund === "abr" ? "Bareeq (ABR)" : "Real Estate (BRE)";
+          body.innerHTML = [
+            `<div class="scan-result-row"><span>Fund</span><span>${fundName}</span></div>`,
+            pendingScanResult.nav != null
+              ? `<div class="scan-result-row"><span>NAV</span><span>${pendingScanResult.nav.toFixed(4)}</span></div>`
+              : "",
+            pendingScanResult.unitsHeld != null
+              ? `<div class="scan-result-row"><span>Units Held</span><span>${pendingScanResult.unitsHeld.toLocaleString()}</span></div>`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("");
+        }
+      }
+      if (actionsEl) (actionsEl as HTMLElement).style.display = "block";
+    } catch (err) {
+      if (processingEl) (processingEl as HTMLElement).style.display = "none";
+      showScanError(
+        err instanceof Error ? err.message : "Scan failed. Please try again.",
+      );
+    }
+  }
+
   win.selectScanMode = (mode: string) => {
+    currentScanMode = mode;
     ["order", "nav", "stock"].forEach((m) =>
       el(`mode-${m}`)?.classList.toggle("selected", m === mode),
     );
@@ -1045,16 +1193,43 @@ export function initDashboardBehavior(
     if (!file) return;
     const preview = el("scan-preview") as HTMLImageElement;
     const reader = new FileReader();
-    reader.onload = (e) => {
-      preview.src = e.target?.result as string;
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      preview.src = dataUrl;
       preview.style.display = "block";
       (el("scan-upload-label") as HTMLElement).style.display = "none";
+      // Reset previous results before re-scanning
+      const errorEl = el("scan-error");
+      const resultEl = el("scan-result");
+      const actionsEl = el("scan-actions");
+      if (errorEl) { (errorEl as HTMLElement).style.display = "none"; errorEl.textContent = ""; }
+      if (resultEl) (resultEl as HTMLElement).style.display = "none";
+      if (actionsEl) (actionsEl as HTMLElement).style.display = "none";
+      await runScan(dataUrl);
     };
     reader.readAsDataURL(file);
   };
 
-  win.applyScanResult = () => {
-    el("scan-overlay")?.classList.remove("open");
+  win.applyScanResult = async () => {
+    if (!pendingScanResult) return;
+    const btn = el("scan-apply-btn") as HTMLButtonElement | null;
+    if (btn) { btn.disabled = true; btn.textContent = "Applying…"; }
+    try {
+      const { fund, nav, unitsHeld } = pendingScanResult;
+      const body: { nav?: number; unitsHeld?: number } = {};
+      if (nav != null) body.nav = nav;
+      if (unitsHeld != null) body.unitsHeld = unitsHeld;
+      await callbacks.updateFund(fund, body);
+      pendingScanResult = null;
+      el("scan-overlay")?.classList.remove("open");
+    } catch (err) {
+      showScanError(
+        "Failed to save: " +
+          (err instanceof Error ? err.message : "Unknown error"),
+      );
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = "Apply to Dashboard"; }
+    }
   };
 
   win.filterCerts = (type: string) => {
