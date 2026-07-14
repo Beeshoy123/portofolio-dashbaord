@@ -307,29 +307,38 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 .sort-popover {
   display: none;
   position: absolute;
-  right: 0; top: calc(100% + 6px);
-  background: var(--card);
-  border: 1px solid var(--edge);
+  right: 0; top: calc(100% + 8px);
+  background: var(--card-dk);
+  border: 1px solid var(--teal-dk);
   border-radius: var(--radius-sm);
-  padding: 8px;
-  z-index: 100;
-  min-width: 200px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  padding: 6px;
+  z-index: 200;
+  min-width: 210px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.65), 0 0 0 1px rgba(18,160,143,.12);
 }
 .sort-popover.open { display: block; }
-.sort-popover-hint { font-size: 10px; color: var(--dim); padding: 4px; margin-bottom: 6px; line-height: 1.4; }
+.sort-popover-hint {
+  font-size: 10px; color: var(--dim);
+  padding: 4px 8px 8px;
+  margin-bottom: 4px;
+  line-height: 1.5;
+  border-bottom: 1px solid var(--edge);
+}
 .sort-option {
   display: flex; justify-content: space-between; align-items: center;
   width: 100%;
   background: transparent; border: none;
-  padding: 7px 8px;
+  padding: 9px 10px;
   border-radius: 7px;
-  font-size: 11.5px; font-weight: 600; color: var(--ink);
+  font-size: 12px; font-weight: 600; color: var(--ink);
   cursor: pointer;
+  text-align: left;
 }
-.sort-option:hover { background: var(--bg); }
-.sort-option-arrow::after { content: '›'; color: var(--dim); }
+.sort-option:hover { background: rgba(255,255,255,.05); }
+.sort-option-arrow::after { content: '›'; color: var(--dim); font-size: 14px; }
+.sort-option.active { background: var(--teal-soft); color: var(--teal); }
 .sort-option.active .sort-option-arrow::after { content: '↑'; color: var(--teal); }
+.sort-option.active-desc { background: var(--teal-soft); color: var(--teal); }
 .sort-option.active-desc .sort-option-arrow::after { content: '↓'; color: var(--teal); }
 
 /* ── Math section ──────────────────────────────────────────────────── */
