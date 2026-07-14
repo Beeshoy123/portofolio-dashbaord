@@ -592,11 +592,14 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
   display: flex;
 }
 .scan-drawer, .insight-drawer {
-  background: var(--card);
+  background: var(--card-dk);
+  border: 1px solid var(--teal-dk);
+  border-bottom: none;
   border-radius: 18px 18px 0 0;
   padding: 20px;
   width: 100%; max-width: 560px;
   max-height: 85vh; overflow-y: auto;
+  box-shadow: 0 -8px 40px rgba(0,0,0,.6), 0 0 0 1px rgba(18,160,143,.12);
 }
 .scan-drawer h2, .insight-drawer h2 {
   font-family: 'Sora', sans-serif;
@@ -660,10 +663,12 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 
 /* API Key modal */
 .apikey-modal {
-  background: var(--card);
+  background: var(--card-dk);
+  border: 1px solid var(--teal-dk);
   border-radius: 16px;
   padding: 24px;
   width: calc(100% - 32px); max-width: 420px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 0 1px rgba(18,160,143,.12);
 }
 .apikey-modal h2 {
   font-family: 'Sora', sans-serif;
@@ -680,10 +685,12 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 
 /* NAV modal */
 .modal {
-  background: var(--card);
+  background: var(--card-dk);
+  border: 1px solid var(--teal-dk);
   border-radius: 16px;
   padding: 24px;
   width: calc(100% - 32px); max-width: 480px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 0 1px rgba(18,160,143,.12);
 }
 .modal h2 { font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 800; color: var(--ink); margin-bottom: 8px; }
 .modal p { font-size: 11.5px; color: var(--dim); margin-bottom: 14px; line-height: 1.5; }
