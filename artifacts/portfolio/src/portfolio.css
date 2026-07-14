@@ -307,7 +307,7 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 .sort-popover {
   display: none;
   position: absolute;
-  right: 0; top: calc(100% + 8px);
+  right: 0; bottom: calc(100% + 8px);
   background: var(--card-dk);
   border: 1px solid var(--teal-dk);
   border-radius: var(--radius-sm);
