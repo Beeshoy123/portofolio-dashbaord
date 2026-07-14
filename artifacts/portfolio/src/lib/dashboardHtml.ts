@@ -224,8 +224,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   </button>
   <button class="icon-btn" onclick="doRefresh()" id="refresh-btn" title="Refresh live prices">🔄</button>
   <button class="icon-btn" onclick="openInsights()" title="Insights &amp; Actions">💡</button>
-  <button class="icon-btn" onclick="openScan()" title="AI Screenshot Scanner">📸</button>
-  <button class="icon-btn" onclick="openNav()" title="Update NAVs">✏️</button>
+  <button class="icon-btn" onclick="openAdd()" title="Add data">➕</button>
 </div>
 
 <div class="view-toggle-bar" id="view-toggle-bar">
@@ -688,6 +687,33 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     <div style="font-size:10.5px;color:var(--dim);margin-bottom:14px;line-height:1.5" id="insights-timestamp"></div>
     <div id="insights-body">
       ${buildInsights(d)}
+    </div>
+  </div>
+</div>
+
+<!-- ADD DATA PICKER -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal" style="max-width:340px">
+    <h2>➕ Add Data</h2>
+    <p>How would you like to update your dashboard?</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+      <button class="add-pick-btn" onclick="closeAdd();openScan()">
+        <span class="add-pick-icon" style="background:var(--teal-soft)">📸</span>
+        <span class="add-pick-body">
+          <span class="add-pick-title">From a screenshot</span>
+          <span class="add-pick-desc">AI reads your Thndr order or fund NAV image and updates automatically.</span>
+        </span>
+      </button>
+      <button class="add-pick-btn" onclick="closeAdd();openNav()">
+        <span class="add-pick-icon" style="background:var(--gold-soft)">✏️</span>
+        <span class="add-pick-body">
+          <span class="add-pick-title">Manually</span>
+          <span class="add-pick-desc">Enter fund NAVs and units held directly.</span>
+        </span>
+      </button>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn btn-cancel" onclick="closeAdd()">Cancel</button>
     </div>
   </div>
 </div>

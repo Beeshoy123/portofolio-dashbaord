@@ -611,20 +611,22 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 }
 .scan-sub { font-size: 11px; color: var(--dim); margin-bottom: 14px; line-height: 1.5; }
 .scan-modes { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.scan-mode-btn {
+.scan-mode-btn, .add-pick-btn {
   display: flex; gap: 10px; align-items: flex-start;
   background: var(--bg); border: 1.5px solid var(--edge);
   border-radius: var(--radius-sm); padding: 12px;
-  cursor: pointer; text-align: left; transition: border-color .15s;
+  cursor: pointer; text-align: left; transition: border-color .15s; width: 100%;
 }
-.scan-mode-btn:hover, .scan-mode-btn.selected { border-color: var(--teal); }
-.scan-mode-icon {
+.scan-mode-btn:hover, .scan-mode-btn.selected,
+.add-pick-btn:hover { border-color: var(--teal); }
+.scan-mode-icon, .add-pick-icon {
   width: 36px; height: 36px; border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
   font-size: 18px; flex-shrink: 0;
 }
-.scan-mode-title { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
-.scan-mode-desc { font-size: 10px; color: var(--dim); line-height: 1.4; }
+.add-pick-body { display: flex; flex-direction: column; }
+.scan-mode-title, .add-pick-title { font-size: 12px; font-weight: 700; color: var(--ink); margin-bottom: 3px; }
+.scan-mode-desc, .add-pick-desc { font-size: 10px; color: var(--dim); line-height: 1.4; }
 .scan-upload-area {
   border: 2px dashed var(--edge);
   border-radius: var(--radius-sm);

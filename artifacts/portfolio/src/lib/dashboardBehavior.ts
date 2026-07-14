@@ -963,6 +963,8 @@ export function initDashboardBehavior(
     el("insight-overlay")?.classList.add("open");
   };
   win.closeInsights = () => el("insight-overlay")?.classList.remove("open");
+  win.openAdd = () => el("add-modal")?.classList.add("open");
+  win.closeAdd = () => el("add-modal")?.classList.remove("open");
   win.openScan = () => el("scan-overlay")?.classList.add("open");
   win.closeScan = () => el("scan-overlay")?.classList.remove("open");
 
