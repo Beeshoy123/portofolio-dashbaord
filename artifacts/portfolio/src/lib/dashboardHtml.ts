@@ -223,7 +223,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     <span class="dark-toggle-track"><span class="dark-toggle-knob" id="dark-toggle-knob">🌙</span></span>
   </button>
   <button class="icon-btn" onclick="doRefresh()" id="refresh-btn" title="Refresh live prices">🔄</button>
-  <button class="icon-btn" onclick="openInsights()" title="Insights &amp; Actions">💡</button>
+  <button class="icon-btn" onclick="openInsights()" title="Insights &amp; Actions">ℹ️</button>
   <button class="icon-btn" onclick="openAdd()" title="Add data">➕</button>
 </div>
 
@@ -683,7 +683,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
 <!-- INSIGHTS DRAWER -->
 <div class="insight-overlay" id="insight-overlay">
   <div class="insight-drawer">
-    <h2>💡 Cross-Card Intelligence <button onclick="closeInsights()">Close</button></h2>
+    <h2>ℹ️ Cross-Card Intelligence <button onclick="closeInsights()">Close</button></h2>
     <div style="font-size:10.5px;color:var(--dim);margin-bottom:14px;line-height:1.5" id="insights-timestamp"></div>
     <div id="insights-body">
       ${buildInsights(d)}
