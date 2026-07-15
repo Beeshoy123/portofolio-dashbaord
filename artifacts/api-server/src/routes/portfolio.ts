@@ -391,32 +391,65 @@ Extract ONLY these fields as a raw JSON object — no markdown, no code fences, 
 }
 Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
-  const geminiRes = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: mimeType, data: image } },
-            ],
-          },
-        ],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
-      }),
-    },
-  );
+  // Tried in order — if a model's quota is exhausted (429) or unavailable
+  // (404, e.g. deprecated), fall through to the next one on the same key
+  // before giving up. Only 429/404 trigger a fallback; other errors (bad
+  // key, bad request) surface immediately since retrying won't help.
+  const MODEL_FALLBACK_CHAIN = [
+    "gemini-2.0-flash",
+    "gemini-2.5-flash",
+    "gemini-1.5-flash",
+  ];
 
-  if (!geminiRes.ok) {
-    const errData = (await geminiRes.json().catch(() => ({}))) as {
+  let geminiRes: Response | undefined;
+  let lastErrData: { error?: { message?: string } } = {};
+  let lastModel = MODEL_FALLBACK_CHAIN[0];
+
+  for (const model of MODEL_FALLBACK_CHAIN) {
+    lastModel = model;
+    const attempt = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: prompt },
+                { inline_data: { mime_type: mimeType, data: image } },
+              ],
+            },
+          ],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 256 },
+        }),
+      },
+    );
+
+    if (attempt.ok) {
+      geminiRes = attempt;
+      break;
+    }
+
+    lastErrData = (await attempt.json().catch(() => ({}))) as {
       error?: { message?: string };
     };
-    res
-      .status(geminiRes.status)
-      .json({ error: errData?.error?.message ?? `Gemini error ${geminiRes.status}` });
+
+    const shouldFallThrough = attempt.status === 429 || attempt.status === 404;
+    if (!shouldFallThrough) {
+      geminiRes = attempt;
+      break;
+    }
+    // else: try next model in the chain
+  }
+
+  if (!geminiRes || !geminiRes.ok) {
+    const status = geminiRes?.status ?? 429;
+    res.status(status).json({
+      error:
+        lastErrData?.error?.message ??
+        `Gemini error ${status} (tried: ${MODEL_FALLBACK_CHAIN.join(", ")}, last: ${lastModel})`,
+    });
     return;
   }
 
