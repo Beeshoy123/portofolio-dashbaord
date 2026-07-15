@@ -105,7 +105,7 @@ export type Certificate = typeof certificatesTable.$inferSelect;
 // Historical buy/sell activity across gold and liquid funds.
 export const transactionsTable = pgTable("transactions", {
   id: serial("id").primaryKey(),
-  assetType: text("asset_type", { enum: ["gold", "abr", "re"] }).notNull(),
+  assetType: text("asset_type", { enum: ["gold", "abr", "re", "azs"] }).notNull(),
   name: text("name").notNull(),
   meta: text("meta").notNull(),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),

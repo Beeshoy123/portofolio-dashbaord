@@ -13,4 +13,5 @@ export const TransactionAssetType = {
   gold: 'gold',
   abr: 'abr',
   re: 're',
+  azs: 'azs',
 } as const;

@@ -325,7 +325,7 @@ components:
           type: integer
         assetType:
           type: string
-          enum: [gold, abr, re]
+          enum: [gold, abr, re, azs]
         name:
           type: string
         meta:

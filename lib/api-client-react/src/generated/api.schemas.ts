@@ -87,6 +87,7 @@ export const TransactionAssetType = {
   gold: 'gold',
   abr: 'abr',
   re: 're',
+  azs: 'azs',
 } as const;
 
 export type TransactionTxType = typeof TransactionTxType[keyof typeof TransactionTxType];
@@ -122,6 +123,10 @@ export interface PortfolioSettings {
   usdEgpRate: number;
   /** 'live' = fetched from open.er-api.com; 'fallback' = stale cache; null = not yet fetched */
   usdEgpStatus: string | null;
+  /** EUR/EGP exchange rate from open.er-api.com; null if not yet fetched */
+  eurEgpRate?: number | null;
+  /** 'live' = fetched from open.er-api.com; 'fallback' = stale cache; null = not yet fetched */
+  eurEgpStatus?: string | null;
 }
 
 export interface Portfolio {

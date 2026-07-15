@@ -67,7 +67,7 @@ export const GetPortfolioResponse = zod.object({
 })),
   "transactions": zod.array(zod.object({
   "id": zod.number(),
-  "assetType": zod.enum(['gold', 'abr', 're']),
+  "assetType": zod.enum(['gold', 'abr', 're', 'azs']),
   "name": zod.string(),
   "meta": zod.string(),
   "occurredAt": zod.coerce.date(),
@@ -82,7 +82,9 @@ export const GetPortfolioResponse = zod.object({
   "settings": zod.object({
   "emergencyFundTarget": zod.number(),
   "usdEgpRate": zod.number(),
-  "usdEgpStatus": zod.string().nullable().describe('\'live\' = fetched from open.er-api.com; \'fallback\' = stale cache; null = not yet fetched')
+  "usdEgpStatus": zod.string().nullable().describe('\'live\' = fetched from open.er-api.com; \'fallback\' = stale cache; null = not yet fetched'),
+  "eurEgpRate": zod.number().nullish().describe('EUR\/EGP exchange rate from open.er-api.com; null if not yet fetched'),
+  "eurEgpStatus": zod.string().nullish().describe('\'live\' = fetched from open.er-api.com; \'fallback\' = stale cache; null = not yet fetched')
 })
 })
 

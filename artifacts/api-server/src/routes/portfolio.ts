@@ -132,7 +132,7 @@ function toCertificate(row: typeof certificatesTable.$inferSelect) {
 function toTransaction(row: typeof transactionsTable.$inferSelect) {
   return {
     id: row.id,
-    assetType: row.assetType as "gold" | "abr" | "re",
+    assetType: row.assetType as "gold" | "abr" | "re" | "azs",
     name: row.name,
     meta: row.meta,
     occurredAt: row.occurredAt.toISOString(),

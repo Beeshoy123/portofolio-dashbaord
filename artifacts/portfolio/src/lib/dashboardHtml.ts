@@ -76,6 +76,7 @@ const TX_ICON: Record<string, { bg: string; icon: string }> = {
   gold: { bg: "var(--gold-soft)", icon: "🥇" },
   abr: { bg: "var(--teal-soft)", icon: "🏦" },
   re: { bg: "var(--coral-soft)", icon: "🏢" },
+  azs: { bg: "var(--teal-soft)", icon: "💰" },
 };
 
 function buildTransactions(p: Portfolio): string {
