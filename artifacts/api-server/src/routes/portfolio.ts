@@ -398,7 +398,8 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   const MODEL_FALLBACK_CHAIN = [
     "gemini-2.0-flash",
     "gemini-2.5-flash",
-    "gemini-1.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-flash-latest",
   ];
 
   let geminiRes: Response | undefined;
