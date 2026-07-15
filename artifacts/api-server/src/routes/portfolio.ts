@@ -391,10 +391,11 @@ Extract ONLY these fields as a raw JSON object — no markdown, no code fences, 
 }
 Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
-  // Tried in order — if a model's quota is exhausted (429) or unavailable
-  // (404, e.g. deprecated), fall through to the next one on the same key
-  // before giving up. Only 429/404 trigger a fallback; other errors (bad
-  // key, bad request) surface immediately since retrying won't help.
+  // Tried in order — if a model's quota is exhausted (429), the model is
+  // unavailable (404, e.g. deprecated), or Google's servers are transiently
+  // overloaded (503 "model is currently experiencing high demand"), fall
+  // through to the next one on the same key before giving up. Other errors
+  // (bad key, bad request) surface immediately since retrying won't help.
   const MODEL_FALLBACK_CHAIN = [
     "gemini-2.0-flash",
     "gemini-2.5-flash",
@@ -436,7 +437,8 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       error?: { message?: string };
     };
 
-    const shouldFallThrough = attempt.status === 429 || attempt.status === 404;
+    const shouldFallThrough =
+      attempt.status === 429 || attempt.status === 404 || attempt.status === 503;
     if (!shouldFallThrough) {
       geminiRes = attempt;
       break;
@@ -446,11 +448,16 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
   if (!geminiRes || !geminiRes.ok) {
     const status = geminiRes?.status ?? 429;
-    res.status(status).json({
-      error:
-        lastErrData?.error?.message ??
-        `Gemini error ${status} (tried: ${MODEL_FALLBACK_CHAIN.join(", ")}, last: ${lastModel})`,
-    });
+    // Log the technical detail server-side for debugging, but show the user
+    // a plain-language message — they can't act on a raw Google API string.
+    console.warn(
+      `[scan] all models exhausted (last: ${lastModel}, status: ${status}): ${lastErrData?.error?.message ?? "no detail"}`,
+    );
+    const friendlyMessage =
+      status === 429 || status === 503
+        ? "Gemini is busy or your key's quota is used up right now. Wait a bit and try again, or enter the values manually."
+        : "Could not read the image — please try again or enter the values manually.";
+    res.status(status).json({ error: friendlyMessage });
     return;
   }
 
