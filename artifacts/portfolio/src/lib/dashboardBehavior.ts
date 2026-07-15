@@ -383,7 +383,7 @@ export function initDashboardBehavior(
     liquid: {
       panels: STD_PERF_PANELS,
       pillLabels: ["PnL", "Yield", "Growth"],
-      hiddenPillIds: ["pill-yield"],
+      hiddenPillIds: [],
       mathIds: { pnl: "math-liquid", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
       pnlUpdate: {
