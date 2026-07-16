@@ -272,7 +272,26 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     </div>
   </div>
 
-  <!-- ② PERFORMANCE -->
+  <!-- ② HOLDINGS HEATMAP — primary card -->
+  <div class="card s-4" data-view-card="heatmap">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div class="card-lbl" id="heatmap-label" style="font-size:12px">Holdings Heatmap</div>
+      <div style="font-size:10px;color:var(--dim)">size = value · color = return</div>
+    </div>
+    <div id="heatmap-container" style="width:100%;aspect-ratio:16/7;position:relative;border-radius:12px;overflow:hidden">
+      <div class="hm-cell" id="hm-cert-cell" style="left:3px;top:3px;width:43%;height:94%;background:${heatColor(d.certTotals.weightedAvgRate)};animation-delay:0ms"><div class="hm-name" style="font-size:15px">Certificates</div><div class="hm-pct" style="font-size:13px" id="hm-cert-pct">${pctStr(d.certTotals.weightedAvgRate)}</div></div>
+      <div class="hm-cell" style="left:47%;top:3px;width:50%;height:55%;background:${heatColor(goldHeatPct)};animation-delay:80ms"><div class="hm-name" style="font-size:15px">Gold 24K</div><div class="hm-pct" style="font-size:13px">${goldPnlPctDisplay1}</div></div>
+      <div class="hm-cell" style="left:47%;top:60%;width:37%;height:37%;background:${heatColor(d.abr.pnlPct)};animation-delay:160ms"><div class="hm-name" style="font-size:13px">Bareeq</div><div class="hm-pct" style="font-size:11px">${pctStr(d.abr.pnlPct)}</div></div>
+      <div class="hm-cell" style="left:86%;top:60%;width:11%;height:37%;background:${heatColor(d.re.pnlPct)};animation-delay:240ms"><div class="hm-name" style="font-size:9px">RE</div><div class="hm-pct" style="font-size:9px">${pctStr(d.re.pnlPct)}</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+      <span style="font-size:10px;color:var(--dim)">Loss</span>
+      <div style="flex:1;height:7px;border-radius:4px;background:linear-gradient(90deg,#c94035,#e07060,#c8c0b0,#2a8a70,#1a6b5a)"></div>
+      <span style="font-size:10px;color:var(--dim)">Gain</span>
+    </div>
+  </div>
+
+  <!-- ③ PERFORMANCE -->
   <div class="card s-2" data-view-card="perf">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
       <div class="card-lbl">Performance <span class="info-icon" id="perf-info-btn" onclick="togglePerfMath()" title="Show calculation">ℹ</span></div>
@@ -487,25 +506,6 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     </div>
     <div class="math-section" id="abr-detail" style="margin-top:10px">
       <div id="abr-note" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">📈 Yield only: ~${d.abr.monthlyYield > 0 ? Math.ceil(Math.max(0, d.settings.emergencyFundTarget - d.abr.value) / d.abr.monthlyYield) : "—"} months · add monthly deposits to go faster</div>
-    </div>
-  </div>
-
-  <!-- ⑥ HOLDINGS HEATMAP -->
-  <div class="card s-2" data-view-card="heatmap">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="card-lbl" id="heatmap-label">Holdings Heatmap</div>
-      <div style="font-size:9px;color:var(--dim)">size = value · color = return</div>
-    </div>
-    <div id="heatmap-container" style="width:100%;aspect-ratio:1/1;position:relative;border-radius:8px;overflow:hidden">
-      <div class="hm-cell" id="hm-cert-cell" style="left:3px;top:3px;width:43%;height:94%;background:${heatColor(d.certTotals.weightedAvgRate)};animation-delay:0ms"><div class="hm-name">Certificates</div><div class="hm-pct" id="hm-cert-pct">${pctStr(d.certTotals.weightedAvgRate)}</div></div>
-      <div class="hm-cell" style="left:47%;top:3px;width:50%;height:55%;background:${heatColor(goldHeatPct)};animation-delay:80ms"><div class="hm-name">Gold 24K</div><div class="hm-pct">${goldPnlPctDisplay1}</div></div>
-      <div class="hm-cell" style="left:47%;top:60%;width:37%;height:37%;background:${heatColor(d.abr.pnlPct)};animation-delay:160ms"><div class="hm-name">Bareeq</div><div class="hm-pct">${pctStr(d.abr.pnlPct)}</div></div>
-      <div class="hm-cell" style="left:86%;top:60%;width:11%;height:37%;background:${heatColor(d.re.pnlPct)};animation-delay:240ms"><div class="hm-name" style="font-size:8px">RE</div><div class="hm-pct" style="font-size:8px">${pctStr(d.re.pnlPct)}</div></div>
-    </div>
-    <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
-      <span style="font-size:9px;color:var(--dim)">Loss</span>
-      <div style="flex:1;height:6px;border-radius:3px;background:linear-gradient(90deg,#c94035,#e07060,#c8c0b0,#2a8a70,#1a6b5a)"></div>
-      <span style="font-size:9px;color:var(--dim)">Gain</span>
     </div>
   </div>
 
