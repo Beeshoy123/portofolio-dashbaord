@@ -259,7 +259,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
 <div class="bento">
 
   <!-- ① HERO TOTAL -->
-  <div class="card dark s-4" style="padding:26px 28px" data-view-card="hero">
+  <div class="card dark s-6" style="padding:26px 28px" data-view-card="hero">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div style="flex:1">
         <div class="card-lbl"><span id="hero-title">Total Portfolio Value</span> <span class="info-icon" onclick="toggleMath('math-total')" title="Show calculation">ℹ</span></div>
@@ -444,7 +444,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   </div>
 
   <!-- ④ WALLET SEGMENTS -->
-  <div class="card s-2 r-2" style="display:flex;flex-direction:column;gap:10px" data-view-card="segments">
+  <div class="card s-2" style="display:flex;flex-direction:column;gap:10px" data-view-card="segments">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="card-lbl">Wallet Segments <span class="info-icon" onclick="toggleMath('alloc-detail')" title="Show concentration">ℹ</span></div>
       <div style="font-size:9.5px;color:var(--dim)" id="seg-count">4 assets</div>
@@ -518,7 +518,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
        sample values are baked in here. Once the live buy/sell gold price
        feature ships, these fields should be pre-filled (and eventually
        replaced) by that live feed, never by a hardcoded number. -->
-  <div class="card s-2 r-2" data-view-card="dca">
+  <div class="card s-2" data-view-card="dca">
     <div class="card-lbl">🪙 Buy More Gold — Scenario Calculator</div>
     <p class="dca-sub">You hold ${fmt(d.gold.gramsHeld)}g (pure-gold-adjusted) @ ${fmt(d.gold.avgCostPerGram)} EGP/pure-g avg. Scenarios are auto-calculated from live goldbullioneg.com prices (refreshed every 5 min). Manufacturing fee on every buy, cashback on every sell — per the fixed dealer fee schedule.</p>
     <div class="dca-divider"></div>

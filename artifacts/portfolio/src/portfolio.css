@@ -52,7 +52,7 @@ html, body {
 }
 
 #dashboard-root {
-  max-width: 900px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 16px var(--gap) 40px;
 }
@@ -211,7 +211,7 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 /* ── Bento Grid ─────────────────────────────────────────────────────── */
 .bento {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: var(--gap);
 }
 
@@ -232,6 +232,7 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 }
 .card.s-2 { grid-column: span 2; }
 .card.s-4 { grid-column: span 4; }
+.card.s-6 { grid-column: span 6; }
 .card.r-2 { grid-row: span 2; }
 
 .card-lbl {
@@ -779,15 +780,18 @@ footer {
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .bento { grid-template-columns: repeat(4, 1fr); }
+  .card.s-6 { grid-column: span 4; }
+}
 @media (max-width: 700px) {
   .bento { grid-template-columns: repeat(2, 1fr); }
-  .card.s-4 { grid-column: span 2; }
-  .card.s-2 { grid-column: span 2; }
+  .card.s-6, .card.s-4, .card.s-2 { grid-column: span 2; }
   .dca-inputs { grid-template-columns: 1fr; }
   .dca-results { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 480px) {
   .bento { grid-template-columns: 1fr; }
-  .card.s-4, .card.s-2 { grid-column: span 1; }
+  .card.s-6, .card.s-4, .card.s-2 { grid-column: span 1; }
   .card.r-2 { grid-row: span 1; }
 }
