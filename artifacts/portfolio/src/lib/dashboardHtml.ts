@@ -103,6 +103,133 @@ function buildTransactions(p: Portfolio): string {
 const GOLD_PRICE_UNAVAILABLE = "Live price unavailable";
 const GOLD_PNL_UNAVAILABLE = "PnL unavailable — live price pending";
 
+// ── Gold Cohort Analysis ───────────────────────────────────────────────────
+// Breaks the gold position into individual purchase batches from
+// p.gold.transactions. Current value uses the live sell price from
+// goldbullioneg.com; profit includes the dealer cashback on sell.
+// Shows a "live price pending" state when the scrape hasn't run yet.
+function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
+  type GoldTx = Portfolio["gold"]["transactions"][number];
+  const txs = [...(p.gold.transactions as GoldTx[])].sort(
+    (a: GoldTx, b: GoldTx) =>
+      new Date(a.date).getTime() - new Date(b.date).getTime(),
+  );
+
+  if (txs.length === 0) {
+    return `<div style="margin-top:var(--gap)" data-view-card="gold-cohort">
+      <div class="card"><div class="card-lbl">📊 Cohort Analysis · Gold Purchases</div>
+      <div style="font-size:11px;color:var(--dim);padding:12px 0">No gold transactions recorded yet.</div></div>
+    </div>`;
+  }
+
+  const livePrice = d.gold.livePricePerGram;
+  const cashback = d.gold.cashbackPerGram;
+  const priceAvail = livePrice !== null;
+
+  let totalPaid = 0;
+  let totalGrams = 0;
+  let totalCurrentValue = 0;
+  let totalProfit = 0;
+
+  const dataRows = txs.map((tx: GoldTx, i: number) => {
+    const avgCostPerGram = tx.totalWeightGrams > 0
+      ? tx.totalPaid / tx.totalWeightGrams
+      : 0;
+    const currentValue = priceAvail ? tx.totalWeightGrams * livePrice! : null;
+    const profitNet = priceAvail
+      ? (currentValue! + tx.totalWeightGrams * cashback) - tx.totalPaid
+      : null;
+    const returnPct = priceAvail && tx.totalPaid > 0
+      ? (profitNet! / tx.totalPaid) * 100
+      : null;
+    const profitColor = profitNet !== null
+      ? profitNet >= 0 ? "var(--teal)" : "var(--coral)"
+      : "var(--dim)";
+
+    const dateStr = new Date(tx.date).toLocaleDateString("en-US", {
+      day: "numeric", month: "short", year: "2-digit",
+    });
+
+    totalPaid += tx.totalPaid;
+    totalGrams += tx.totalWeightGrams;
+    if (priceAvail && currentValue !== null) totalCurrentValue += currentValue;
+    if (priceAvail && profitNet !== null) totalProfit += profitNet;
+
+    const valueCell = priceAvail
+      ? `<td style="font-weight:700">${fmt2(currentValue!)}</td>`
+      : `<td style="color:var(--dim)">—</td>`;
+    const profitCell = priceAvail
+      ? `<td style="font-weight:700;color:${profitColor}">${profitNet! >= 0 ? "+" : ""}${fmt2(profitNet!)}</td>`
+      : `<td style="color:var(--dim);font-size:10px">live pending</td>`;
+    const returnCell = priceAvail
+      ? `<td style="font-weight:800;color:${profitColor}">${returnPct! >= 0 ? "+" : ""}${returnPct!.toFixed(2)}%</td>`
+      : `<td style="color:var(--dim)">—</td>`;
+
+    return `<tr>
+      <td><span style="font-size:10px;font-weight:800;background:var(--bg);border:1px solid var(--edge);border-radius:6px;padding:2px 7px;color:var(--gold,#b8893f)">B${i + 1}</span></td>
+      <td style="color:var(--dim);font-size:11px">${dateStr}</td>
+      <td style="font-weight:600">${fmt2(tx.totalPaid)}</td>
+      <td style="font-weight:600">${fmt(tx.totalWeightGrams)}g</td>
+      <td style="color:var(--dim)">${tx.karat}K · ${tx.quantity}×${fmt(tx.weightPerUnitGrams)}g</td>
+      <td style="color:var(--dim)">${fmt2(avgCostPerGram)}</td>
+      ${valueCell}${profitCell}${returnCell}
+    </tr>`;
+  });
+
+  const totalAvgCost = totalGrams > 0 ? totalPaid / totalGrams : 0;
+  const totalReturnPct = priceAvail && totalPaid > 0 ? (totalProfit / totalPaid) * 100 : null;
+  const totalProfitColor = totalProfit >= 0 ? "var(--teal)" : "var(--coral)";
+
+  const totalValueCell = priceAvail
+    ? `<td style="font-weight:800">${fmt2(totalCurrentValue)}</td>`
+    : `<td style="color:var(--dim)">—</td>`;
+  const totalProfitCell = priceAvail
+    ? `<td style="font-weight:800;color:${totalProfitColor}">${totalProfit >= 0 ? "+" : ""}${fmt2(totalProfit)}</td>`
+    : `<td style="color:var(--dim);font-size:10px">live pending</td>`;
+  const totalReturnCell = priceAvail && totalReturnPct !== null
+    ? `<td style="font-weight:800;color:${totalProfitColor}">${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(2)}%</td>`
+    : `<td style="color:var(--dim)">—</td>`;
+
+  const priceNote = priceAvail
+    ? `Sell: <b>${fmt(livePrice!)} EGP/g</b> · Cashback: <b>${fmt2(cashback)} EGP/g</b> · Profit = (Value + Cashback) − Paid`
+    : `⏳ Live sell price pending — goldbullioneg.com scrape in progress`;
+
+  return `<div style="margin-top:var(--gap)" data-view-card="gold-cohort">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+        <div class="card-lbl">📊 Cohort Analysis · Gold Purchases</div>
+      </div>
+      <div style="font-size:10px;color:${priceAvail ? "var(--teal)" : "var(--dim)"};margin-bottom:16px">${priceNote}</div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table class="ah-table" style="min-width:640px">
+          <thead><tr>
+            <th>Cohort</th>
+            <th>Date</th>
+            <th>Paid (EGP)</th>
+            <th>Weight</th>
+            <th>Bar / Karat</th>
+            <th>Avg Cost/g</th>
+            <th>Current Value (EGP)</th>
+            <th>Profit incl. Cashback</th>
+            <th>Return (%)</th>
+          </tr></thead>
+          <tbody>
+            ${dataRows.join("")}
+            <tr class="cohort-total-row">
+              <td colspan="2" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)">Total</td>
+              <td style="font-weight:800">${fmt2(totalPaid)}</td>
+              <td style="font-weight:800">${fmt(totalGrams)}g</td>
+              <td style="color:var(--dim)">—</td>
+              <td style="color:var(--dim)">${fmt2(totalAvgCost)}</td>
+              ${totalValueCell}${totalProfitCell}${totalReturnCell}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
+}
+
 // ── Cohort Analysis ────────────────────────────────────────────────────────
 // Breaks each fund's position into its individual buy batches, computes
 // current value (units × live NAV) and profit/return for each cohort, and
@@ -755,6 +882,9 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     </table>
   </div>
 </div>
+
+<!-- GOLD COHORT ANALYSIS — gold view only -->
+${buildGoldCohortAnalysis(p, d)}
 
 <!-- COHORT ANALYSIS — liquid view only -->
 ${buildCohortAnalysis(p, d)}

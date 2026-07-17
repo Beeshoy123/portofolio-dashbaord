@@ -64,7 +64,7 @@ export function initDashboardBehavior(
     },
     gold: {
       label: "Gold 24K · physical position",
-      cards: ["hero", "perf", "dca", "activity"],
+      cards: ["hero", "perf", "gold-cohort", "dca", "activity"],
       assetGroup: "gold",
     },
     liquid: {
