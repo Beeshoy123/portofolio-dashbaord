@@ -64,12 +64,12 @@ export function initDashboardBehavior(
     },
     gold: {
       label: "Gold 24K · physical position",
-      cards: ["hero", "perf", "gold-cohort", "dca", "activity"],
+      cards: ["hero", "perf", "gold-cohort", "dca"],
       assetGroup: "gold",
     },
     liquid: {
       label: "Liquid assets · Bareeq & funds",
-      cards: ["hero", "perf", "progress", "cohort", "activity"],
+      cards: ["hero", "perf", "progress", "cohort"],
       assetGroup: "liquid",
     },
     certs: {
@@ -315,8 +315,6 @@ export function initDashboardBehavior(
 
     updatePerfPnlForView(view);
     updatePerfTabsForView(view);
-    renderHoldingsForView(view);
-    applyTxChipsForView(view);
   };
 
   // Panel ID tuples — one entry per pill in [pnl, yield, growth] order.
@@ -543,91 +541,6 @@ export function initDashboardBehavior(
     PILL_KEYS.forEach(t => el(`pill-${t}`)?.classList.toggle("active", t === type));
     if (type === "growth") refreshGrowthLabel();
   };
-
-  win.switchTab = (tab: string) => {
-    el("panel-holdings")!.style.display = tab === "holdings" ? "block" : "none";
-    el("panel-transactions")!.style.display =
-      tab === "transactions" ? "block" : "none";
-    el("tab-holdings")?.classList.toggle("active", tab === "holdings");
-    el("tab-transactions")?.classList.toggle("active", tab === "transactions");
-  };
-
-  function txTypesForView(view: string): string[] {
-    if (view === "gold") return ["gold"];
-    if (view === "liquid") return ["abr", "re"];
-    return ["gold", "abr", "re"];
-  }
-
-  function applyTxChipsForView(view: string) {
-    const valid = txTypesForView(view);
-    const chipBar = el("tx-chip-bar");
-    if (!chipBar) return;
-
-    if (view === "gold") {
-      chipBar.style.display = "none";
-    } else {
-      chipBar.style.display = "flex";
-      const chipAll = el("chip-all");
-      if (chipAll) chipAll.style.display = "";
-      const chipMap: Record<string, string> = {
-        gold: "chip-gold",
-        abr: "chip-abr",
-        re: "chip-re",
-      };
-      Object.entries(chipMap).forEach(([type, chipId]) => {
-        const c = el(chipId);
-        if (c) c.style.display = valid.includes(type) ? "" : "none";
-      });
-    }
-
-    if (view === "gold") {
-      applyTxFilter("gold", valid);
-    } else {
-      ["all", "gold", "abr", "re"].forEach((t) =>
-        el(`chip-${t}`)?.classList.remove("active"),
-      );
-      el("chip-all")?.classList.add("active");
-      applyTxFilter("all", valid);
-    }
-  }
-
-  function applyTxFilter(type: string, validTypes: string[]) {
-    document.querySelectorAll("#tx-list .tx-entry").forEach((entry) => {
-      const dtype = entry.getAttribute("data-type") || "";
-      const inScope = validTypes.includes(dtype);
-      const matchesFilter = type === "all" || dtype === type;
-      (entry as HTMLElement).style.display =
-        inScope && matchesFilter ? "flex" : "none";
-    });
-  }
-
-  win.filterTx = (type: string) => {
-    const valid = txTypesForView(currentView);
-    ["all", "gold", "abr", "re"].forEach((t) =>
-      el(`chip-${t}`)?.classList.toggle("active", t === type),
-    );
-    applyTxFilter(type, valid);
-  };
-
-  function renderHoldingsForView(view: string) {
-    const rows = document.querySelectorAll(
-      "#holdings-tbody tr[data-asset-group]",
-    );
-    const totalRow = document.querySelector(
-      "#holdings-tbody tr.holdings-total-row",
-    ) as HTMLElement | null;
-
-    rows.forEach((row) => {
-      const group = row.getAttribute("data-asset-group") || "";
-      let visible = true;
-      if (view === "gold") visible = group === "gold";
-      if (view === "liquid") visible = group === "liquid";
-      if (view === "certs") visible = group === "certs";
-      (row as HTMLElement).style.display = visible ? "" : "none";
-    });
-
-    if (totalRow) totalRow.style.display = view === "total" ? "" : "none";
-  }
 
   win.toggleMath = (id: string) => {
     const sec = el(id);

@@ -63,43 +63,6 @@ function buildDonutRing(d: Derived): string {
   return circles;
 }
 
-function buildHoldingsRows(p: Portfolio, d: Derived): string {
-  return `
-    <tr data-asset-group="gold"><td><div class="ah-asset-name">Gold 24K</div><div class="ah-asset-sub">${fmt(d.gold.gramsHeld)}g physical</div></td><td>${d.gold.value !== null ? fmt2(d.gold.value) : `${fmt2(d.gold.cost)} <span style="font-size:9px;color:var(--dim)">(at cost)</span>`}</td><td style="color:var(--dim)">~${fmt(d.gold.cost)}</td><td style="color:var(--dim)">${d.gold.pnlAvailable ? pctStr(d.gold.pnlPct!, 2) : "N/A"}</td></tr>
-    <tr data-asset-group="liquid"><td><div class="ah-asset-name">Bareeq Fund</div><div class="ah-asset-sub">ABR · ${fmt(d.abr.unitsHeld)} certs</div></td><td>${fmt2(d.abr.value)}</td><td style="color:var(--dim)">~${fmt(d.abr.costBasisTotal)}</td><td style="color:var(--teal)">${pctStr(d.abr.pnlPct, 2)}</td></tr>
-    <tr data-asset-group="liquid"><td><div class="ah-asset-name">Beltone Real Estate Fund</div><div class="ah-asset-sub">BRE · ${fmt(d.re.unitsHeld)} certs</div></td><td>${fmt2(d.re.value)}</td><td style="color:var(--dim)">~${fmt(d.re.costBasisTotal)}</td><td style="color:${d.re.pnlPct >= 0 ? "var(--teal)" : "var(--coral)"}">${pctStr(d.re.pnlPct, 2)}</td></tr>
-    <tr data-asset-group="certs"><td><div class="ah-asset-name">NBE Certificates</div><div class="ah-asset-sub">Fixed · ${p.certificates.length} certs</div></td><td>${fmt2(d.certTotals.totalPrincipal)}</td><td style="color:var(--dim)">~${fmt(d.certTotals.totalPrincipal)}</td><td id="cert-return-cell" style="color:var(--teal)">${pctStr(d.certTotals.weightedAvgRate)}</td></tr>
-    <tr class="holdings-total-row" style="border-top:2px solid var(--edge)"><td><div class="ah-asset-name" style="color:var(--dim);font-size:10.5px;text-transform:uppercase;letter-spacing:.05em">Total</div></td><td style="font-family:'Sora',sans-serif;font-weight:800;font-size:13px">${fmt2(d.total.value)}</td><td style="color:var(--dim);font-weight:700">~${fmt(d.total.cost)}</td><td style="color:var(--teal);font-weight:800">${pctStr(d.total.pnlPct, 2)}</td></tr>`;
-}
-
-const TX_ICON: Record<string, { bg: string; icon: string }> = {
-  gold: { bg: "var(--gold-soft)", icon: "🥇" },
-  abr: { bg: "var(--teal-soft)", icon: "🏦" },
-  re: { bg: "var(--coral-soft)", icon: "🏢" },
-  azs: { bg: "var(--teal-soft)", icon: "💰" },
-};
-
-function buildTransactions(p: Portfolio): string {
-  return p.transactions
-    .map((tx) => {
-      const iconMeta = TX_ICON[tx.assetType] ?? TX_ICON.abr;
-      const date = new Date(tx.occurredAt);
-      const dateStr = date.toLocaleDateString("en-US", {
-        weekday: "short",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      });
-      const timeStr = date.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const amountColor = tx.txType === "buy" && tx.assetType === "gold" ? "var(--coral)" : "var(--teal)";
-      return `<div class="tx-entry" data-type="${tx.assetType}"><div class="tx-entry-icon" style="background:${iconMeta.bg}">${iconMeta.icon}</div><div class="tx-entry-body"><div class="tx-entry-name">${tx.name}</div><div class="tx-entry-meta">${dateStr} · ${timeStr} · ${tx.meta}</div></div><div class="tx-entry-right"><div class="tx-entry-amount" style="color:${amountColor}">${fmt2(tx.amount)}</div><div class="tx-entry-badge">${tx.txType.toUpperCase()}</div></div></div>`;
-    })
-    .join("\n");
-}
-
 const GOLD_PRICE_UNAVAILABLE = "Live price unavailable";
 const GOLD_PNL_UNAVAILABLE = "PnL unavailable — live price pending";
 
@@ -888,39 +851,6 @@ ${buildGoldCohortAnalysis(p, d)}
 
 <!-- COHORT ANALYSIS — liquid view only -->
 ${buildCohortAnalysis(p, d)}
-
-<!-- ACTIVITY & HOLDINGS -->
-<div style="margin-top:var(--gap)" data-view-card="activity">
-  <div class="card" style="width:100%">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div class="card-lbl">Activity &amp; Holdings</div>
-      <div style="font-size:9.5px;color:var(--teal);font-weight:700">All orders · Fulfilled ✓</div>
-    </div>
-    <div style="display:flex;gap:0;border-bottom:2px solid var(--edge);margin-bottom:16px">
-      <button class="ah-tab active" id="tab-holdings" onclick="switchTab('holdings')">📊 Holdings</button>
-      <button class="ah-tab" id="tab-transactions" onclick="switchTab('transactions')">🧾 Transactions</button>
-    </div>
-    <div id="panel-holdings">
-      <table class="ah-table">
-        <thead><tr><th>Asset</th><th>Value (EGP)</th><th>Cost</th><th>Return</th></tr></thead>
-        <tbody id="holdings-tbody">
-          ${buildHoldingsRows(p, d)}
-        </tbody>
-      </table>
-    </div>
-    <div id="panel-transactions" style="display:none">
-      <div id="tx-chip-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
-        <button class="chip active" id="chip-all" onclick="filterTx('all')">All</button>
-        <button class="chip" id="chip-gold" onclick="filterTx('gold')">🥇 Gold</button>
-        <button class="chip" id="chip-abr" onclick="filterTx('abr')">🏦 Bareeq</button>
-        <button class="chip" id="chip-re" onclick="filterTx('re')">🏢 Real Estate</button>
-      </div>
-      <div id="tx-list">
-        ${buildTransactions(p)}
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- AI SCREENSHOT SCANNER DRAWER -->
 <div class="scan-overlay" id="scan-overlay">
