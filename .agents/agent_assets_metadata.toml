@@ -24,3 +24,9 @@ id = "CpUORpVa-udUedFrsTxhy"
 uri = "file://portfolio_backup.zip"
 type = "unspecified"
 title = "Portfolio Database Backup (SQL)"
+
+[[outputs]]
+id = "QDnvnZNI-JPtlHVIEyNqd"
+uri = "file://portfolio_backup_20260717_194805.sql"
+type = "unspecified"
+title = "Portfolio DB Backup · 17 Jul 2026"
