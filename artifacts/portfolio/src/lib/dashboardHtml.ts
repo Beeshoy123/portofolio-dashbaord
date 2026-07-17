@@ -507,6 +507,12 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     </div>
   </div>
 
+<!-- GOLD COHORT ANALYSIS — gold view only -->
+${buildGoldCohortAnalysis(p, d)}
+
+<!-- COHORT ANALYSIS — liquid view only -->
+${buildCohortAnalysis(p, d)}
+
   <!-- ② HOLDINGS HEATMAP — primary card -->
   <div class="card s-4" data-view-card="heatmap">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -845,12 +851,6 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     </table>
   </div>
 </div>
-
-<!-- GOLD COHORT ANALYSIS — gold view only -->
-${buildGoldCohortAnalysis(p, d)}
-
-<!-- COHORT ANALYSIS — liquid view only -->
-${buildCohortAnalysis(p, d)}
 
 <!-- AI SCREENSHOT SCANNER DRAWER -->
 <div class="scan-overlay" id="scan-overlay">
