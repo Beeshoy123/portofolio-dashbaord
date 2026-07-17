@@ -314,24 +314,6 @@ export function initDashboardBehavior(
     const mathBody = el("hero-math-body");
     if (mathBody) mathBody.innerHTML = heroMath(view);
 
-    // ── Gold hero visual treatment ──────────────────────────────────────────
-    const heroCard = document.querySelector('[data-view-card="hero"]') as HTMLElement | null;
-    if (heroCard) heroCard.classList.toggle("gold-hero", view === "gold");
-    const goldVis = el("gold-hero-visual");
-    if (goldVis) goldVis.style.display = view === "gold" ? "flex" : "none";
-    const goldStats = el("gold-hero-stats");
-    if (goldStats) goldStats.style.display = view === "gold" ? "flex" : "none";
-    const goldBadge = el("gold-price-badge");
-    if (goldBadge) {
-      goldBadge.textContent = derived.gold.livePricePerGram
-        ? `${fmt(derived.gold.livePricePerGram)} EGP/g`
-        : "Price loading…";
-    }
-    const goldKaratLbl = el("gold-karat-label");
-    if (goldKaratLbl) {
-      goldKaratLbl.style.color = derived.gold.livePricePerGram ? "#b45309" : "#a3a3a3";
-    }
-
     updatePerfPnlForView(view);
     updatePerfTabsForView(view);
   };

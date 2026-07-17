@@ -501,19 +501,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
         <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px" id="hero-sublabel">Total Cost Basis · EGP</div>
         <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em" id="s-total">${fmt(d.total.cost)} EGP</div>
         <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} Market Value: ${fmt(d.total.value)} EGP (net PnL ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
-        <!-- Gold-specific stat chips — hidden until gold view activates -->
-        <div id="gold-hero-stats" style="display:none;margin-top:18px;gap:8px;flex-wrap:wrap">
-          <span class="gold-stat-pill">⚖️ ${fmt(d.gold.gramsHeld)}g held</span>
-          <span class="gold-stat-pill">📐 ${fmt2(d.gold.avgCostPerGram)} EGP/g avg cost</span>
-          <span class="gold-stat-pill">💰 ${fmt2(d.gold.cashbackPerGram)} EGP/g cashback</span>
-        </div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>
-      </div>
-      <!-- Gold coin visual — hidden until gold view activates -->
-      <div id="gold-hero-visual" style="display:none;flex-direction:column;align-items:center;gap:10px;min-width:96px;padding-top:4px">
-        <div class="gold-coin-icon">🪙</div>
-        <div class="gold-price-badge" id="gold-price-badge">${d.gold.livePricePerGram ? fmt(d.gold.livePricePerGram) + " EGP/g" : "Price loading…"}</div>
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;text-align:center" id="gold-karat-label">24K · LIVE</div>
       </div>
       <div id="rate-box-container" style="display:none"></div>
     </div>

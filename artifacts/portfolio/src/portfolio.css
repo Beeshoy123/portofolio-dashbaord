@@ -515,56 +515,6 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
   background: var(--bg);
   font-weight: 800;
 }
-/* ── Gold Hero Card ─────────────────────────────────────────────────────── */
-.card.gold-hero {
-  background: linear-gradient(145deg, #fffdf5 0%, #fef9e7 55%, #fef3c7 100%) !important;
-  border: 1.5px solid #fcd34d !important;
-  box-shadow: 0 4px 28px rgba(251,191,36,.2), 0 1px 4px rgba(0,0,0,.05) !important;
-}
-.card.gold-hero #hero-title  { color: #92400e; }
-.card.gold-hero .card-lbl    { color: #92400e; }
-.card.gold-hero #hero-sublabel { color: #b45309 !important; }
-.card.gold-hero #s-total     { color: #1c1917 !important; }
-.card.gold-hero .info-icon   { color: #d97706; }
-.card.gold-hero #s-total-chg.neg { color: #b91c1c !important; }
-.card.gold-hero #s-total-chg.pos { color: #15803d !important; }
-
-.gold-coin-icon {
-  font-size: 76px;
-  line-height: 1;
-  filter: drop-shadow(0 6px 18px rgba(212,160,23,.5));
-  animation: goldFloat 3.5s ease-in-out infinite;
-  user-select: none;
-}
-@keyframes goldFloat {
-  0%, 100% { transform: translateY(0) rotate(-5deg); }
-  50%       { transform: translateY(-7px) rotate(5deg); }
-}
-
-.gold-price-badge {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
-  color: #fff;
-  font-size: 10.5px;
-  font-weight: 800;
-  padding: 5px 13px;
-  border-radius: 20px;
-  white-space: nowrap;
-  box-shadow: 0 3px 10px rgba(217,119,6,.35);
-}
-
-.gold-stat-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #78350f;
-  background: rgba(251,191,36,.14);
-  border: 1px solid rgba(251,191,36,.55);
-  padding: 4px 11px;
-  border-radius: 14px;
-}
-
 /* Buttons */
 .btn {
   border: none; border-radius: var(--radius-sm);
