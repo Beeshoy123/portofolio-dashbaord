@@ -64,12 +64,12 @@ export function initDashboardBehavior(
     },
     gold: {
       label: "Gold 24K · physical position",
-      cards: ["hero", "perf", "gold-cohort", "dca"],
+      cards: ["hero", "gold-cohort", "perf", "dca"],
       assetGroup: "gold",
     },
     liquid: {
       label: "Liquid assets · Bareeq & funds",
-      cards: ["hero", "perf", "progress", "cohort"],
+      cards: ["hero", "cohort", "perf", "progress"],
       assetGroup: "liquid",
     },
     certs: {
