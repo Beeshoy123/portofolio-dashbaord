@@ -1,27 +1,8 @@
 /* ── Portfolio Dashboard · Beeshoy ────────────────────────────────── */
 
-/* CSS Variables – dark mode default */
+/* CSS Variables – light mode default */
 :root {
   --gap: 12px;
-  --bg: #0e1c1a;
-  --card: #141f1d;
-  --card-dk: #0b1614;
-  --edge: rgba(255, 255, 255, 0.07);
-  --ink: #d4deda;
-  --dim: #4e6e68;
-  --teal: #12a08f;
-  --teal-dk: #0c6f62;
-  --teal-soft: rgba(18, 160, 143, 0.1);
-  --gold: #c69a40;
-  --gold-soft: rgba(198, 154, 64, 0.12);
-  --coral: #e05a50;
-  --coral-soft: rgba(224, 90, 80, 0.1);
-  --purple: #8b6fb0;
-  --radius: 16px;
-  --radius-sm: 10px;
-}
-
-body.light {
   --bg: #f0f4f3;
   --card: #ffffff;
   --card-dk: #e2ebe9;
@@ -35,6 +16,25 @@ body.light {
   --gold-soft: rgba(184, 137, 63, 0.1);
   --coral: #d94a40;
   --coral-soft: rgba(217, 74, 64, 0.08);
+  --purple: #7a5fa0;
+  --radius: 16px;
+  --radius-sm: 10px;
+}
+
+body.dark {
+  --bg: #0e1c1a;
+  --card: #141f1d;
+  --card-dk: #0b1614;
+  --edge: rgba(255, 255, 255, 0.07);
+  --ink: #d4deda;
+  --dim: #4e6e68;
+  --teal: #12a08f;
+  --teal-dk: #0c6f62;
+  --teal-soft: rgba(18, 160, 143, 0.1);
+  --gold: #c69a40;
+  --gold-soft: rgba(198, 154, 64, 0.12);
+  --coral: #e05a50;
+  --coral-soft: rgba(224, 90, 80, 0.1);
   --radius: 16px;
 }
 

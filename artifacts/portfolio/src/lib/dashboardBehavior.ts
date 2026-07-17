@@ -560,10 +560,10 @@ export function initDashboardBehavior(
   };
 
   win.toggleDark = () => {
-    document.body.classList.toggle("light");
+    document.body.classList.toggle("dark");
     const knob = el("dark-toggle-knob");
     if (knob)
-      knob.textContent = document.body.classList.contains("light")
+      knob.textContent = document.body.classList.contains("dark")
         ? "☀️"
         : "🌙";
   };
