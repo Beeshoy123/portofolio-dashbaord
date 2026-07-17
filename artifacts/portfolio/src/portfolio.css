@@ -502,6 +502,11 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
   color: var(--ink); font-weight: 600;
 }
 .ah-table tr:last-child td { border-bottom: none; }
+.cohort-total-row td {
+  border-top: 2px solid var(--edge);
+  background: var(--bg);
+  font-weight: 800;
+}
 .ah-asset-name { font-weight: 700; color: var(--ink); font-size: 12px; }
 .ah-asset-sub { font-size: 9.5px; color: var(--dim); }
 .ah-tab {

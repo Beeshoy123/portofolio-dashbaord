@@ -103,6 +103,151 @@ function buildTransactions(p: Portfolio): string {
 const GOLD_PRICE_UNAVAILABLE = "Live price unavailable";
 const GOLD_PNL_UNAVAILABLE = "PnL unavailable — live price pending";
 
+// ── Cohort Analysis ────────────────────────────────────────────────────────
+// Breaks each fund's position into its individual buy batches, computes
+// current value (units × live NAV) and profit/return for each cohort, and
+// totals them. Data comes exclusively from p.transactions + live NAV — no
+// hardcoded numbers.
+//
+// Fund-type distinctions (per product spec):
+//   ABR (Bareeq):  Fixed-income accumulative. NAV accrues daily. NO dividend
+//                  harvesting or yield-sale logic — profit is pure NAV growth.
+//   RE  (Beltone): Equity/RE fund. Performance is NAV market volatility.
+//                  Average cost basis logic applies.
+function buildCohortAnalysis(p: Portfolio, d: Derived): string {
+  // Parse unit count from meta strings like:
+  //   "48 units @ EGP 206.988"  → 48
+  //   "2,656 units @ EGP 1.888" → 2656
+  function parseUnits(meta: string): number {
+    const m = meta.replace(/,/g, "").match(/^(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  }
+
+  // Parse avg cost per unit from meta strings like "48 units @ EGP 206.988" → 206.988
+  function parseAvgCost(meta: string): number {
+    const m = meta.match(/EGP\s*([\d.]+)/);
+    return m ? parseFloat(m[1]) : 0;
+  }
+
+  function buildFundTable(
+    assetKey: string,
+    currentNav: number,
+    label: string,
+    fundTypeNote: string,
+    accentColor: string,
+  ): string {
+    type Tx = Portfolio["transactions"][number];
+    const buys = p.transactions
+      .filter((tx: Tx) => tx.assetType === assetKey && tx.txType === "buy")
+      .sort(
+        (a: Tx, b: Tx) =>
+          new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
+      );
+
+    if (buys.length === 0) {
+      return `<div style="margin-bottom:24px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <div style="font-size:12px;font-weight:800;color:var(--fg)">${label}</div>
+          <div style="font-size:10px;color:var(--dim);background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid var(--edge)">${fundTypeNote}</div>
+        </div>
+        <div style="font-size:11px;color:var(--dim);padding:12px 0">No buy transactions recorded yet.</div>
+      </div>`;
+    }
+
+    let totalInvested = 0;
+    let totalUnits = 0;
+    let totalCurrentValue = 0;
+
+    const dataRows = (buys as Tx[])
+      .map((tx: Tx, i: number) => {
+        const units = parseUnits(tx.meta);
+        const avgCost = parseAvgCost(tx.meta);
+        const invested = tx.amount;
+        const currentValue = units * currentNav;
+        const profit = currentValue - invested;
+        const returnPct = invested > 0 ? (profit / invested) * 100 : 0;
+        const profitColor =
+          profit >= 0 ? "var(--teal)" : "var(--coral)";
+        const date = new Date(tx.occurredAt);
+        const dateStr = date.toLocaleDateString("en-US", {
+          day: "numeric",
+          month: "short",
+          year: "2-digit",
+        });
+        totalInvested += invested;
+        totalUnits += units;
+        totalCurrentValue += currentValue;
+        return `<tr>
+          <td><span style="font-size:10px;font-weight:800;background:var(--bg);border:1px solid var(--edge);border-radius:6px;padding:2px 7px;color:${accentColor}">B${i + 1}</span></td>
+          <td style="color:var(--dim);font-size:11px">${dateStr}</td>
+          <td style="font-weight:600">${fmt2(invested)}</td>
+          <td>${fmt(units)}</td>
+          <td style="color:var(--dim)">${fmt2(avgCost)}</td>
+          <td style="font-weight:700">${fmt2(currentValue)}</td>
+          <td style="font-weight:700;color:${profitColor}">${profit >= 0 ? "+" : ""}${fmt2(profit)}</td>
+          <td style="font-weight:800;color:${profitColor}">${profit >= 0 ? "+" : ""}${returnPct.toFixed(2)}%</td>
+        </tr>`;
+      })
+      .join("");
+
+    const totalProfit = totalCurrentValue - totalInvested;
+    const totalReturn =
+      totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+    const totalProfitColor =
+      totalProfit >= 0 ? "var(--teal)" : "var(--coral)";
+    const totalAvgCost =
+      totalUnits > 0 ? totalInvested / totalUnits : 0;
+
+    const totalRow = `<tr class="cohort-total-row">
+      <td colspan="2" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)">Total</td>
+      <td style="font-weight:800">${fmt2(totalInvested)}</td>
+      <td style="font-weight:800">${fmt(totalUnits)}</td>
+      <td style="color:var(--dim)">${fmt2(totalAvgCost)}</td>
+      <td style="font-weight:800">${fmt2(totalCurrentValue)}</td>
+      <td style="font-weight:800;color:${totalProfitColor}">${totalProfit >= 0 ? "+" : ""}${fmt2(totalProfit)}</td>
+      <td style="font-weight:800;color:${totalProfitColor}">${totalProfit >= 0 ? "+" : ""}${totalReturn.toFixed(2)}%</td>
+    </tr>`;
+
+    return `<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="font-size:12px;font-weight:800;color:var(--fg)">${label}</div>
+        <div style="font-size:9.5px;color:${accentColor};background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid ${accentColor};opacity:.8">${fundTypeNote}</div>
+        <div style="font-size:9.5px;color:var(--dim);margin-left:auto">NAV: <b style="color:var(--fg)">${fmt2(currentNav)}</b> EGP</div>
+      </div>
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+        <table class="ah-table" style="min-width:580px">
+          <thead><tr>
+            <th>Cohort</th>
+            <th>Date</th>
+            <th>Invested (EGP)</th>
+            <th>Units</th>
+            <th>Avg. Cost/Unit</th>
+            <th>Current Value (EGP)</th>
+            <th>Profit (EGP)</th>
+            <th>Return (%)</th>
+          </tr></thead>
+          <tbody>
+            ${dataRows}
+            ${totalRow}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+  }
+
+  return `<div style="margin-top:var(--gap)" data-view-card="cohort">
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px">
+        <div class="card-lbl">📊 Cohort Analysis · Buy Batches</div>
+        <div style="font-size:9.5px;color:var(--dim)">Profit = (Units × Current NAV) − Invested</div>
+      </div>
+      ${buildFundTable("abr", d.abr.nav, "🏦 Bareeq Fund (ABR)", "Fixed Income · Accrual — NAV grows daily, no yield harvest", "var(--teal)")}
+      <div style="height:1px;background:var(--edge);margin-bottom:20px"></div>
+      ${buildFundTable("re", d.re.nav, "🏢 Beltone Real Estate (BRE)", "Equity Fund · NAV Volatility — avg cost basis", "var(--coral)")}
+    </div>
+  </div>`;
+}
+
 export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   const goldSubCost = fmt(d.gold.avgCostPerGram);
   const goldSubMkt = d.gold.livePricePerGram !== null
@@ -610,6 +755,9 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     </table>
   </div>
 </div>
+
+<!-- COHORT ANALYSIS — liquid view only -->
+${buildCohortAnalysis(p, d)}
 
 <!-- ACTIVITY & HOLDINGS -->
 <div style="margin-top:var(--gap)" data-view-card="activity">

@@ -69,7 +69,7 @@ export function initDashboardBehavior(
     },
     liquid: {
       label: "Liquid assets · Bareeq & funds",
-      cards: ["hero", "perf", "progress", "activity"],
+      cards: ["hero", "perf", "progress", "cohort", "activity"],
       assetGroup: "liquid",
     },
     certs: {
