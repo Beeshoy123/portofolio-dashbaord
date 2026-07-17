@@ -233,6 +233,14 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 .card.s-2 { grid-column: span 2; }
 .card.s-4 { grid-column: span 4; }
 .card.s-6 { grid-column: span 6; }
+
+/* Gold & Liquid: stack all secondary cards full-width below cohort */
+.bento[data-view="gold"] .card[data-view-card="perf"],
+.bento[data-view="gold"] .card[data-view-card="dca"],
+.bento[data-view="liquid"] .card[data-view-card="perf"],
+.bento[data-view="liquid"] .card[data-view-card="progress"] {
+  grid-column: span 6;
+}
 .card.r-2 { grid-row: span 2; }
 
 .card-lbl {

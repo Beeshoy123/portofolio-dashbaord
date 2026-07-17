@@ -265,6 +265,7 @@ export function initDashboardBehavior(
 
   win.setView = (view: string) => {
     currentView = view;
+    document.querySelector(".bento")?.setAttribute("data-view", view);
     ["math-gold", "math-liquid", "math-yield", "math-total-capital", "math-total-income", "math-total"].forEach(
       (id) => el(id)?.classList.remove("open"),
     );
