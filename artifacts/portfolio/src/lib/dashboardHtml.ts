@@ -667,7 +667,7 @@ ${buildCohortAnalysis(p, d)}
     </div>
     <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
       <div style="flex-shrink:0">
-        <div style="font-family:'Sora',sans-serif;font-size:52px;font-weight:800;line-height:1;color:#e8eaed" id="wh-arc-score">${d.health.overallScore}</div>
+        <div style="font-family:'Sora',sans-serif;font-size:52px;font-weight:800;line-height:1;color:var(--ink)" id="wh-arc-score">${d.health.overallScore}</div>
         <div style="font-size:9px;color:#5a7a74;font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-top:4px">out of 100</div>
       </div>
       <svg width="130" height="130" viewBox="0 0 130 130" style="flex-shrink:0">
@@ -807,27 +807,27 @@ ${buildCohortAnalysis(p, d)}
   <div class="card dark" style="padding:26px 28px;margin-bottom:var(--gap)">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div style="flex:1">
-        <div class="card-lbl" style="color:#5a7a74">NBE Certificates · Total Principal <span class="info-icon" onclick="toggleMath('math-certs-hero')" title="Show calculation" style="color:#5a7a74;background:rgba(255,255,255,.06)">ℹ</span></div>
+        <div class="card-lbl" style="color:#5a7a74">NBE Certificates · Total Principal <span class="info-icon" onclick="toggleMath('math-certs-hero')" title="Show calculation" style="color:#5a7a74;background:var(--edge)">ℹ</span></div>
         <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px">Principal Balance · EGP</div>
-        <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em;color:#e8eaed">${fmt(d.certTotals.totalPrincipal)} <span style="font-size:22px;color:#5a7a74">EGP</span></div>
+        <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em;color:var(--ink)">${fmt(d.certTotals.totalPrincipal)} <span style="font-size:22px;color:#5a7a74">EGP</span></div>
         <div style="display:flex;gap:20px;margin-top:16px;flex-wrap:wrap">
-          <div><div style="font-size:9px;color:#5a7a74;text-transform:uppercase;letter-spacing:.06em">Certificates</div><div style="font-size:16px;font-weight:800;color:#e8eaed">${p.certificates.length}</div></div>
+          <div><div style="font-size:9px;color:#5a7a74;text-transform:uppercase;letter-spacing:.06em">Certificates</div><div style="font-size:16px;font-weight:800;color:var(--ink)">${p.certificates.length}</div></div>
           <div><div style="font-size:9px;color:#5a7a74;text-transform:uppercase;letter-spacing:.06em">Avg APY</div><div style="font-size:16px;font-weight:800;color:#3dae6e">+${d.certTotals.weightedAvgRate.toFixed(1)}%</div></div>
           <div><div style="font-size:9px;color:#5a7a74;text-transform:uppercase;letter-spacing:.06em">Annual Yield</div><div style="font-size:16px;font-weight:800;color:#3dae6e" id="cert-annual-yield">${fmt(d.certTotals.annualYield)} EGP</div></div>
           <div><div style="font-size:9px;color:#5a7a74;text-transform:uppercase;letter-spacing:.06em">Monthly Yield</div><div style="font-size:16px;font-weight:800;color:#3dae6e" id="cert-monthly-yield">${fmt(d.certTotals.totalMonthly)} EGP</div></div>
           <div><div style="font-size:9px;color:#5a7a74;text-transform:uppercase;letter-spacing:.06em">Maturing in 90d</div><div style="font-size:16px;font-weight:800;color:#d99a2b" id="cert-maturing-soon">${d.certTotals.maturingSoon} certs</div></div>
         </div>
         <div class="math-section" id="math-certs-hero" style="margin-top:14px">
-          <div class="math-line"><span class="math-label" style="color:#5a7a74">Total Principal:</span><span class="math-calc" style="color:#5a7a74">${p.certificates.length} certificates</span><span class="math-result" style="color:#e8eaed">${fmt(d.certTotals.totalPrincipal)} EGP</span></div>
+          <div class="math-line"><span class="math-label" style="color:#5a7a74">Total Principal:</span><span class="math-calc" style="color:#5a7a74">${p.certificates.length} certificates</span><span class="math-result" style="color:var(--ink)">${fmt(d.certTotals.totalPrincipal)} EGP</span></div>
           <div class="math-line"><span class="math-label" style="color:#5a7a74">Avg APY:</span><span class="math-calc" id="math-cert-avg-calc" style="color:#5a7a74">Σ(value × rate) ÷ ${fmt(d.certTotals.totalPrincipal)}</span><span class="math-result" style="color:#3dae6e" id="math-cert-avg-result">${d.certTotals.weightedAvgRate.toFixed(1)}%</span></div>
           <div class="math-line"><span class="math-label" style="color:#5a7a74">Annual Yield:</span><span class="math-calc" id="math-cert-annual-calc" style="color:#5a7a74">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% = ${fmt(d.certTotals.annualYield)} EGP</span><span class="math-result" style="color:#3dae6e" id="math-cert-annual-result">${fmt(d.certTotals.annualYield)} EGP/yr</span></div>
-          <div class="math-divider" style="background:rgba(255,255,255,.06)"></div>
+          <div class="math-divider" style="background:var(--edge)"></div>
           <div class="math-line"><span class="math-label" style="color:#3dae6e">Monthly yield:</span><span class="math-calc" style="color:#5a7a74">annual ÷ 12</span><span class="math-result" style="color:#3dae6e" id="math-cert-monthly-result">${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-size:10px;color:#5a7a74;text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:6px">Live Rates</div>
-        <div style="font-size:11px;color:#c8d4cf;line-height:2" id="cert-hero-rates">Avg APY: ${d.certTotals.weightedAvgRate.toFixed(1)}%<br>Monthly yield: ${fmt(d.certTotals.totalMonthly)} EGP</div>
+        <div style="font-size:11px;color:var(--dim);line-height:2" id="cert-hero-rates">Avg APY: ${d.certTotals.weightedAvgRate.toFixed(1)}%<br>Monthly yield: ${fmt(d.certTotals.totalMonthly)} EGP</div>
       </div>
     </div>
   </div>
