@@ -79,7 +79,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
   );
 
   if (txs.length === 0) {
-    return `<div style="margin-top:var(--gap)" data-view-card="gold-cohort">
+    return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="gold-cohort">
       <div class="card"><div class="card-lbl">📊 Cohort Analysis · Gold Purchases</div>
       <div style="font-size:11px;color:var(--dim);padding:12px 0">No gold transactions recorded yet.</div></div>
     </div>`;
@@ -157,7 +157,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
     ? `Sell: <b>${fmt(livePrice!)} EGP/g</b> · Cashback: <b>${fmt2(cashback)} EGP/g</b> · Profit = (Value + Cashback) − Paid`
     : `⏳ Live sell price pending — goldbullioneg.com scrape in progress`;
 
-  return `<div style="margin-top:var(--gap)" data-view-card="gold-cohort">
+  return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="gold-cohort">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
         <div class="card-lbl">📊 Cohort Analysis · Gold Purchases</div>
@@ -325,7 +325,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     </div>`;
   }
 
-  return `<div style="margin-top:var(--gap)" data-view-card="cohort">
+  return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="cohort">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px">
         <div class="card-lbl">📊 Cohort Analysis · Buy Batches</div>
