@@ -272,6 +272,26 @@ body:not(.dark) .bento[data-view="gold"] .card[data-view-card="hero"] .math-sect
   border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
+/* Liquid view: ocean blue as primary accent (light mode only) */
+body:not(.dark) .bento[data-view="liquid"] {
+  --teal:      #1a78c2;
+  --teal-dk:   #155fa0;
+  --teal-soft: rgba(26, 120, 194, 0.10);
+}
+body:not(.dark):has(.bento[data-view="liquid"]) .view-toggle-slider {
+  background: #1a78c2;
+}
+
+/* Certificates view: plum as primary accent (light mode only) */
+body:not(.dark) .bento[data-view="certs"] {
+  --teal:      #7B4FA6;
+  --teal-dk:   #6a3f8f;
+  --teal-soft: rgba(123, 79, 166, 0.10);
+}
+body:not(.dark):has(.bento[data-view="certs"]) .view-toggle-slider {
+  background: #7B4FA6;
+}
+
 /* Gold & Liquid: stack all secondary cards full-width below cohort */
 .bento[data-view="gold"] .card[data-view-card="perf"],
 .bento[data-view="gold"] .card[data-view-card="dca"],
