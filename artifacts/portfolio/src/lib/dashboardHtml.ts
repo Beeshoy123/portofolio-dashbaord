@@ -825,10 +825,6 @@ ${buildCohortAnalysis(p, d)}
           <div class="math-line"><span class="math-label" style="color:#3dae6e">Monthly yield:</span><span class="math-calc" style="color:#5a7a74">annual ÷ 12</span><span class="math-result" style="color:#3dae6e" id="math-cert-monthly-result">${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
         </div>
       </div>
-      <div style="text-align:right;flex-shrink:0">
-        <div style="font-size:10px;color:#5a7a74;text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-bottom:6px">Live Rates</div>
-        <div style="font-size:11px;color:var(--dim);line-height:2" id="cert-hero-rates">Avg APY: ${d.certTotals.weightedAvgRate.toFixed(1)}%<br>Monthly yield: ${fmt(d.certTotals.totalMonthly)} EGP</div>
-      </div>
     </div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)">

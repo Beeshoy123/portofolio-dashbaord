@@ -38,6 +38,20 @@ body.dark {
   --radius: 16px;
 }
 
+/* ── Gold view – warm cream theme ──────────────────────────────────── */
+body:not(.dark):has(.bento[data-view="gold"]) {
+  --bg:        #faf0e6;
+  --card:      #fffdf8;
+  --card-dk:   #f5e8d4;
+  --edge:      rgba(184, 137, 63, 0.18);
+  --ink:       #2c1d0e;
+  --dim:       #8a6a3a;
+  --teal:      #0c7a6e;
+  --teal-soft: rgba(12, 122, 110, 0.08);
+  --gold:      #c8922a;
+  --gold-soft: rgba(200, 146, 42, 0.13);
+}
+
 /* ── Reset ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
