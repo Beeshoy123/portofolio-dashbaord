@@ -254,6 +254,11 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
 }
+/* math breakdown panel on amber — frosted glass instead of cream bg */
+.bento[data-view="gold"] .card[data-view-card="hero"] .math-section {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
 
 /* Gold & Liquid: stack all secondary cards full-width below cohort */
 .bento[data-view="gold"] .card[data-view-card="perf"],
