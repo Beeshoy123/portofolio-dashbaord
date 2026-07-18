@@ -419,9 +419,9 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     ? `<div class="pnl-row-val" style="color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"}">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</div><div style="font-size:9.5px;color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.gold.pnlPct!)} (sell + cashback)</div>`
     : `<div class="pnl-row-val" style="color:var(--dim)">N/A</div><div style="font-size:9.5px;color:var(--dim);font-weight:600">live price pending</div>`;
   // ── Total-view performance panel helpers ─────────────────────────────────
-  const totCapColor = d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)";
-  const totCapLabel = `${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP net`;
-  const totCapPctStr = pctStr(d.total.pnlPct);
+  const totCapColor = d.total.capitalPnl >= 0 ? "var(--teal)" : "var(--coral)";
+  const totCapLabel = `${d.total.capitalPnl >= 0 ? "+" : ""}${fmt(d.total.capitalPnl)} EGP net`;
+  const totCapPctStr = pctStr(d.total.cost > 0 ? (d.total.capitalPnl / d.total.cost) * 100 : 0);
   const goldCapLabel = d.gold.pnlAvailable
     ? `${(d.gold.netPnl ?? 0) >= 0 ? "+" : ""}${fmt(d.gold.netPnl ?? 0)} EGP`
     : "live price pending";
