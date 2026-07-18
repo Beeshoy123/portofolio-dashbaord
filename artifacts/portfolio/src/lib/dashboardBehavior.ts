@@ -1216,7 +1216,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   function applyCertSort(data: typeof CERTS_DATA): typeof CERTS_DATA {
     return [...data].sort((a, b) => {
       let cmp = 0;
-      if      (certSortKey === 'name')     cmp = a.name.localeCompare(b.name);
+      if      (certSortKey === 'name')     cmp = a.name.localeCompare(b.name, undefined, { numeric: true });
       else if (certSortKey === 'value')    cmp = a.value - b.value;
       else if (certSortKey === 'rate')     cmp = a.rate - b.rate;
       else if (certSortKey === 'maturity') cmp = new Date(a.maturity).getTime() - new Date(b.maturity).getTime();
