@@ -38,6 +38,18 @@ body.dark {
   --radius: 16px;
 }
 
+/* ── Gold view – white cards, soft shadow, no border ───────────────── */
+body:not(.dark):has(.bento[data-view="gold"]) .card {
+  background: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(180, 120, 40, 0.08), 0 1px 3px rgba(0,0,0,0.05);
+}
+body:not(.dark):has(.bento[data-view="gold"]) .card.dark {
+  background: #fff8ee;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(180, 120, 40, 0.08), 0 1px 3px rgba(0,0,0,0.05);
+}
+
 /* ── Reset ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
