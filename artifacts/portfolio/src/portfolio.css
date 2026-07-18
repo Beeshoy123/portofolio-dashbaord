@@ -292,6 +292,83 @@ body:not(.dark):has(.bento[data-view="certs"]) .view-toggle-slider {
   background: #7B4FA6;
 }
 
+/* ── Per-toggle hero card colours (light mode only) ─────────────────
+   Pattern: coloured gradient bg + white text.
+   --teal / --coral restored to light variants so PnL green/red
+   remains distinguishable on the darker coloured backgrounds.
+   ------------------------------------------------------------------ */
+/* shared PnL colours for medium-dark hero cards */
+:root {
+  --hero-pnl-up:   #86efac; /* light green  – readable on teal/blue/plum */
+  --hero-pnl-down: #fca5a5; /* light red    – readable on teal/blue/plum */
+}
+
+/* Total – teal hero card */
+body:not(.dark) .bento[data-view="total"] .card[data-view-card="hero"] {
+  background: linear-gradient(135deg, #0e8a7d 0%, #0c7a6e 100%);
+  border-color: #0a5f55;
+  --ink:      #ffffff;
+  --dim:      rgba(255, 255, 255, 0.75);
+  --edge:     rgba(255, 255, 255, 0.25);
+  --card-dk:  rgba(255, 255, 255, 0.12);
+  --teal:     var(--hero-pnl-up);
+  --coral:    var(--hero-pnl-down);
+}
+body:not(.dark) .bento[data-view="total"] .card[data-view-card="hero"] #hero-sublabel {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+body:not(.dark) .bento[data-view="total"] .card[data-view-card="hero"] .info-icon {
+  background: rgba(255, 255, 255, 0.18); color: #fff;
+}
+body:not(.dark) .bento[data-view="total"] .card[data-view-card="hero"] .math-section {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+/* Liquid – ocean-blue hero card */
+body:not(.dark) .bento[data-view="liquid"] .card[data-view-card="hero"] {
+  background: linear-gradient(135deg, #2088d4 0%, #1a78c2 100%);
+  border-color: #1260a0;
+  --ink:      #ffffff;
+  --dim:      rgba(255, 255, 255, 0.75);
+  --edge:     rgba(255, 255, 255, 0.25);
+  --card-dk:  rgba(255, 255, 255, 0.12);
+  --teal:     var(--hero-pnl-up);
+  --coral:    var(--hero-pnl-down);
+}
+body:not(.dark) .bento[data-view="liquid"] .card[data-view-card="hero"] #hero-sublabel {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+body:not(.dark) .bento[data-view="liquid"] .card[data-view-card="hero"] .info-icon {
+  background: rgba(255, 255, 255, 0.18); color: #fff;
+}
+body:not(.dark) .bento[data-view="liquid"] .card[data-view-card="hero"] .math-section {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+/* Certificates – plum hero card */
+body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] {
+  background: linear-gradient(135deg, #8a5fb8 0%, #7B4FA6 100%);
+  border-color: #6a3f8f;
+  --ink:      #ffffff;
+  --dim:      rgba(255, 255, 255, 0.75);
+  --edge:     rgba(255, 255, 255, 0.25);
+  --card-dk:  rgba(255, 255, 255, 0.12);
+  --teal:     var(--hero-pnl-up);
+  --coral:    var(--hero-pnl-down);
+}
+body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] #hero-sublabel {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] .info-icon {
+  background: rgba(255, 255, 255, 0.18); color: #fff;
+}
+body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] .math-section {
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
 /* Gold & Liquid: stack all secondary cards full-width below cohort */
 .bento[data-view="gold"] .card[data-view-card="perf"],
 .bento[data-view="gold"] .card[data-view-card="dca"],
