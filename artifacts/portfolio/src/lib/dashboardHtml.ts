@@ -455,13 +455,23 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
 
 <div class="header">
   <h1 id="app-title">📊 Portfolio · Beeshoy</h1>
-  <button class="dark-toggle" onclick="toggleDark()" id="dark-btn" title="Dark mode" aria-label="Toggle dark mode">
-    <span class="dark-toggle-track"><span class="dark-toggle-knob" id="dark-toggle-knob">🌙</span></span>
-  </button>
-  <button class="icon-btn lang-btn" onclick="toggleLang()" id="lang-btn" title="Switch language / تغيير اللغة" aria-label="Switch language">ع</button>
   <button class="icon-btn" onclick="doRefresh()" id="refresh-btn" title="Refresh live prices">🔄</button>
   <button class="icon-btn" onclick="openInsights()" title="Insights &amp; Actions">ℹ️</button>
   <button class="icon-btn" onclick="openAdd()" title="Add data">➕</button>
+  <div class="settings-wrap">
+    <button class="icon-btn" id="settings-btn" onclick="toggleSettings()" title="Settings" aria-label="Settings">⚙️</button>
+    <div class="settings-dropdown" id="settings-dropdown">
+      <button class="settings-item" onclick="toggleDark();closeSettings()">
+        <span class="settings-item-icon" id="dark-mode-icon">🌙</span>
+        <span id="dark-mode-label">Dark mode</span>
+      </button>
+      <div class="settings-divider"></div>
+      <button class="settings-item" onclick="toggleLang();closeSettings()">
+        <span class="settings-item-icon" id="lang-icon" style="font-family:'Cairo',sans-serif;font-weight:700">ع</span>
+        <span id="lang-label">العربية</span>
+      </button>
+    </div>
+  </div>
 </div>
 
 <div class="view-toggle-bar" id="view-toggle-bar">

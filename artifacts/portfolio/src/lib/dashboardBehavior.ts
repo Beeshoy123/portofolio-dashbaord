@@ -579,13 +579,19 @@ export function initDashboardBehavior(
     el(id)?.classList.toggle("open");
   };
 
+  function syncDarkLabel() {
+    const isDark = document.body.classList.contains("dark");
+    const icon  = el("dark-mode-icon");
+    const label = el("dark-mode-label");
+    if (icon)  icon.textContent  = isDark ? "☀️" : "🌙";
+    if (label) label.textContent = isDark
+      ? (currentLang === 'ar' ? "الوضع الفاتح" : "Light mode")
+      : (currentLang === 'ar' ? "الوضع الداكن" : "Dark mode");
+  }
+
   win.toggleDark = () => {
     document.body.classList.toggle("dark");
-    const knob = el("dark-toggle-knob");
-    if (knob)
-      knob.textContent = document.body.classList.contains("dark")
-        ? "☀️"
-        : "🌙";
+    syncDarkLabel();
   };
 
   // ── Language toggle ─────────────────────────────────────────────────
@@ -597,9 +603,12 @@ export function initDashboardBehavior(
     document.documentElement.lang = lang;
     document.documentElement.dir  = lang === 'ar' ? 'rtl' : 'ltr';
 
-    // Update button label
-    const langBtn = el("lang-btn");
-    if (langBtn) langBtn.textContent = lang === 'ar' ? 'EN' : 'ع';
+    // Update settings dropdown lang item
+    const langIcon  = el("lang-icon");
+    const langLabel = el("lang-label");
+    if (langIcon)  langIcon.textContent  = lang === 'ar' ? 'EN' : 'ع';
+    if (langLabel) langLabel.textContent = lang === 'ar' ? 'English' : 'العربية';
+    syncDarkLabel(); // dark label text depends on currentLang
 
     // Update page title
     const appTitle = el("app-title");
@@ -631,6 +640,22 @@ export function initDashboardBehavior(
   win.toggleLang = () => {
     applyLang(currentLang === 'ar' ? 'en' : 'ar');
   };
+
+  // ── Settings dropdown ────────────────────────────────────────────────
+  function closeSettings() {
+    el("settings-dropdown")?.classList.remove("open");
+  }
+  win.toggleSettings = () => {
+    el("settings-dropdown")?.classList.toggle("open");
+  };
+  win.closeSettings = closeSettings;
+
+  // Close when clicking outside the settings wrap
+  const closeSettingsOutside = (e: MouseEvent) => {
+    const wrap = document.querySelector(".settings-wrap");
+    if (wrap && !wrap.contains(e.target as Node)) closeSettings();
+  };
+  document.addEventListener("click", closeSettingsOutside);
 
   win.dismissWarning = () => {
     const w = el("api-warning");
@@ -1440,5 +1465,6 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   return () => {
     clearInterval(timeInterval);
     document.removeEventListener("click", closeSortPopover);
+    document.removeEventListener("click", closeSettingsOutside);
   };
 }
