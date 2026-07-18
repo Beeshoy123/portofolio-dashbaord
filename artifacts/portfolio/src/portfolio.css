@@ -234,6 +234,17 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 .card.s-4 { grid-column: span 4; }
 .card.s-6 { grid-column: span 6; }
 
+/* Gold view: amber replaces teal as primary accent (light mode only) */
+body:not(.dark) .bento[data-view="gold"] {
+  --teal:      #E8A400;
+  --teal-dk:   #C8920A;
+  --teal-soft: rgba(232, 164, 0, 0.12);
+}
+/* Tab slider turns amber when Gold is active */
+body:not(.dark):has(.bento[data-view="gold"]) .view-toggle-slider {
+  background: #E8A400;
+}
+
 /* Gold hero card – amber-gold background (light mode only) */
 body:not(.dark) .bento[data-view="gold"] .card[data-view-card="hero"] {
   background: linear-gradient(135deg, #F5B800 0%, #E8A400 100%);
@@ -242,8 +253,9 @@ body:not(.dark) .bento[data-view="gold"] .card[data-view-card="hero"] {
   --dim:      rgba(255, 255, 255, 0.75);
   --edge:     rgba(255, 255, 255, 0.25);
   --card-dk:  rgba(255, 255, 255, 0.12);
-  --teal:     #ffffff;
-  --coral:    #ffe8e6;
+  /* restore PnL conditional colors — both readable on amber */
+  --teal:     #0c7a6e;
+  --coral:    #d94a40;
 }
 /* sublabel has a hardcoded hex — override it */
 body:not(.dark) .bento[data-view="gold"] .card[data-view-card="hero"] #hero-sublabel {
@@ -254,7 +266,7 @@ body:not(.dark) .bento[data-view="gold"] .card[data-view-card="hero"] .info-icon
   background: rgba(255, 255, 255, 0.18);
   color: #fff;
 }
-/* math breakdown panel on amber — frosted glass instead of cream bg */
+/* math breakdown panel — frosted glass instead of cream bg */
 body:not(.dark) .bento[data-view="gold"] .card[data-view-card="hero"] .math-section {
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.28);
