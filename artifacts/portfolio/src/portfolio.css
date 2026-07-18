@@ -189,6 +189,7 @@ html[lang="ar"] .settings-item { text-align: right; flex-direction: row-reverse;
 .settings-item:hover { background: var(--bg); }
 .settings-item-icon { font-size: 17px; line-height: 1; width: 22px; text-align: center; }
 .settings-divider { height: 1px; background: var(--edge); margin: 0 10px; }
+html[lang="ar"] .settings-dropdown { right: auto; left: 0; }
 
 /* ── API Warning ────────────────────────────────────────────────────── */
 .api-warning {
