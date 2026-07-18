@@ -232,7 +232,7 @@ export function computeDerived(portfolio: Portfolio): Derived {
 
   const emergencyFundTarget = portfolio.settings.emergencyFundTarget;
   const emergencyFundPct =
-    emergencyFundTarget > 0 ? (abrValue / emergencyFundTarget) * 100 : 0;
+    emergencyFundTarget > 0 ? (abrCostBasisTotal / emergencyFundTarget) * 100 : 0;
   const emergencyFundScore = Math.max(0, Math.min(100, emergencyFundPct));
 
   const abrAnnualYield = (abrValue * abrApyPercent) / 100;

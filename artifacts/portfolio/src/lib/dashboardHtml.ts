@@ -735,8 +735,8 @@ ${buildCohortAnalysis(p, d)}
     </div>
     <div style="display:flex;flex-direction:column;gap:0">
       <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name">Gold 24K · ${fmt(d.gold.gramsHeld)}g</div><div class="seg-meta" id="gold-sub">Avg cost ${goldSubCost} EGP/g · Mkt ${goldSubMkt}</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--teal)' : 'var(--coral)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' vs cost' : ''}</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--teal-soft)">🏦</div><div class="seg-body"><div class="seg-name">Bareeq Fund</div><div class="seg-meta" id="abr-sub">${fmt(d.abr.apyPercent)}% APY · ${fmt(d.abr.unitsHeld)} certs @ <span id="abr-nav-lbl">${fmt2(d.abr.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-abr-val">${fmt(d.abr.value)}</div><div class="seg-pct pos">${pctStr(d.abr.pnlPct)} vs cost</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--coral-soft)">🏢</div><div class="seg-body"><div class="seg-name">Beltone Real Estate</div><div class="seg-meta">${fmt(d.re.unitsHeld)} certs @ <span id="re-nav-lbl">${fmt2(d.re.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-re-val">${fmt(d.re.value)}</div><div class="seg-pct" style="color:${d.re.pnlPct >= 0 ? "var(--teal)" : "var(--coral)"}">${pctStr(d.re.pnlPct)} vs cost</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--teal-soft)">🏦</div><div class="seg-body"><div class="seg-name">Bareeq Fund</div><div class="seg-meta" id="abr-sub">${fmt(d.abr.apyPercent)}% APY · ${fmt(d.abr.unitsHeld)} certs @ <span id="abr-nav-lbl">${fmt2(d.abr.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-abr-val">${fmt(d.abr.costBasisTotal)}</div><div class="seg-pct pos">${pctStr(d.abr.pnlPct)} vs cost</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--coral-soft)">🏢</div><div class="seg-body"><div class="seg-name">Beltone Real Estate</div><div class="seg-meta">${fmt(d.re.unitsHeld)} certs @ <span id="re-nav-lbl">${fmt2(d.re.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-re-val">${fmt(d.re.costBasisTotal)}</div><div class="seg-pct" style="color:${d.re.pnlPct >= 0 ? "var(--teal)" : "var(--coral)"}">${pctStr(d.re.pnlPct)} vs cost</div></div></div>
       <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name">NBE Certificates</div><div class="seg-meta" id="cert-sub">${p.certificates.length} NBE certs · avg ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--teal)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
     </div>
     <div class="math-section" id="alloc-detail" style="margin-top:auto">
@@ -748,16 +748,16 @@ ${buildCohortAnalysis(p, d)}
   <div class="card s-2" data-view-card="progress">
     <div class="card-lbl"><span data-i18n="card.ef">Emergency Fund · Bareeq Target</span> <span class="info-icon" onclick="toggleMath('abr-detail')" title="Show pace details">ℹ</span></div>
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">
-      <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800" id="abr-prog-val">${fmt(d.abr.value)} EGP</div>
+      <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800" id="abr-prog-val">${fmt(d.abr.costBasisTotal)} EGP</div>
       <div style="font-size:10px;color:var(--dim);font-weight:600" id="abr-prog-pct-label">${d.health.emergencyFundPct.toFixed(1)}% of ${fmt(d.settings.emergencyFundTarget / 1000)}k</div>
     </div>
     <div class="prog-track"><div class="prog-fill" id="abr-prog-bar" style="width:0%" data-target="${Math.min(100, d.health.emergencyFundPct).toFixed(1)}"></div></div>
     <div class="prog-labels">
       <span id="abr-prog-pct">${d.health.emergencyFundPct.toFixed(1)}%</span>
-      <span id="abr-prog-left-label" style="color:var(--dim)">${fmt(Math.max(0, d.settings.emergencyFundTarget - d.abr.value))} <span data-i18n="ef.togo">EGP to go</span></span>
+      <span id="abr-prog-left-label" style="color:var(--dim)">${fmt(Math.max(0, d.settings.emergencyFundTarget - d.abr.costBasisTotal))} <span data-i18n="ef.togo">EGP to go</span></span>
     </div>
     <div class="math-section" id="abr-detail" style="margin-top:10px">
-      <div id="abr-note" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">📈 Yield only: ~${d.abr.monthlyYield > 0 ? Math.ceil(Math.max(0, d.settings.emergencyFundTarget - d.abr.value) / d.abr.monthlyYield) : "—"} months · add monthly deposits to go faster</div>
+      <div id="abr-note" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">📈 Yield only: ~${d.abr.monthlyYield > 0 ? Math.ceil(Math.max(0, d.settings.emergencyFundTarget - d.abr.costBasisTotal) / d.abr.monthlyYield) : "—"} months · add monthly deposits to go faster</div>
     </div>
   </div>
 
