@@ -347,26 +347,29 @@ body:not(.dark) .bento[data-view="liquid"] .card[data-view-card="hero"] .math-se
   border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
-/* Certificates – plum hero card */
-body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] {
+/* Certificates – plum hero card (uses its own #certs-placeholder, not data-view-card=hero) */
+body:not(.dark) #certs-placeholder .card.dark {
   background: linear-gradient(135deg, #8a5fb8 0%, #7B4FA6 100%);
   border-color: #6a3f8f;
   --ink:      #ffffff;
   --dim:      rgba(255, 255, 255, 0.75);
   --edge:     rgba(255, 255, 255, 0.25);
   --card-dk:  rgba(255, 255, 255, 0.12);
-  --teal:     var(--hero-pnl-up);
-  --coral:    var(--hero-pnl-down);
 }
-body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] #hero-sublabel {
-  color: rgba(255, 255, 255, 0.72) !important;
-}
-body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] .info-icon {
+body:not(.dark) #certs-placeholder .card.dark .info-icon {
   background: rgba(255, 255, 255, 0.18); color: #fff;
 }
-body:not(.dark) .bento[data-view="certs"] .card[data-view-card="hero"] .math-section {
+body:not(.dark) #certs-placeholder .card.dark .math-section {
   background: rgba(255, 255, 255, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.28);
+}
+/* yield values (APY / annual / monthly) → light green on plum */
+body:not(.dark) #certs-placeholder .card.dark .cert-yield-val {
+  color: #86efac !important;
+}
+/* maturing-soon → light amber on plum */
+body:not(.dark) #certs-placeholder .card.dark #cert-maturing-soon {
+  color: #fde68a !important;
 }
 
 /* Gold & Liquid: stack all secondary cards full-width below cohort */
