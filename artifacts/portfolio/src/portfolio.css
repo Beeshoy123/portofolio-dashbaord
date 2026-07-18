@@ -1,23 +1,23 @@
 /* ── Portfolio Dashboard · Beeshoy ────────────────────────────────── */
 
-/* CSS Variables – light mode default */
+/* CSS Variables – light mode default (warm cream) */
 :root {
   --gap: 12px;
-  --bg: #f0f4f3;
-  --card: #ffffff;
-  --card-dk: #e2ebe9;
-  --edge: rgba(0, 0, 0, 0.07);
-  --ink: #1a2e2a;
-  --dim: #6a8880;
-  --teal: #0c7a6e;
-  --teal-dk: #0a5f55;
+  --bg:        #faf0e6;
+  --card:      #fffdf8;
+  --card-dk:   #f5e8d4;
+  --edge:      rgba(184, 137, 63, 0.18);
+  --ink:       #2c1d0e;
+  --dim:       #8a6a3a;
+  --teal:      #0c7a6e;
+  --teal-dk:   #0a5f55;
   --teal-soft: rgba(12, 122, 110, 0.08);
-  --gold: #b8893f;
-  --gold-soft: rgba(184, 137, 63, 0.1);
-  --coral: #d94a40;
-  --coral-soft: rgba(217, 74, 64, 0.08);
-  --purple: #7a5fa0;
-  --radius: 16px;
+  --gold:      #c8922a;
+  --gold-soft: rgba(200, 146, 42, 0.13);
+  --coral:     #d94a40;
+  --coral-soft:rgba(217, 74, 64, 0.08);
+  --purple:    #7a5fa0;
+  --radius:    16px;
   --radius-sm: 10px;
 }
 
@@ -36,20 +36,6 @@ body.dark {
   --coral: #e05a50;
   --coral-soft: rgba(224, 90, 80, 0.1);
   --radius: 16px;
-}
-
-/* ── Gold view – warm cream theme ──────────────────────────────────── */
-body:not(.dark):has(.bento[data-view="gold"]) {
-  --bg:        #faf0e6;
-  --card:      #fffdf8;
-  --card-dk:   #f5e8d4;
-  --edge:      rgba(184, 137, 63, 0.18);
-  --ink:       #2c1d0e;
-  --dim:       #8a6a3a;
-  --teal:      #0c7a6e;
-  --teal-soft: rgba(12, 122, 110, 0.08);
-  --gold:      #c8922a;
-  --gold-soft: rgba(200, 146, 42, 0.13);
 }
 
 /* ── Reset ─────────────────────────────────────────────────────────── */
