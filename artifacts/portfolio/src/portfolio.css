@@ -234,6 +234,27 @@ body.light .dark-toggle-knob { transform: translateX(20px); }
 .card.s-4 { grid-column: span 4; }
 .card.s-6 { grid-column: span 6; }
 
+/* Gold hero card – amber-gold background */
+.bento[data-view="gold"] .card[data-view-card="hero"] {
+  background: linear-gradient(135deg, #F5B800 0%, #E8A400 100%);
+  border-color: #D4980A;
+  --ink:      #ffffff;
+  --dim:      rgba(255, 255, 255, 0.75);
+  --edge:     rgba(255, 255, 255, 0.25);
+  --card-dk:  rgba(255, 255, 255, 0.12);
+  --teal:     #ffffff;
+  --coral:    #ffe8e6;
+}
+/* sublabel has a hardcoded hex — override it */
+.bento[data-view="gold"] .card[data-view-card="hero"] #hero-sublabel {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+/* info icon border on amber */
+.bento[data-view="gold"] .card[data-view-card="hero"] .info-icon {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
 /* Gold & Liquid: stack all secondary cards full-width below cohort */
 .bento[data-view="gold"] .card[data-view-card="perf"],
 .bento[data-view="gold"] .card[data-view-card="dca"],
