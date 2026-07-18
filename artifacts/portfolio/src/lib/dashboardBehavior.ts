@@ -1207,7 +1207,70 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     }
   };
 
+  // ── Cert table sort state ───────────────────────────────────────────
+  type CertSortKey = 'name' | 'value' | 'rate' | 'maturity' | 'monthly';
+  let certSortKey: CertSortKey = 'maturity';
+  let certSortDir: 'asc' | 'desc' = 'asc';
+  let certFilterType = 'all';
+
+  function applyCertSort(data: typeof CERTS_DATA): typeof CERTS_DATA {
+    return [...data].sort((a, b) => {
+      let cmp = 0;
+      if      (certSortKey === 'name')     cmp = a.name.localeCompare(b.name);
+      else if (certSortKey === 'value')    cmp = a.value - b.value;
+      else if (certSortKey === 'rate')     cmp = a.rate - b.rate;
+      else if (certSortKey === 'maturity') cmp = new Date(a.maturity).getTime() - new Date(b.maturity).getTime();
+      else if (certSortKey === 'monthly')  cmp = a.monthly - b.monthly;
+      return certSortDir === 'asc' ? cmp : -cmp;
+    });
+  }
+
+  function updateSortHeaders() {
+    (['name','value','rate','maturity','monthly'] as CertSortKey[]).forEach(key => {
+      const th = el(`th-arrow-${key}`)?.closest('th');
+      const arrow = el(`th-arrow-${key}`);
+      if (!th || !arrow) return;
+      const isActive = key === certSortKey;
+      th.classList.toggle('th-active', isActive);
+      arrow.textContent = isActive ? (certSortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+    });
+  }
+
+  win.sortCerts = (key: string) => {
+    if (certSortKey === key as CertSortKey) {
+      certSortDir = certSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      certSortKey = key as CertSortKey;
+      certSortDir = 'asc';
+    }
+    updateSortHeaders();
+    rebuildCertTbody();
+    (win.filterCerts as (t: string) => void)(certFilterType);
+  };
+
+  function rebuildCertTbody() {
+    const tbody = el("certs-tbody");
+    if (!tbody) return;
+    const today = new Date();
+    const rows = applyCertSort(CERTS_DATA);
+    tbody.innerHTML = rows.map((c) => {
+      const mat = new Date(c.maturity);
+      const daysLeft = Math.ceil((mat.getTime() - today.getTime()) / 86400000);
+      const badge = daysLeft < 90
+        ? '<span style="background:var(--coral-soft);color:var(--coral);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">Soon</span>'
+        : "";
+      return `<tr data-maturity="${c.maturity}" data-rate="${c.rate}">
+        <td><div class="ah-asset-name">${c.name}</div></td>
+        <td style="font-weight:700">${fmt(c.value)} EGP</td>
+        <td style="color:var(--teal);font-weight:700">${c.rate}%</td>
+        <td>${mat.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} ${badge}</td>
+        <td style="color:var(--teal);font-weight:700">${fmt(c.monthly)} EGP</td>
+      </tr>`;
+    }).join("");
+  }
+
   win.filterCerts = (type: string) => {
+    certFilterType = type;
     ["all", "high", "soon"].forEach((t) =>
       el(`cert-chip-${t}`)?.classList.toggle("active", t === type),
     );
@@ -1280,25 +1343,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         )
         .join("");
     }
-    tbody.innerHTML = sorted
-      .map((c) => {
-        const mat = new Date(c.maturity);
-        const daysLeft = Math.ceil(
-          (mat.getTime() - today.getTime()) / 86400000,
-        );
-        const badge =
-          daysLeft < 90
-            ? '<span style="background:var(--coral-soft);color:var(--coral);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">Soon</span>'
-            : "";
-        return `<tr data-maturity="${c.maturity}" data-rate="${c.rate}">
-        <td><div class="ah-asset-name">${c.name}</div></td>
-        <td style="font-weight:700">${fmt(c.value)} EGP</td>
-        <td style="color:var(--teal);font-weight:700">${c.rate}%</td>
-        <td>${mat.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} ${badge}</td>
-        <td style="color:var(--teal);font-weight:700">${fmt(c.monthly)} EGP</td>
-      </tr>`;
-      })
-      .join("");
+    rebuildCertTbody();
   }
 
   type SnapRow = { snapshotDate: string; value: number };
@@ -1418,6 +1463,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   applyLang(currentLang);
   (win.setView as (view: string) => void)("total");
   renderCerts();
+  updateSortHeaders();
   renderGrowthSparkline();
 
   // Init gold price display from the prices baked into the initial

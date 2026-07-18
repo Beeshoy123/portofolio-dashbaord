@@ -722,6 +722,19 @@ body:not(.dark) #certs-placeholder .card.dark #cert-maturing-soon {
   letter-spacing: .06em;
   border-bottom: 2px solid var(--edge);
 }
+.th-sortable {
+  cursor: pointer; user-select: none;
+  white-space: nowrap;
+  transition: color .12s;
+}
+.th-sortable:hover { color: var(--ink); }
+.th-sortable.th-active { color: var(--teal); }
+.th-arrow {
+  display: inline-block; margin-left: 4px;
+  font-size: 10px; opacity: .35; vertical-align: middle;
+}
+.th-sortable.th-active .th-arrow { opacity: 1; }
+html[lang="ar"] .th-arrow { margin-left: 0; margin-right: 4px; }
 .ah-table td {
   padding: 9px 10px;
   border-bottom: 1px solid var(--edge);

@@ -853,7 +853,13 @@ ${buildCohortAnalysis(p, d)}
       <button class="chip" id="cert-chip-soon" onclick="filterCerts('soon')" data-i18n="certs.chip.soon">⚠️ Due Soon</button>
     </div>
     <table class="ah-table" id="certs-table">
-      <thead><tr><th data-i18n="certs.th.name">Certificate</th><th data-i18n="certs.th.value">Value</th><th data-i18n="certs.th.rate">Rate</th><th data-i18n="certs.th.maturity">Maturity</th><th data-i18n="certs.th.monthly">Monthly</th></tr></thead>
+      <thead><tr>
+        <th class="th-sortable" onclick="sortCerts('name')"><span data-i18n="certs.th.name">Certificate</span><span class="th-arrow" id="th-arrow-name"></span></th>
+        <th class="th-sortable" onclick="sortCerts('value')"><span data-i18n="certs.th.value">Value</span><span class="th-arrow" id="th-arrow-value"></span></th>
+        <th class="th-sortable" onclick="sortCerts('rate')"><span data-i18n="certs.th.rate">Rate</span><span class="th-arrow" id="th-arrow-rate"></span></th>
+        <th class="th-sortable" onclick="sortCerts('maturity')"><span data-i18n="certs.th.maturity">Maturity</span><span class="th-arrow" id="th-arrow-maturity"></span></th>
+        <th class="th-sortable" onclick="sortCerts('monthly')"><span data-i18n="certs.th.monthly">Monthly</span><span class="th-arrow" id="th-arrow-monthly"></span></th>
+      </tr></thead>
       <tbody id="certs-tbody"></tbody>
     </table>
   </div>
