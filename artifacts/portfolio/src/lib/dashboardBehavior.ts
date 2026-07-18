@@ -1,6 +1,7 @@
 import type { Portfolio } from "@workspace/api-client-react";
 import type { Derived, DerivedCertificate } from "./portfolioMath";
 import { fmt, fmt2 } from "./portfolioMath";
+import { T, type Lang, getSavedLang, saveLang } from "./i18n";
 import {
   MFG_FEE_5G_24K_PER_GRAM,
   MFG_FEE_10G_24K_PER_GRAM,
@@ -34,6 +35,7 @@ export function initDashboardBehavior(
   let currentPerf = "pnl";
   let currentSortKey: string | null = null;
   let sortDesc = false;
+  let currentLang: Lang = getSavedLang();
 
   const el = (id: string) => document.getElementById(id);
   const win = window as unknown as WindowFns;
@@ -55,25 +57,29 @@ export function initDashboardBehavior(
 
   const VIEW_CONFIG: Record<
     string,
-    { label: string; cards: string[]; assetGroup: string | null }
+    { label: string; labelAr: string; cards: string[]; assetGroup: string | null }
   > = {
     total: {
       label: "All assets · full portfolio",
+      labelAr: "جميع الأصول · المحفظة الكاملة",
       cards: ["hero", "perf", "health", "segments", "progress", "heatmap"],
       assetGroup: null,
     },
     gold: {
       label: "Gold 24K · physical position",
+      labelAr: "ذهب 24 قيراط · المركز المادي",
       cards: ["hero", "gold-cohort", "perf", "dca"],
       assetGroup: "gold",
     },
     liquid: {
       label: "Liquid assets · Bareeq & funds",
+      labelAr: "الأصول السائلة · بريق والصناديق",
       cards: ["hero", "cohort", "perf", "progress"],
       assetGroup: "liquid",
     },
     certs: {
       label: "NBE Certificates · fixed income",
+      labelAr: "شهادات بنك مصر · دخل ثابت",
       cards: [],
       assetGroup: "certs",
     },
@@ -200,8 +206,8 @@ export function initDashboardBehavior(
   const HERO_CFG: Record<
     string,
     {
-      title: string;
-      sub: string;
+      title: string; titleAr: string;
+      sub: string;   subAr: string;
       val: string;
       chg: string;
       rates: string;
@@ -209,8 +215,8 @@ export function initDashboardBehavior(
     }
   > = {
     total: {
-      title: "Total Portfolio Value",
-      sub: "Total Cost Basis · EGP",
+      title: "Total Portfolio Value",    titleAr: "إجمالي قيمة المحفظة",
+      sub: "Total Cost Basis · EGP",     subAr: "إجمالي تكلفة الشراء · ج.م",
       val: `${fmt(derived.total.cost)} EGP`,
       chg: `Market Value: ${fmt(derived.total.value)} EGP (net PnL ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} EGP, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
       rates: derived.gold.pnlAvailable
@@ -219,8 +225,8 @@ export function initDashboardBehavior(
       sentiment: derived.total.pnl >= 0 ? "up" : "down",
     },
     gold: {
-      title: "Gold 24K · Physical",
-      sub: "Cost Basis · EGP (mfg fee incl.)",
+      title: "Gold 24K · Physical",      titleAr: "ذهب 24 قيراط · مادي",
+      sub: "Cost Basis · EGP (mfg fee incl.)", subAr: "تكلفة الشراء · ج.م (شامل رسوم التصنيع)",
       val: `${fmt(derived.gold.cost)} EGP`,
       chg: derived.gold.pnlAvailable
         ? `Market Value: ${fmt(derived.gold.value!)} EGP (net PnL ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP, ${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
@@ -235,16 +241,16 @@ export function initDashboardBehavior(
           : "down",
     },
     liquid: {
-      title: "Liquid Assets · Funds",
-      sub: "Cost Basis · EGP",
+      title: "Liquid Assets · Funds",    titleAr: "الأصول السائلة · صناديق",
+      sub: "Cost Basis · EGP",           subAr: "تكلفة الشراء · ج.م",
       val: `${fmt(derived.liquid.cost)} EGP`,
       chg: `Market Value: ${fmt(derived.liquid.value)} EGP (net PnL ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
       rates: ``,
       sentiment: derived.liquid.pnl >= 0 ? "up" : "down",
     },
     certs: {
-      title: "NBE Certificates",
-      sub: "Principal Balance · EGP",
+      title: "NBE Certificates",         titleAr: "شهادات بنك مصر",
+      sub: "Principal Balance · EGP",    subAr: "رصيد رأس المال · ج.م",
       val: `${fmt(derived.certTotals.totalPrincipal)} EGP`,
       chg: `${derived.certTotals.weightedAvgRate.toFixed(1)}% avg APY · +${fmt(derived.certTotals.totalMonthly)} EGP/mo`,
       rates: `Avg APY: ${derived.certTotals.weightedAvgRate.toFixed(1)}%<br>Monthly yield: ${fmt(derived.certTotals.totalMonthly)} EGP`,
@@ -270,7 +276,7 @@ export function initDashboardBehavior(
       (id) => el(id)?.classList.remove("open"),
     );
     const cfg = VIEW_CONFIG[view] || VIEW_CONFIG.total;
-    el("view-label")!.textContent = cfg.label;
+    el("view-label")!.textContent = currentLang === 'ar' ? cfg.labelAr : cfg.label;
 
     ["total", "gold", "liquid", "certs"].forEach((v) => {
       el(`view-btn-${v}`)?.classList.toggle("active", v === view);
@@ -299,9 +305,9 @@ export function initDashboardBehavior(
 
     const hcfg = HERO_CFG[view] || HERO_CFG.total;
     const heroTitle = el("hero-title");
-    if (heroTitle) heroTitle.textContent = hcfg.title;
+    if (heroTitle) heroTitle.textContent = currentLang === 'ar' ? hcfg.titleAr : hcfg.title;
     const heroSub = el("hero-sublabel");
-    if (heroSub) heroSub.textContent = hcfg.sub;
+    if (heroSub) heroSub.textContent = currentLang === 'ar' ? hcfg.subAr : hcfg.sub;
     const heroVal = el("s-total");
     if (heroVal) heroVal.textContent = hcfg.val;
     const heroChg = el("s-total-chg");
@@ -331,12 +337,16 @@ export function initDashboardBehavior(
     panels: [string, string, string];
     /** Display text for the three pills. */
     pillLabels: [string, string, string];
+    /** Arabic display text for the three pills. */
+    pillLabelsAr: [string, string, string];
     /** pill-* IDs to hide for this view. */
     hiddenPillIds: string[];
     /** Math section to open per pill; null = no section for that tab. */
     mathIds: Record<"pnl" | "yield" | "growth", string | null>;
     /** Heading shown inside the shared growth panel for this view. */
     growthLabel: string;
+    /** Arabic heading for the growth panel. */
+    growthLabelAr: string;
     /**
      * How to mutate the shared perf-pnl panel.
      * null = skip — this view has its own dedicated panels.
@@ -355,17 +365,21 @@ export function initDashboardBehavior(
     total: {
       panels: TOTAL_PERF_PANELS,
       pillLabels: ["Capital", "Income", "Growth"],
+      pillLabelsAr: ["رأس المال", "دخل", "نمو"],
       hiddenPillIds: [],
       mathIds: { pnl: "math-total-capital", yield: "math-total-income", growth: null },
       growthLabel: "Total Wallet · Month over Month",
+      growthLabelAr: "المحفظة الكاملة · شهر بشهر",
       pnlUpdate: null,
     },
     gold: {
       panels: STD_PERF_PANELS,
       pillLabels: ["PnL", "Yield", "Growth"],
+      pillLabelsAr: ["ر/خ", "عائد", "نمو"],
       hiddenPillIds: ["pill-yield", "pill-growth"],
       mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
+      growthLabelAr: "نمو المدخرات · شهر بشهر",
       pnlUpdate: {
         icon: "🥇",
         headline: () => derived.gold.pnlAvailable
@@ -382,9 +396,11 @@ export function initDashboardBehavior(
     liquid: {
       panels: STD_PERF_PANELS,
       pillLabels: ["PnL", "Yield", "Growth"],
+      pillLabelsAr: ["ر/خ", "عائد", "نمو"],
       hiddenPillIds: [],
       mathIds: { pnl: "math-liquid", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
+      growthLabelAr: "نمو المدخرات · شهر بشهر",
       pnlUpdate: {
         icon: "💧",
         headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net · ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%`,
@@ -399,9 +415,11 @@ export function initDashboardBehavior(
       // This entry is defensive; it should never be reached in practice.
       panels: STD_PERF_PANELS,
       pillLabels: ["PnL", "Yield", "Growth"],
+      pillLabelsAr: ["ر/خ", "عائد", "نمو"],
       hiddenPillIds: [],
       mathIds: { pnl: "math-gold", yield: "math-yield", growth: null },
       growthLabel: "Savings Growth · Month over Month",
+      growthLabelAr: "نمو المدخرات · شهر بشهر",
       pnlUpdate: {
         icon: "🥇",
         headline: () => derived.gold.pnlAvailable
@@ -419,20 +437,22 @@ export function initDashboardBehavior(
 
   const PILL_KEYS = ["pnl", "yield", "growth"] as const;
 
-  /** Swaps the heading text inside the shared growth panel to match the active view. */
+  /** Swaps the heading text inside the shared growth panel to match the active view and language. */
   function refreshGrowthLabel() {
     const labelEl = el("growth-view-label");
-    if (labelEl) labelEl.textContent = (PERF_CFG[currentView] ?? PERF_CFG.total).growthLabel;
+    const cfg = PERF_CFG[currentView] ?? PERF_CFG.total;
+    if (labelEl) labelEl.textContent = currentLang === 'ar' ? cfg.growthLabelAr : cfg.growthLabel;
   }
 
   function updatePerfTabsForView(view: string) {
     const cfg = PERF_CFG[view] ?? PERF_CFG.total;
+    const labels = currentLang === 'ar' ? cfg.pillLabelsAr : cfg.pillLabels;
 
     // 1. Relabel and show/hide pills.
     PILL_KEYS.forEach((key, i) => {
       const pill = el(`pill-${key}`);
       if (!pill) return;
-      pill.innerHTML = cfg.pillLabels[i];
+      pill.innerHTML = labels[i];
       pill.style.display = cfg.hiddenPillIds.includes(`pill-${key}`) ? "none" : "";
     });
 
@@ -566,6 +586,50 @@ export function initDashboardBehavior(
       knob.textContent = document.body.classList.contains("dark")
         ? "☀️"
         : "🌙";
+  };
+
+  // ── Language toggle ─────────────────────────────────────────────────
+  function applyLang(lang: Lang) {
+    currentLang = lang;
+    saveLang(lang);
+
+    // Set dir + lang on root
+    document.documentElement.lang = lang;
+    document.documentElement.dir  = lang === 'ar' ? 'rtl' : 'ltr';
+
+    // Update button label
+    const langBtn = el("lang-btn");
+    if (langBtn) langBtn.textContent = lang === 'ar' ? 'EN' : 'ع';
+
+    // Update page title
+    const appTitle = el("app-title");
+    if (appTitle) appTitle.textContent = lang === 'ar' ? '📊 محفظة · بيشوي' : '📊 Portfolio · Beeshoy';
+
+    // Update nav buttons
+    const NAV_LABELS: Record<string, [string, string]> = {
+      'view-btn-total':  ['📊 Total',        '📊 الإجمالي'],
+      'view-btn-gold':   ['🥇 Gold',          '🥇 ذهب'],
+      'view-btn-liquid': ['💧 Liquid',        '💧 سيولة'],
+      'view-btn-certs':  ['🏦 Certificates',  '🏦 شهادات'],
+    };
+    Object.entries(NAV_LABELS).forEach(([id, [en, ar]]) => {
+      const btn = el(id);
+      if (btn) btn.textContent = lang === 'ar' ? ar : en;
+    });
+
+    // Walk all data-i18n elements
+    document.querySelectorAll<HTMLElement>('[data-i18n]').forEach(node => {
+      const key = node.getAttribute('data-i18n')!;
+      const text = T[lang][key] ?? T.en[key];
+      if (text !== undefined) node.textContent = text;
+    });
+
+    // Re-run setView to refresh hero title/sub, view label, and pill labels
+    (win.setView as (view: string) => void)(currentView);
+  }
+
+  win.toggleLang = () => {
+    applyLang(currentLang === 'ar' ? 'en' : 'ar');
   };
 
   win.dismissWarning = () => {
@@ -1325,6 +1389,8 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   const timeInterval = setInterval(updateTime, 1000);
   animateRings();
   animateProgress();
+  // Apply saved language before initial setView so labels render correctly
+  applyLang(currentLang);
   (win.setView as (view: string) => void)("total");
   renderCerts();
   renderGrowthSparkline();

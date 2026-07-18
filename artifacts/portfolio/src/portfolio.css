@@ -51,6 +51,79 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* ── Arabic / RTL overrides ─────────────────────────────────────────── */
+html[lang="ar"], html[lang="ar"] body {
+  font-family: 'Cairo', 'Segoe UI', system-ui, sans-serif;
+  direction: rtl;
+}
+
+/* Keep numbers & ticker symbols left-to-right */
+html[lang="ar"] b,
+html[lang="ar"] .pnl-row-val,
+html[lang="ar"] .seg-val,
+html[lang="ar"] .seg-pct,
+html[lang="ar"] .dl-pct,
+html[lang="ar"] .wh-mval,
+html[lang="ar"] #s-total,
+html[lang="ar"] #s-total-chg,
+html[lang="ar"] #gold-pnl,
+html[lang="ar"] #s-yield,
+html[lang="ar"] .math-result,
+html[lang="ar"] .math-calc,
+html[lang="ar"] .live-time,
+html[lang="ar"] .dca-scenario-val {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* Sora font kept for big numeric displays */
+html[lang="ar"] [style*="font-family:'Sora'"],
+html[lang="ar"] [style*='font-family:Sora'] {
+  font-family: 'Cairo', 'Sora', sans-serif;
+}
+
+/* Header: title stays left of controls in RTL */
+html[lang="ar"] .header h1 {
+  text-align: right;
+}
+
+/* View-toggle slider positioning is JS-driven — no CSS change needed */
+
+/* Progress bar: fill from right in RTL */
+html[lang="ar"] .prog-fill {
+  float: right;
+  border-radius: 0 4px 4px 0;
+}
+html[lang="ar"] .prog-track {
+  direction: ltr; /* keep fill expanding left→right visually */
+}
+
+/* Math sections: label + calc + result stay LTR so equations read correctly */
+html[lang="ar"] .math-line {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Insights drawer & scan drawer */
+html[lang="ar"] .insight-drawer,
+html[lang="ar"] .scan-drawer {
+  text-align: right;
+}
+
+/* Sort popover */
+html[lang="ar"] .sort-popover {
+  right: auto;
+  left: 0;
+}
+
+/* Dark-mode toggle knob: reverse travel direction in RTL */
+html[lang="ar"] body.light .dark-toggle-knob {
+  transform: translateX(-20px);
+}
+html[lang="ar"] body:not(.light) .dark-toggle-knob {
+  transform: translateX(0);
+}
+
 #dashboard-root {
   max-width: 1400px;
   margin: 0 auto;
@@ -82,6 +155,7 @@ html, body {
   transition: opacity .15s;
 }
 .icon-btn:hover { opacity: .8; }
+.lang-btn { font-size: 18px; font-weight: 700; font-family: 'Cairo', sans-serif; }
 
 /* Dark mode toggle */
 .dark-toggle {
