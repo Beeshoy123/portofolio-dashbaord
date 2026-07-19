@@ -26,12 +26,15 @@ function heatColor(pct: number): string {
 function attribBar(
   icon: string, label: string, sub: string,
   barPct: number, valLabel: string, valColor: string,
+  labelKey?: string, subKey?: string,
 ): string {
   const w = Math.min(100, Math.abs(barPct));
+  const labelHtml = labelKey ? `<span data-i18n="${labelKey}">${label}</span>` : label;
+  const subHtml   = subKey   ? `<span data-i18n="${subKey}">${sub}</span>`   : sub;
   return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
     <div style="width:68px;flex-shrink:0">
-      <div style="font-size:10.5px;font-weight:700;color:var(--fg)">${icon} ${label}</div>
-      <div style="font-size:9px;color:var(--dim);margin-top:1px">${sub}</div>
+      <div style="font-size:10.5px;font-weight:700;color:var(--fg)">${icon} ${labelHtml}</div>
+      <div style="font-size:9px;color:var(--dim);margin-top:1px">${subHtml}</div>
     </div>
     <div style="flex:1;background:var(--edge);border-radius:4px;height:5px;overflow:hidden">
       <div style="height:100%;width:${w}%;background:${valColor};border-radius:4px;transition:width .5s ease"></div>
@@ -80,8 +83,8 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
 
   if (txs.length === 0) {
     return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="gold-cohort">
-      <div class="card"><div class="card-lbl">📊 Cohort Analysis · Gold Purchases</div>
-      <div style="font-size:11px;color:var(--dim);padding:12px 0">No gold transactions recorded yet.</div></div>
+      <div class="card"><div class="card-lbl" data-i18n="card.cohort.gold">📊 Cohort Analysis · Gold Purchases</div>
+      <div style="font-size:11px;color:var(--dim);padding:12px 0" data-i18n="cohort.empty">No gold transactions recorded yet.</div></div>
     </div>`;
   }
 
@@ -160,7 +163,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
   return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="gold-cohort">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
-        <div class="card-lbl">📊 Cohort Analysis · Gold Purchases</div>
+        <div class="card-lbl" data-i18n="card.cohort.gold">📊 Cohort Analysis · Gold Purchases</div>
       </div>
       <div style="font-size:10px;color:${priceAvail ? "var(--teal)" : "var(--dim)"};margin-bottom:16px">${priceNote}</div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
@@ -328,8 +331,8 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
   return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="cohort">
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px">
-        <div class="card-lbl">📊 Cohort Analysis · Buy Batches</div>
-        <div style="font-size:9.5px;color:var(--dim)">Profit = (Units × Current NAV) − Invested</div>
+        <div class="card-lbl" data-i18n="card.cohort.batches">📊 Cohort Analysis · Buy Batches</div>
+        <div style="font-size:9.5px;color:var(--dim)" data-i18n="cohort.profit.formula">Profit = (Units × Current NAV) − Invested</div>
       </div>
       ${buildFundTable("abr", d.abr.nav, "🏦 Bareeq Fund (ABR)", "Fixed Income · Accrual — NAV grows daily, no yield harvest", "var(--teal)")}
       <div style="height:1px;background:var(--edge);margin-bottom:20px"></div>
@@ -436,19 +439,19 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
 
   // math-gold expandable section.
   const mathGoldRows = d.gold.pnlAvailable
-    ? `<div class="math-line"><span class="math-label">Sell Price:</span><span class="math-calc">24K · goldbullioneg.com</span><span class="math-result">${fmt(d.gold.livePricePerGram!)} EGP/g</span></div>
-  <div class="math-line"><span class="math-label">Current Value:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt(d.gold.livePricePerGram!)} EGP/g</span><span class="math-result">= ${fmt(d.gold.value!)} EGP</span></div>
-  <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubCost} EGP/g</span><span class="math-result">= ${fmt(d.gold.cost)} EGP (mfg fee included)</span></div>
-  <div class="math-line"><span class="math-label">Raw PnL:</span><span class="math-calc">value − cost</span><span class="math-result">${d.gold.rawPnl! >= 0 ? "+" : ""}${fmt(d.gold.rawPnl!)} EGP</span></div>
-  <div class="math-line"><span class="math-label">Sell Cashback:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt2(d.gold.cashbackPerGram)} EGP/g</span><span class="math-result">= ${fmt(d.gold.cashback!)} EGP (refunded on sell)</span></div>
+    ? `<div class="math-line"><span class="math-label" data-i18n="ml.sell.price">Sell Price:</span><span class="math-calc">24K · goldbullioneg.com</span><span class="math-result">${fmt(d.gold.livePricePerGram!)} EGP/g</span></div>
+  <div class="math-line"><span class="math-label" data-i18n="ml.curr.value">Current Value:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt(d.gold.livePricePerGram!)} EGP/g</span><span class="math-result">= ${fmt(d.gold.value!)} EGP</span></div>
+  <div class="math-line"><span class="math-label" data-i18n="ml.cost.basis">Cost Basis:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubCost} EGP/g</span><span class="math-result">= ${fmt(d.gold.cost)} EGP</span></div>
+  <div class="math-line"><span class="math-label" data-i18n="ml.raw.pnl">Raw PnL:</span><span class="math-calc" data-i18n="mc.val.minus.cost">value − cost</span><span class="math-result">${d.gold.rawPnl! >= 0 ? "+" : ""}${fmt(d.gold.rawPnl!)} EGP</span></div>
+  <div class="math-line"><span class="math-label" data-i18n="ml.sell.cashback">Sell Cashback:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt2(d.gold.cashbackPerGram)} EGP/g</span><span class="math-result">= ${fmt(d.gold.cashback!)} EGP</span></div>
   <div class="math-divider"></div>
-  <div class="math-line math-total${d.gold.netPnl! >= 0 ? "" : " neg"}"><span class="math-label">Net PnL:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</span></div>`
-    : `<div class="math-line"><span class="math-label">Current Value:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubMkt}</span><span class="math-result">${GOLD_PRICE_UNAVAILABLE}</span></div>
-  <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubCost} EGP/g</span><span class="math-result">= ${fmt(d.gold.cost)} EGP (mfg fee included)</span></div>
-  <div class="math-line"><span class="math-label">Raw PnL:</span><span class="math-calc">value − cost</span><span class="math-result">N/A</span></div>
-  <div class="math-line"><span class="math-label">Sell Cashback:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt2(d.gold.cashbackPerGram)} EGP/g</span><span class="math-result">added on sell, not cost basis</span></div>
+  <div class="math-line math-total${d.gold.netPnl! >= 0 ? "" : " neg"}"><span class="math-label" data-i18n="ml.net.pnl">Net PnL:</span><span class="math-calc" data-i18n="mc.val.cb.minus.cost">(value + cashback) − cost</span><span class="math-result">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</span></div>`
+    : `<div class="math-line"><span class="math-label" data-i18n="ml.curr.value">Current Value:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubMkt}</span><span class="math-result">${GOLD_PRICE_UNAVAILABLE}</span></div>
+  <div class="math-line"><span class="math-label" data-i18n="ml.cost.basis">Cost Basis:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${goldSubCost} EGP/g</span><span class="math-result">= ${fmt(d.gold.cost)} EGP</span></div>
+  <div class="math-line"><span class="math-label" data-i18n="ml.raw.pnl">Raw PnL:</span><span class="math-calc" data-i18n="mc.val.minus.cost">value − cost</span><span class="math-result">N/A</span></div>
+  <div class="math-line"><span class="math-label" data-i18n="ml.sell.cashback">Sell Cashback:</span><span class="math-calc">${fmt(d.gold.gramsHeld)}g × ${fmt2(d.gold.cashbackPerGram)} EGP/g</span><span class="math-result" data-i18n="mc.refunded.on.sell">added on sell, not cost basis</span></div>
   <div class="math-divider"></div>
-  <div class="math-line math-total"><span class="math-label">Net PnL:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result">${GOLD_PNL_UNAVAILABLE}</span></div>`;
+  <div class="math-line math-total"><span class="math-label" data-i18n="ml.net.pnl">Net PnL:</span><span class="math-calc" data-i18n="mc.val.cb.minus.cost">(value + cashback) − cost</span><span class="math-result">${GOLD_PNL_UNAVAILABLE}</span></div>`;
 
   return `
 <div id="dashboard-root">
@@ -511,7 +514,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
         <div class="card-lbl"><span id="hero-title">Total Portfolio Value</span> <span class="info-icon" onclick="toggleMath('math-total')" title="Show calculation">ℹ</span></div>
         <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px" id="hero-sublabel">Total Cost Basis · EGP</div>
         <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em" id="s-total">${fmt(d.total.cost)} EGP</div>
-        <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} Market Value: ${fmt(d.total.value)} EGP (net PnL ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
+        <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} <span data-i18n="hero.market.value">Market Value:</span> ${fmt(d.total.value)} EGP (<span data-i18n="hero.net.pnl">net PnL</span> ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>
       </div>
       <div id="rate-box-container" style="display:none"></div>
@@ -583,15 +586,15 @@ ${buildCohortAnalysis(p, d)}
         ${mathGoldRows}
       </div>
       <div class="math-section" id="math-liquid">
-        <div class="math-line"><span class="math-label">Bareeq:</span><span class="math-calc">${fmt(d.abr.unitsHeld)} units × ${fmt2(d.abr.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.abr.value))} EGP</span></div>
-        <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.abr.costBasisTotal)} EGP</span></div>
-        <div class="math-line math-total${d.abr.pnl < 0 ? " neg" : ""}"><span class="math-label">Bareeq PnL:</span><span class="math-calc">value − cost</span><span class="math-result">${d.abr.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.abr.pnl))} EGP (${pctStr(d.abr.pnlPct)})</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.bareeq">Bareeq:</span><span class="math-calc">${fmt(d.abr.unitsHeld)} units × ${fmt2(d.abr.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.abr.value))} EGP</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.cost.basis">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.abr.costBasisTotal)} EGP</span></div>
+        <div class="math-line math-total${d.abr.pnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.bareeq.pnl">Bareeq PnL:</span><span class="math-calc" data-i18n="mc.val.minus.cost">value − cost</span><span class="math-result">${d.abr.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.abr.pnl))} EGP (${pctStr(d.abr.pnlPct)})</span></div>
         <div class="math-divider"></div>
-        <div class="math-line"><span class="math-label">Real Est.:</span><span class="math-calc">${fmt(d.re.unitsHeld)} units × ${fmt2(d.re.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.re.value))} EGP</span></div>
-        <div class="math-line"><span class="math-label">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.re.costBasisTotal)} EGP</span></div>
-        <div class="math-line math-total${d.re.pnl < 0 ? " neg" : ""}"><span class="math-label">Real Est. PnL:</span><span class="math-calc">value − cost</span><span class="math-result">${d.re.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.re.pnl))} EGP (${pctStr(d.re.pnlPct)})</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.re">Real Est.:</span><span class="math-calc">${fmt(d.re.unitsHeld)} units × ${fmt2(d.re.nav)} NAV</span><span class="math-result">= ${fmt(Math.round(d.re.value))} EGP</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.cost.basis">Cost Basis:</span><span class="math-calc"></span><span class="math-result">= ${fmt(d.re.costBasisTotal)} EGP</span></div>
+        <div class="math-line math-total${d.re.pnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.re.pnl">Real Est. PnL:</span><span class="math-calc" data-i18n="mc.val.minus.cost">value − cost</span><span class="math-result">${d.re.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.re.pnl))} EGP (${pctStr(d.re.pnlPct)})</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total${d.liquid.pnl < 0 ? " neg" : ""}"><span class="math-label">Net PnL:</span><span class="math-calc">Bareeq + Real Est. combined</span><span class="math-result">${d.liquid.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.liquid.pnl))} EGP (${pctStr(d.liquid.pnlPct)})</span></div>
+        <div class="math-line math-total${d.liquid.pnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.net.pnl">Net PnL:</span><span class="math-calc" data-i18n="mc.bareeq.re.combined">Bareeq + Real Est. combined</span><span class="math-result">${d.liquid.pnl >= 0 ? "+" : ""}${fmt(Math.round(d.liquid.pnl))} EGP (${pctStr(d.liquid.pnlPct)})</span></div>
       </div>
     </div>
 
@@ -601,17 +604,17 @@ ${buildCohortAnalysis(p, d)}
       <div style="font-family:'Sora',sans-serif;font-size:28px;font-weight:800" id="s-yield" class="pos">${signedFmt(d.yield.totalMonthly)} EGP/mo</div>
       <div style="font-size:10.5px;font-weight:600;margin-top:5px" class="neu" id="yield-sub">ABR ${fmt(d.abr.apyPercent)}% + NBE ${d.certTotals.weightedAvgRate.toFixed(1)}% (weighted avg)</div>
       <div class="math-section" id="math-yield">
-        <div class="math-line"><span class="math-label">Bareeq:</span><span class="math-calc">${fmt(d.abr.value)} × ${fmt(d.abr.apyPercent)}% ÷ 12</span><span class="math-result">= ${fmt2(d.abr.monthlyYield)} EGP/mo</span></div>
-        <div id="yield-cert-row" class="math-line"><span class="math-label">NBE Certs:</span><span id="yield-cert-calc" class="math-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% ÷ 12</span><span id="yield-cert-result" class="math-result">= ${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.bareeq">Bareeq:</span><span class="math-calc">${fmt(d.abr.value)} × ${fmt(d.abr.apyPercent)}% ÷ 12</span><span class="math-result">= ${fmt2(d.abr.monthlyYield)} EGP/mo</span></div>
+        <div id="yield-cert-row" class="math-line"><span class="math-label" data-i18n="ml.nbe.certs">NBE Certs:</span><span id="yield-cert-calc" class="math-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% ÷ 12</span><span id="yield-cert-result" class="math-result">= ${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total"><span class="math-label">Total Yield:</span><span class="math-calc"></span><span id="yield-total-result" class="math-result">${fmt(Math.round(d.yield.totalMonthly))} EGP/mo</span></div>
+        <div class="math-line math-total"><span class="math-label" data-i18n="ml.total.yield">Total Yield:</span><span class="math-calc"></span><span id="yield-total-result" class="math-result">${fmt(Math.round(d.yield.totalMonthly))} EGP/mo</span></div>
       </div>
     </div>
 
     <!-- GROWTH VIEW -->
     <div id="perf-growth" style="display:none">
       <div style="margin-bottom:10px">
-        <div id="growth-view-label" style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">Savings Growth · Month over Month</div>
+        <div id="growth-view-label" style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)" data-i18n="growth.label">Savings Growth · Month over Month</div>
         <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;margin-top:4px" id="growth-latest" class="pos">${fmt(d.abr.value)} EGP</div>
         <div style="font-size:10.5px;color:var(--teal);margin-top:2px" id="growth-delta"></div>
       </div>
@@ -634,18 +637,18 @@ ${buildCohortAnalysis(p, d)}
     <div id="perf-total-capital" style="display:none">
       <div style="font-size:22px;margin-bottom:6px">💼</div>
       <div style="font-family:Sora,sans-serif;font-size:20px;font-weight:800;color:${totCapColor}">${totCapLabel}</div>
-      <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">${totCapPctStr} · vs ${fmt(d.total.cost)} EGP deployed</div>
+      <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">${totCapPctStr} · <span data-i18n="perf.vs">vs</span> ${fmt(d.total.cost)} EGP <span data-i18n="perf.deployed">deployed</span></div>
       <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px" data-i18n="perf.return.attr">Return Attribution</div>
-      ${attribBar("🥇", "Gold", d.gold.pnlAvailable ? `${fmt(d.gold.gramsHeld)}g physical` : "live price pending", d.total.contributions.goldCapitalPct, goldCapLabel, goldCapColor)}
-      ${attribBar("💧", "Liquid", "Bareeq + Real Est.", d.total.contributions.liquidCapitalPct, liquidCapLabel, liquidCapColor)}
+      ${attribBar("🥇", "Gold", d.gold.pnlAvailable ? `${fmt(d.gold.gramsHeld)}g physical` : "live price pending", d.total.contributions.goldCapitalPct, goldCapLabel, goldCapColor, "attr.gold", d.gold.pnlAvailable ? undefined : "attr.price.pending")}
+      ${attribBar("💧", "Liquid", "Bareeq + Real Est.", d.total.contributions.liquidCapitalPct, liquidCapLabel, liquidCapColor, "attr.liquid", "attr.liquid.sub")}
       <div style="font-size:9.5px;color:var(--dim);margin-top:4px;padding:6px 0 0;border-top:1px solid var(--edge)" data-i18n="perf.certs.note">📜 Certificates · held at face value — interest income is in the Income tab</div>
       <div class="math-section" id="math-total-capital">
         ${d.gold.pnlAvailable
-          ? `<div class="math-line"><span class="math-label">Gold PnL:</span><span class="math-calc">(value + cashback) − cost</span><span class="math-result" style="color:${goldCapColor}">${goldCapLabel}</span></div>`
-          : `<div class="math-line"><span class="math-label">Gold PnL:</span><span class="math-calc">live price pending</span><span class="math-result" style="color:var(--dim)">N/A</span></div>`}
-        <div class="math-line"><span class="math-label">Liquid PnL:</span><span class="math-calc">Bareeq + Real Estate combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
+          ? `<div class="math-line"><span class="math-label" data-i18n="ml.gold.pnl">Gold PnL:</span><span class="math-calc" data-i18n="mc.val.cb.minus.cost">(value + cashback) − cost</span><span class="math-result" style="color:${goldCapColor}">${goldCapLabel}</span></div>`
+          : `<div class="math-line"><span class="math-label" data-i18n="ml.gold.pnl">Gold PnL:</span><span class="math-calc" data-i18n="attr.price.pending">live price pending</span><span class="math-result" style="color:var(--dim)">N/A</span></div>`}
+        <div class="math-line"><span class="math-label" data-i18n="ml.liquid.pnl">Liquid PnL:</span><span class="math-calc" data-i18n="mc.bareeq.re.combined">Bareeq + Real Est. combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total${d.total.pnl < 0 ? " neg" : ""}"><span class="math-label">Total Capital PnL:</span><span class="math-calc">gold + liquid</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
+        <div class="math-line math-total${d.total.capitalPnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.total.cap.pnl">Total Capital PnL:</span><span class="math-calc" data-i18n="mc.gold.plus.liquid">gold + liquid</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
       </div>
     </div>
 
@@ -653,18 +656,18 @@ ${buildCohortAnalysis(p, d)}
     <div id="perf-total-income" style="display:none">
       <div style="font-size:22px;margin-bottom:6px">💹</div>
       <div style="font-family:'Sora',sans-serif;font-size:28px;font-weight:800;color:var(--teal)">${totIncomeMonthly} EGP/mo</div>
-      <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">ABR ${fmt(d.abr.apyPercent)}% + NBE ${d.certTotals.weightedAvgRate.toFixed(1)}% (weighted avg)</div>
-      <div style="font-size:10.5px;font-weight:700;margin-top:4px;color:var(--teal)">${d.total.blendedYieldPct.toFixed(1)}% blended annual yield on total wallet</div>
-      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px">Income Breakdown</div>
-      ${attribBar("🏦", "Bareeq", `${fmt(d.abr.apyPercent)}% APY`, d.total.contributions.abrIncomePct, `${abrAnnualIncEgp} EGP/yr`, "var(--teal)")}
-      ${attribBar("📜", "Certs", `${d.certTotals.weightedAvgRate.toFixed(1)}% avg APY`, d.total.contributions.certIncomePct, `${certAnnualIncEgp} EGP/yr`, "#8b6fb0")}
+      <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">ABR ${fmt(d.abr.apyPercent)}% + NBE ${d.certTotals.weightedAvgRate.toFixed(1)}% (<span data-i18n="perf.weighted.avg">weighted avg</span>)</div>
+      <div style="font-size:10.5px;font-weight:700;margin-top:4px;color:var(--teal)">${d.total.blendedYieldPct.toFixed(1)}% <span data-i18n="perf.blended.on.total">blended annual yield on total wallet</span></div>
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px" data-i18n="perf.income.breakdown">Income Breakdown</div>
+      ${attribBar("🏦", "Bareeq", `${fmt(d.abr.apyPercent)}% APY`, d.total.contributions.abrIncomePct, `${abrAnnualIncEgp} EGP/yr`, "var(--teal)", "attr.bareeq")}
+      ${attribBar("📜", "Certs", `${d.certTotals.weightedAvgRate.toFixed(1)}% avg APY`, d.total.contributions.certIncomePct, `${certAnnualIncEgp} EGP/yr`, "#8b6fb0", "attr.certs")}
       <div class="math-section" id="math-total-income">
-        <div class="math-line"><span class="math-label">Bareeq:</span><span class="math-calc">${fmt(d.abr.value)} × ${fmt(d.abr.apyPercent)}% ÷ 12</span><span class="math-result">= ${fmt2(d.abr.monthlyYield)} EGP/mo</span></div>
-        <div class="math-line"><span class="math-label">NBE Certs:</span><span class="math-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% ÷ 12</span><span class="math-result">= ${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.bareeq">Bareeq:</span><span class="math-calc">${fmt(d.abr.value)} × ${fmt(d.abr.apyPercent)}% ÷ 12</span><span class="math-result">= ${fmt2(d.abr.monthlyYield)} EGP/mo</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.nbe.certs">NBE Certs:</span><span class="math-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% ÷ 12</span><span class="math-result">= ${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total"><span class="math-label">Monthly Income:</span><span class="math-calc"></span><span class="math-result">${fmt(Math.round(d.yield.totalMonthly))} EGP/mo</span></div>
-        <div class="math-line"><span class="math-label">Annual Income:</span><span class="math-calc">× 12</span><span class="math-result">${fmt(Math.round(d.yield.totalMonthly * 12))} EGP/yr</span></div>
-        <div class="math-line"><span class="math-label">Blended Yield:</span><span class="math-calc">annual income ÷ total wallet</span><span class="math-result">${d.total.blendedYieldPct.toFixed(1)}%</span></div>
+        <div class="math-line math-total"><span class="math-label" data-i18n="ml.monthly.income">Monthly Income:</span><span class="math-calc"></span><span class="math-result">${fmt(Math.round(d.yield.totalMonthly))} EGP/mo</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.annual.income">Annual Income:</span><span class="math-calc" data-i18n="mc.times.12">× 12</span><span class="math-result">${fmt(Math.round(d.yield.totalMonthly * 12))} EGP/yr</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.blended.yield">Blended Yield:</span><span class="math-calc" data-i18n="mc.annual.div.total">annual income ÷ total wallet</span><span class="math-result">${d.total.blendedYieldPct.toFixed(1)}%</span></div>
       </div>
     </div>
 
@@ -705,12 +708,12 @@ ${buildCohortAnalysis(p, d)}
       <div class="wh-metric"><span class="wh-dot" style="background:#d99a2b"></span><span class="wh-mname" data-i18n="health.liquidity">Liquidity</span><div class="wh-track"><div class="wh-fill" id="wh-liq-bar" style="width:0%"></div></div><span class="wh-mval" id="wh-liq-v">${Math.round(d.health.liquidityScore)}</span></div>
     </div>
     <div class="math-section" id="math-health">
-      <div class="math-line"><span class="math-label">Diversity:</span><span class="math-calc">100 - ${d.health.goldConcentrationPct.toFixed(1)}% gold conc.</span><span class="math-result">= ${Math.round(d.health.diversityScore)}</span></div>
-      <div class="math-line"><span class="math-label">Emergency Fund:</span><span class="math-calc">${fmt(d.abr.value)} ÷ ${fmt(d.settings.emergencyFundTarget)}</span><span class="math-result">= ${Math.round(d.health.emergencyFundScore)}</span></div>
-      <div class="math-line"><span class="math-label">Yield Rate:</span><span class="math-calc">${d.health.blendedYieldPct.toFixed(1)}% blended ÷ 27% benchmark</span><span class="math-result">= ${Math.round(d.health.yieldScore)}</span></div>
-      <div class="math-line"><span class="math-label">Liquidity:</span><span class="math-calc">${fmt(d.abr.value)} liquid ÷ ${fmt(d.total.value)} total</span><span class="math-result">= ${Math.round(d.health.liquidityPct)}%</span></div>
+      <div class="math-line"><span class="math-label" data-i18n="ml.diversity">Diversity:</span><span class="math-calc">100 - ${d.health.goldConcentrationPct.toFixed(1)}% <span data-i18n="mc.gold.conc">gold conc.</span></span><span class="math-result">= ${Math.round(d.health.diversityScore)}</span></div>
+      <div class="math-line"><span class="math-label" data-i18n="ml.emergency.fund">Emergency Fund:</span><span class="math-calc">${fmt(d.abr.costBasisTotal)} ÷ ${fmt(d.settings.emergencyFundTarget)}</span><span class="math-result">= ${Math.round(d.health.emergencyFundScore)}</span></div>
+      <div class="math-line"><span class="math-label" data-i18n="ml.yield.rate">Yield Rate:</span><span class="math-calc">${d.health.blendedYieldPct.toFixed(1)}% <span data-i18n="mc.blended.benchmark">blended ÷ 27% benchmark</span></span><span class="math-result">= ${Math.round(d.health.yieldScore)}</span></div>
+      <div class="math-line"><span class="math-label" data-i18n="ml.liquidity">Liquidity:</span><span class="math-calc">${fmt(d.abr.value)} <span data-i18n="mc.liquid.div.total">liquid ÷</span> ${fmt(d.total.value)} <span data-i18n="mc.total.word">total</span></span><span class="math-result">= ${Math.round(d.health.liquidityPct)}%</span></div>
       <div class="math-divider"></div>
-      <div class="math-line math-total"><span class="math-label">Average:</span><span class="math-calc">(${Math.round(d.health.diversityScore)}+${Math.round(d.health.emergencyFundScore)}+${Math.round(d.health.yieldScore)}+${Math.round(d.health.liquidityScore)}) ÷ 4</span><span class="math-result">= ${d.health.overallScore}</span></div>
+      <div class="math-line math-total"><span class="math-label" data-i18n="ml.average">Average:</span><span class="math-calc">(${Math.round(d.health.diversityScore)}+${Math.round(d.health.emergencyFundScore)}+${Math.round(d.health.yieldScore)}+${Math.round(d.health.liquidityScore)}) ÷ 4</span><span class="math-result">= ${d.health.overallScore}</span></div>
     </div>
   </div>
 
@@ -718,7 +721,7 @@ ${buildCohortAnalysis(p, d)}
   <div class="card s-2" style="display:flex;flex-direction:column;gap:10px" data-view-card="segments">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="card-lbl"><span data-i18n="card.segments">Wallet Segments</span> <span class="info-icon" onclick="toggleMath('alloc-detail')" title="Show concentration">ℹ</span></div>
-      <div style="font-size:9.5px;color:var(--dim)" id="seg-count">4 assets</div>
+      <div style="font-size:9.5px;color:var(--dim)" id="seg-count">4 <span data-i18n="seg.assets">assets</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:14px">
       <div class="donut-ring" id="donut">
@@ -734,10 +737,10 @@ ${buildCohortAnalysis(p, d)}
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0">
-      <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name">Gold 24K · ${fmt(d.gold.gramsHeld)}g</div><div class="seg-meta" id="gold-sub">Avg cost ${goldSubCost} EGP/g · Mkt ${goldSubMkt}</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--teal)' : 'var(--coral)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' vs cost' : ''}</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--teal-soft)">🏦</div><div class="seg-body"><div class="seg-name">Bareeq Fund</div><div class="seg-meta" id="abr-sub">${fmt(d.abr.apyPercent)}% APY · ${fmt(d.abr.unitsHeld)} certs @ <span id="abr-nav-lbl">${fmt2(d.abr.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-abr-val">${fmt(d.abr.costBasisTotal)}</div><div class="seg-pct pos">${pctStr(d.abr.pnlPct)} vs cost</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--coral-soft)">🏢</div><div class="seg-body"><div class="seg-name">Beltone Real Estate</div><div class="seg-meta">${fmt(d.re.unitsHeld)} certs @ <span id="re-nav-lbl">${fmt2(d.re.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-re-val">${fmt(d.re.costBasisTotal)}</div><div class="seg-pct" style="color:${d.re.pnlPct >= 0 ? "var(--teal)" : "var(--coral)"}">${pctStr(d.re.pnlPct)} vs cost</div></div></div>
-      <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name">NBE Certificates</div><div class="seg-meta" id="cert-sub">${p.certificates.length} NBE certs · avg ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--teal)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name"><span data-i18n="seg.gold">Gold 24K</span> · ${fmt(d.gold.gramsHeld)}g</div><div class="seg-meta" id="gold-sub"><span data-i18n="seg.avg.cost">Avg cost</span> ${goldSubCost} EGP/g · <span data-i18n="seg.mkt">Mkt</span> ${goldSubMkt}</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--teal)' : 'var(--coral)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' <span data-i18n="seg.vs.cost">vs cost</span>' : ''}</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--teal-soft)">🏦</div><div class="seg-body"><div class="seg-name" data-i18n="seg.bareeq.fund">Bareeq Fund</div><div class="seg-meta" id="abr-sub">${fmt(d.abr.apyPercent)}% APY · ${fmt(d.abr.unitsHeld)} <span data-i18n="seg.certs.at">certs @</span> <span id="abr-nav-lbl">${fmt2(d.abr.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-abr-val">${fmt(d.abr.costBasisTotal)}</div><div class="seg-pct pos">${pctStr(d.abr.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--coral-soft)">🏢</div><div class="seg-body"><div class="seg-name" data-i18n="seg.beltone.re">Beltone Real Estate</div><div class="seg-meta">${fmt(d.re.unitsHeld)} <span data-i18n="seg.certs.at">certs @</span> <span id="re-nav-lbl">${fmt2(d.re.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-re-val">${fmt(d.re.costBasisTotal)}</div><div class="seg-pct" style="color:${d.re.pnlPct >= 0 ? "var(--teal)" : "var(--coral)"}">${pctStr(d.re.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
+      <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name" data-i18n="seg.nbe.certs">NBE Certificates</div><div class="seg-meta" id="cert-sub">${p.certificates.length} <span data-i18n="seg.nbe.certs.avg">NBE certs · avg</span> ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--teal)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
     </div>
     <div class="math-section" id="alloc-detail" style="margin-top:auto">
       <div id="alloc-detail-text" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">${allocInsight(d)}</div>
@@ -757,7 +760,7 @@ ${buildCohortAnalysis(p, d)}
       <span id="abr-prog-left-label" style="color:var(--dim)">${fmt(Math.max(0, d.settings.emergencyFundTarget - d.abr.costBasisTotal))} <span data-i18n="ef.togo">EGP to go</span></span>
     </div>
     <div class="math-section" id="abr-detail" style="margin-top:10px">
-      <div id="abr-note" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">📈 Yield only: ~${d.abr.monthlyYield > 0 ? Math.ceil(Math.max(0, d.settings.emergencyFundTarget - d.abr.costBasisTotal) / d.abr.monthlyYield) : "—"} months · add monthly deposits to go faster</div>
+      <div id="abr-note" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">📈 <span data-i18n="ef.note.prefix">Yield only: ~</span>${d.abr.monthlyYield > 0 ? Math.ceil(Math.max(0, d.settings.emergencyFundTarget - d.abr.costBasisTotal) / d.abr.monthlyYield) : "—"} <span data-i18n="ef.note.suffix">months · add monthly deposits to go faster</span></div>
     </div>
   </div>
 
@@ -829,11 +832,11 @@ ${buildCohortAnalysis(p, d)}
           <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.soon">Maturing in 90d</div><div style="font-size:16px;font-weight:800;color:#d99a2b" id="cert-maturing-soon">${d.certTotals.maturingSoon} certs</div></div>
         </div>
         <div class="math-section" id="math-certs-hero" style="margin-top:14px">
-          <div class="math-line"><span class="math-label">Total Principal:</span><span class="math-calc">${p.certificates.length} certificates</span><span class="math-result">${fmt(d.certTotals.totalPrincipal)} EGP</span></div>
-          <div class="math-line"><span class="math-label">Avg APY:</span><span class="math-calc" id="math-cert-avg-calc">Σ(value × rate) ÷ ${fmt(d.certTotals.totalPrincipal)}</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-avg-result">${d.certTotals.weightedAvgRate.toFixed(1)}%</span></div>
-          <div class="math-line"><span class="math-label">Annual Yield:</span><span class="math-calc" id="math-cert-annual-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% = ${fmt(d.certTotals.annualYield)} EGP</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-annual-result">${fmt(d.certTotals.annualYield)} EGP/yr</span></div>
+          <div class="math-line"><span class="math-label" data-i18n="ml.total.principal">Total Principal:</span><span class="math-calc">${p.certificates.length} <span data-i18n="mc.certificates">certificates</span></span><span class="math-result">${fmt(d.certTotals.totalPrincipal)} EGP</span></div>
+          <div class="math-line"><span class="math-label" data-i18n="ml.avg.apy">Avg APY:</span><span class="math-calc" id="math-cert-avg-calc">Σ(value × rate) ÷ ${fmt(d.certTotals.totalPrincipal)}</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-avg-result">${d.certTotals.weightedAvgRate.toFixed(1)}%</span></div>
+          <div class="math-line"><span class="math-label" data-i18n="ml.annual.yield">Annual Yield:</span><span class="math-calc" id="math-cert-annual-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% = ${fmt(d.certTotals.annualYield)} EGP</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-annual-result">${fmt(d.certTotals.annualYield)} EGP/yr</span></div>
           <div class="math-divider"></div>
-          <div class="math-line"><span class="math-label cert-yield-val" style="color:#3dae6e">Monthly yield:</span><span class="math-calc">annual ÷ 12</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-monthly-result">${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
+          <div class="math-line"><span class="math-label cert-yield-val" style="color:#3dae6e" data-i18n="ml.monthly.yield">Monthly yield:</span><span class="math-calc" data-i18n="mc.annual.div.12">annual ÷ 12</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-monthly-result">${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
         </div>
       </div>
     </div>

@@ -541,7 +541,9 @@ export function initDashboardBehavior(
     } else {
       // All other views: combined fund + certificates
       if (yieldEl) yieldEl.textContent = `+${fmt(Math.round(derived.yield.totalMonthly))} EGP/mo`;
-      if (subEl)   subEl.textContent   = `ABR ${fmt(derived.abr.apyPercent)}% + NBE ${derived.certTotals.weightedAvgRate.toFixed(1)}% (weighted avg)`;
+      if (subEl)   subEl.textContent   = currentLang === 'ar'
+        ? `ABR ${fmt(derived.abr.apyPercent)}% + NBE ${derived.certTotals.weightedAvgRate.toFixed(1)}% (متوسط مرجح)`
+        : `ABR ${fmt(derived.abr.apyPercent)}% + NBE ${derived.certTotals.weightedAvgRate.toFixed(1)}% (weighted avg)`;
       if (certRow) certRow.style.display = "";
       if (totalRes) totalRes.textContent = `${fmt(Math.round(derived.yield.totalMonthly))} EGP/mo`;
     }
@@ -1360,13 +1362,13 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       if (prev) {
         const delta = latest.value - prev.value;
         const pct = prev.value > 0 ? (delta / prev.value) * 100 : 0;
-        deltaEl.textContent = `${delta >= 0 ? "▲" : "▼"} ${delta >= 0 ? "+" : ""}${fmt(delta)} EGP (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%) vs last snapshot`;
+        deltaEl.textContent = `${delta >= 0 ? "▲" : "▼"} ${delta >= 0 ? "+" : ""}${fmt(delta)} EGP (${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%) ${currentLang === 'ar' ? 'مقابل اللقطة السابقة' : 'vs last snapshot'}`;
       } else {
-        deltaEl.textContent = "First snapshot recorded";
+        deltaEl.textContent = currentLang === 'ar' ? 'أول لقطة مسجلة' : 'First snapshot recorded';
       }
     }
     const snapCountEl = el("growth-snapcount");
-    if (snapCountEl) snapCountEl.textContent = `${snaps.length} snapshots`;
+    if (snapCountEl) snapCountEl.textContent = currentLang === 'ar' ? `${snaps.length} لقطة` : `${snaps.length} snapshots`;
 
     const values = snaps.map((s) => s.value);
     const min = Math.min(...values);
