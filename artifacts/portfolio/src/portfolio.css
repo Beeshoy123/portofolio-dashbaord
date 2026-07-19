@@ -222,7 +222,7 @@ html[lang="ar"] .settings-dropdown { right: auto; left: 0; }
   top: 3px; bottom: 3px;
   border-radius: 8px;
   background: var(--teal);
-  transition: left .2s ease, width .2s ease;
+  transition: left .2s ease, right .2s ease, width .2s ease;
   pointer-events: none;
   z-index: 0;
 }

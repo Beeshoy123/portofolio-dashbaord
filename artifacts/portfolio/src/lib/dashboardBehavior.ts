@@ -299,7 +299,14 @@ export function initDashboardBehavior(
     const slider = el("view-toggle-slider");
     if (bar && slider) {
       const btnWidth = bar.offsetWidth / 4;
-      slider.style.left = 3 + idx * btnWidth + "px";
+      const offset = 3 + idx * btnWidth + "px";
+      if (currentLang === 'ar') {
+        slider.style.right = offset;
+        slider.style.left  = "";
+      } else {
+        slider.style.left  = offset;
+        slider.style.right = "";
+      }
       slider.style.width = btnWidth - 4 + "px";
     }
 
