@@ -9,6 +9,7 @@
 import type { Portfolio } from "@workspace/api-client-react";
 import type { Derived } from "./portfolioMath";
 import { fmt, fmt1, fmt2 } from "./portfolioMath";
+import type { Lang } from "./i18n";
 
 function pctStr(n: number, digits = 1): string {
   const sign = n >= 0 ? "+" : "";
@@ -971,40 +972,54 @@ function signedFmt(n: number): string {
   return n >= 0 ? `+${fmt(n)}` : `${fmt(n)}`;
 }
 
-function healthGrade(score: number): string {
+export function healthGrade(score: number, lang: Lang = 'en'): string {
+  if (lang === 'ar') {
+    if (score >= 75) return "ممتاز";
+    if (score >= 55) return "جيد";
+    if (score >= 35) return "يحتاج اهتمام";
+    return "في خطر";
+  }
   if (score >= 75) return "Excellent";
   if (score >= 55) return "Good";
   if (score >= 35) return "Needs attention";
   return "At risk";
 }
 
-function allocInsight(d: Derived): string {
+export function allocInsight(d: Derived, lang: Lang = 'en'): string {
+  if (lang === 'ar') {
+    if (d.allocation.pctGold > 30) {
+      return `الذهب عند ${d.allocation.pctGold.toFixed(0)}% أعلى من الحد الأقصى الموصى به 30% لأصل واحد. فكّر في التنويع نحو أدوات السيولة أو شهادات إضافية لإعادة التوازن.`;
+    }
+    return `توزيع محفظتك ضمن حدود التركيز الموصى بها. الذهب عند ${d.allocation.pctGold.toFixed(0)}%، متنوع جيداً مقارنةً بسائر حيازاتك.`;
+  }
   if (d.allocation.pctGold > 30) {
     return `Gold at ${d.allocation.pctGold.toFixed(0)}% is above the recommended 30% max for a single asset. Consider diversifying into liquid instruments or additional certificates to rebalance.`;
   }
   return `Your portfolio allocation is within recommended concentration limits. Gold sits at ${d.allocation.pctGold.toFixed(0)}%, well diversified against your other holdings.`;
 }
 
-function buildInsights(d: Derived): string {
+export function buildInsights(d: Derived, lang: Lang = 'en'): string {
   const items: string[] = [];
-  if (d.health.goldConcentrationPct > 30) {
-    items.push(
-      `<div class="insight-item"><div class="insight-icon">⚠️</div><div><div class="insight-title">High Gold Concentration</div><div class="insight-desc">Gold represents ${d.health.goldConcentrationPct.toFixed(0)}% of your portfolio — above the recommended 30% max. Consider rebalancing into liquid instruments.</div></div></div>`,
-    );
+  if (lang === 'ar') {
+    if (d.health.goldConcentrationPct > 30) {
+      items.push(`<div class="insight-item"><div class="insight-icon">⚠️</div><div><div class="insight-title">تركيز ذهب مرتفع</div><div class="insight-desc">الذهب يمثل ${d.health.goldConcentrationPct.toFixed(0)}% من محفظتك — أعلى من الحد الأقصى الموصى به 30%. فكّر في إعادة التوازن نحو أدوات السيولة.</div></div></div>`);
+    }
+    if (d.health.liquidityPct < 20) {
+      items.push(`<div class="insight-item"><div class="insight-icon">💧</div><div><div class="insight-title">سيولة منخفضة (${d.health.liquidityPct.toFixed(0)}%)</div><div class="insight-desc">فقط ${fmt(d.abr.value)} ج.م (${d.health.liquidityPct.toFixed(1)}%) سائل. احتفظ بـ15–20% على الأقل في أصول سائلة للطوارئ.</div></div></div>`);
+    }
+    items.push(`<div class="insight-item"><div class="insight-icon">📈</div><div><div class="insight-title">صندوق الطوارئ عند ${d.health.emergencyFundPct.toFixed(0)}%</div><div class="insight-desc">رصيد بريق يغطي ${d.health.emergencyFundPct.toFixed(0)}% من هدف ${fmt(d.settings.emergencyFundTarget)} ج.م.</div></div></div>`);
+    items.push(`<div class="insight-item"><div class="insight-icon">🥇</div><div><div class="insight-title">أداء الذهب</div><div class="insight-desc">${fmt(d.gold.gramsHeld)} جم بتكلفة ${fmt(d.gold.cost)} ج.م (متوسط ${fmt(d.gold.avgCostPerGram)} ج.م/جم، شامل رسوم التصنيع). استرداد البيع ${fmt2(d.gold.cashbackPerGram)} ج.م/جم عند البيع. ${GOLD_PNL_UNAVAILABLE}.</div></div></div>`);
+    items.push(`<div class="insight-item"><div class="insight-icon">💹</div><div><div class="insight-title">عائد الشهادات</div><div class="insight-desc" id="insight-cert-desc">شهاداتك الـ${d.certs.length} (البنك الأهلي) تُولّد ~${fmt(d.certTotals.totalMonthly)} ج.م/شهر (${fmt(d.certTotals.annualYield)} ج.م/سنة) بمتوسط مرجح ${d.certTotals.weightedAvgRate.toFixed(1)}% — إعادة الاستثمار في بريق يُضاعف النمو.</div></div></div>`);
+  } else {
+    if (d.health.goldConcentrationPct > 30) {
+      items.push(`<div class="insight-item"><div class="insight-icon">⚠️</div><div><div class="insight-title">High Gold Concentration</div><div class="insight-desc">Gold represents ${d.health.goldConcentrationPct.toFixed(0)}% of your portfolio — above the recommended 30% max. Consider rebalancing into liquid instruments.</div></div></div>`);
+    }
+    if (d.health.liquidityPct < 20) {
+      items.push(`<div class="insight-item"><div class="insight-icon">💧</div><div><div class="insight-title">Low Liquidity (${d.health.liquidityPct.toFixed(0)}%)</div><div class="insight-desc">Only ${fmt(d.abr.value)} EGP (${d.health.liquidityPct.toFixed(1)}%) is liquid. Consider keeping at least 15–20% in liquid assets for emergencies.</div></div></div>`);
+    }
+    items.push(`<div class="insight-item"><div class="insight-icon">📈</div><div><div class="insight-title">Emergency Fund at ${d.health.emergencyFundPct.toFixed(0)}%</div><div class="insight-desc">Your Bareeq balance covers ${d.health.emergencyFundPct.toFixed(0)}% of the ${fmt(d.settings.emergencyFundTarget)} EGP target.</div></div></div>`);
+    items.push(`<div class="insight-item"><div class="insight-icon">🥇</div><div><div class="insight-title">Gold Performance</div><div class="insight-desc">${fmt(d.gold.gramsHeld)}g at a cost basis of ${fmt(d.gold.cost)} EGP (avg ${fmt(d.gold.avgCostPerGram)} EGP/g, mfg fee included). Sell cashback of ${fmt2(d.gold.cashbackPerGram)} EGP/g applies on sell. ${GOLD_PNL_UNAVAILABLE}.</div></div></div>`);
+    items.push(`<div class="insight-item"><div class="insight-icon">💹</div><div><div class="insight-title">Certificate Yield</div><div class="insight-desc" id="insight-cert-desc">Your ${d.certs.length} NBE certificates generate ~${fmt(d.certTotals.totalMonthly)} EGP/month (${fmt(d.certTotals.annualYield)} EGP/yr) at a weighted average ${d.certTotals.weightedAvgRate.toFixed(1)}% APY — reinvesting into Bareeq would compound growth.</div></div></div>`);
   }
-  if (d.health.liquidityPct < 20) {
-    items.push(
-      `<div class="insight-item"><div class="insight-icon">💧</div><div><div class="insight-title">Low Liquidity (${d.health.liquidityPct.toFixed(0)}%)</div><div class="insight-desc">Only ${fmt(d.abr.value)} EGP (${d.health.liquidityPct.toFixed(1)}%) is liquid. Consider keeping at least 15–20% in liquid assets for emergencies.</div></div></div>`,
-    );
-  }
-  items.push(
-    `<div class="insight-item"><div class="insight-icon">📈</div><div><div class="insight-title">Emergency Fund at ${d.health.emergencyFundPct.toFixed(0)}%</div><div class="insight-desc">Your Bareeq balance covers ${d.health.emergencyFundPct.toFixed(0)}% of the ${fmt(d.settings.emergencyFundTarget)} EGP target.</div></div></div>`,
-  );
-  items.push(
-    `<div class="insight-item"><div class="insight-icon">🥇</div><div><div class="insight-title">Gold Performance</div><div class="insight-desc">${fmt(d.gold.gramsHeld)}g at a cost basis of ${fmt(d.gold.cost)} EGP (avg ${fmt(d.gold.avgCostPerGram)} EGP/g, mfg fee included). Sell cashback of ${fmt2(d.gold.cashbackPerGram)} EGP/g applies on sell. ${GOLD_PNL_UNAVAILABLE}.</div></div></div>`,
-  );
-  items.push(
-    `<div class="insight-item"><div class="insight-icon">💹</div><div><div class="insight-title">Certificate Yield</div><div class="insight-desc" id="insight-cert-desc">Your ${d.certs.length} NBE certificates generate ~${fmt(d.certTotals.totalMonthly)} EGP/month (${fmt(d.certTotals.annualYield)} EGP/yr) at a weighted average ${d.certTotals.weightedAvgRate.toFixed(1)}% APY — reinvesting into Bareeq would compound growth.</div></div></div>`,
-  );
   return items.join("\n");
 }

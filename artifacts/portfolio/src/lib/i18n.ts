@@ -214,6 +214,46 @@ export const T: Record<Lang, Record<string, string>> = {
     'seg.beltone.re'      : 'Beltone Real Estate',
     'seg.nbe.certs'       : 'NBE Certificates',
     'seg.nbe.certs.avg'   : 'NBE certs · avg',
+    // heroMath labels
+    'ml.combined.nav'     : 'Combined NAV:',
+    'ml.total.value'      : 'Total Value:',
+    'ml.total.cost'       : 'Total Cost:',
+    'ml.pnl'              : 'PnL:',
+    'ml.certificates.label': 'Certificates:',
+    'ml.gold.live.price'  : 'Gold 24K (live sell price):',
+    'ml.gold.at.cost'     : 'Gold (at cost, live price pending):',
+    // heroMath calc/result additions
+    'mc.mfg.fee.incl'     : 'mfg fee incl.',
+    'mc.mfg.fee.paid'     : 'mfg fee included, paid at purchase',
+    'mc.refunded.sell.full': 'refunded on sell, added to value — not the cost basis',
+    'mc.live.price.unavail': 'Live gold price unavailable — feature in development',
+    'mc.pnl.unavail'      : 'PnL unavailable — live price feature in development',
+    // Health grade
+    'health.grade.excellent': 'Excellent',
+    'health.grade.good'   : 'Good',
+    'health.grade.attention': 'Needs attention',
+    'health.grade.risk'   : 'At risk',
+    // Sort labels
+    'sort.by.value'       : 'By Value',
+    'sort.by.pnl'         : 'By PnL',
+    'sort.by.pct'         : 'By %',
+    'sort.by.name'        : 'By Name',
+    'sort.default'        : 'Default',
+    // Performance avg-vs-sell
+    'perf.my.avg'         : 'My Avg:',
+    'perf.vs.sell.cb'     : 'vs Sell+Cashback:',
+    'perf.funds.only'     : 'funds only',
+    // DCA avg drop/rise
+    'dca.avg.drops'       : 'drops',
+    'dca.avg.rises'       : 'rises',
+    'dca.avg.unit'        : 'EGP/pure-g from current avg',
+    // DCA notes
+    'dca.note.waiting'    : '⚠️ Waiting for live gold prices from goldbullioneg.com — scenarios will appear once the first scrape completes.',
+    'dca.note.live'       : 'ℹ️ Prices from goldbullioneg.com (live, auto-refreshed every 5 min). Manufacturing fees and cashback from the fixed dealer fee schedule.',
+    // Insights timestamp
+    'insights.generated'  : 'Generated:',
+    // Saving button
+    'btn.saving'          : 'Saving…',
   },
 
   ar: {
@@ -409,5 +449,45 @@ export const T: Record<Lang, Record<string, string>> = {
     'seg.beltone.re'      : 'بلتون عقارات',
     'seg.nbe.certs'       : 'شهادات البنك الأهلي',
     'seg.nbe.certs.avg'   : 'شهادة · متوسط',
+    // heroMath labels
+    'ml.combined.nav'     : 'NAV المجمع:',
+    'ml.total.value'      : 'إجمالي القيمة:',
+    'ml.total.cost'       : 'إجمالي التكلفة:',
+    'ml.pnl'              : 'ر/خ:',
+    'ml.certificates.label': 'شهادات:',
+    'ml.gold.live.price'  : 'ذهب 24ق (سعر البيع الحي):',
+    'ml.gold.at.cost'     : 'ذهب (بالتكلفة، السعر معلق):',
+    // heroMath calc/result additions
+    'mc.mfg.fee.incl'     : 'شامل رسوم التصنيع',
+    'mc.mfg.fee.paid'     : 'رسوم التصنيع مشمولة، مدفوعة عند الشراء',
+    'mc.refunded.sell.full': 'يُسترد عند البيع، يُضاف للقيمة — ليس في التكلفة',
+    'mc.live.price.unavail': 'سعر الذهب الحي غير متاح — الميزة قيد التطوير',
+    'mc.pnl.unavail'      : 'ر/خ غير متاح — السعر الحي قيد التطوير',
+    // Health grade
+    'health.grade.excellent': 'ممتاز',
+    'health.grade.good'   : 'جيد',
+    'health.grade.attention': 'يحتاج اهتمام',
+    'health.grade.risk'   : 'في خطر',
+    // Sort labels
+    'sort.by.value'       : 'حسب القيمة',
+    'sort.by.pnl'         : 'حسب ر/خ',
+    'sort.by.pct'         : 'حسب النسبة',
+    'sort.by.name'        : 'حسب الاسم',
+    'sort.default'        : 'افتراضي',
+    // Performance avg-vs-sell
+    'perf.my.avg'         : 'متوسطي:',
+    'perf.vs.sell.cb'     : 'مقابل البيع+الاسترداد:',
+    'perf.funds.only'     : 'صناديق فقط',
+    // DCA avg drop/rise
+    'dca.avg.drops'       : 'ينخفض',
+    'dca.avg.rises'       : 'يرتفع',
+    'dca.avg.unit'        : 'ج.م/جم نقي عن المتوسط',
+    // DCA notes
+    'dca.note.waiting'    : '⚠️ في انتظار أسعار الذهب الحية من goldbullioneg.com — ستظهر السيناريوهات بعد أول عملية مسح.',
+    'dca.note.live'       : 'ℹ️ الأسعار من goldbullioneg.com (حية، تتجدد كل 5 دقائق). رسوم التصنيع والاسترداد من جدول رسوم الموزع الثابت.',
+    // Insights timestamp
+    'insights.generated'  : 'تم الإنشاء:',
+    // Saving button
+    'btn.saving'          : 'جارٍ الحفظ…',
   },
 };

@@ -2,6 +2,7 @@ import type { Portfolio } from "@workspace/api-client-react";
 import type { Derived, DerivedCertificate } from "./portfolioMath";
 import { fmt, fmt2 } from "./portfolioMath";
 import { T, type Lang, getSavedLang, saveLang } from "./i18n";
+import { allocInsight, buildInsights, healthGrade } from "./dashboardHtml";
 import {
   MFG_FEE_5G_24K_PER_GRAM,
   MFG_FEE_10G_24K_PER_GRAM,
@@ -88,114 +89,51 @@ export function initDashboardBehavior(
   const ml = (label: string, calc: string, result: string, cls = "") =>
     `<div class="math-line ${cls}"><span class="math-label">${label}</span><span class="math-calc">${calc}</span><span class="math-result">${result}</span></div>`;
   const divider = () => `<div class="math-divider"></div>`;
+  const t = (key: string) => T[currentLang][key] ?? T.en[key] ?? key;
 
   function heroMath(view: string): string {
     if (view === "gold") {
       if (derived.gold.pnlAvailable) {
         return [
-          ml("Sell Price:", "24K · goldbullioneg.com", `${fmt(derived.gold.livePricePerGram!)} EGP/g`),
-          ml("Current Value:", `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.livePricePerGram!)} EGP/g`, `= ${fmt(derived.gold.value!)} EGP`),
-          ml("Cost Basis:", `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`, `= ${fmt(derived.gold.cost)} EGP (mfg fee incl.)`),
-          ml("Raw PnL:", "value − cost", `${derived.gold.rawPnl! >= 0 ? "+" : ""}${fmt(derived.gold.rawPnl!)} EGP`),
-          ml("Sell Cashback:", `${fmt(derived.gold.gramsHeld)}g × ${fmt2(derived.gold.cashbackPerGram)} EGP/g`, `= ${fmt(derived.gold.cashback!)} EGP (refunded on sell)`),
+          ml(t('ml.sell.price'), "24K · goldbullioneg.com", `${fmt(derived.gold.livePricePerGram!)} EGP/g`),
+          ml(t('ml.curr.value'), `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.livePricePerGram!)} EGP/g`, `= ${fmt(derived.gold.value!)} EGP`),
+          ml(t('ml.cost.basis'), `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`, `= ${fmt(derived.gold.cost)} EGP (${t('mc.mfg.fee.incl')})`),
+          ml(t('ml.raw.pnl'), t('mc.val.minus.cost'), `${derived.gold.rawPnl! >= 0 ? "+" : ""}${fmt(derived.gold.rawPnl!)} EGP`),
+          ml(t('ml.sell.cashback'), `${fmt(derived.gold.gramsHeld)}g × ${fmt2(derived.gold.cashbackPerGram)} EGP/g`, `= ${fmt(derived.gold.cashback!)} EGP (${t('mc.refunded.on.sell')})`),
           divider(),
-          ml("Net PnL:", "(value + cashback) − cost", `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP`, derived.gold.netPnl! >= 0 ? "math-total" : "math-total neg"),
+          ml(t('ml.net.pnl'), t('mc.val.cb.minus.cost'), `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP`, derived.gold.netPnl! >= 0 ? "math-total" : "math-total neg"),
         ].join("");
       }
       return [
-        ml(
-          "Current Value:",
-          `${fmt(derived.gold.gramsHeld)}g × live price`,
-          "Live gold price unavailable — feature in development",
-        ),
-        ml(
-          "Cost Basis:",
-          `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`,
-          `= ${fmt(derived.gold.cost)} EGP (mfg fee included, paid at purchase)`,
-        ),
-        ml("Raw PnL:", "value − cost", "N/A"),
-        ml(
-          "Sell Cashback:",
-          `${fmt(derived.gold.gramsHeld)}g × ${derived.gold.cashbackPerGram} EGP/g`,
-          "refunded on sell, added to value — not the cost basis",
-        ),
+        ml(t('ml.curr.value'), `${fmt(derived.gold.gramsHeld)}g × live price`, t('mc.live.price.unavail')),
+        ml(t('ml.cost.basis'), `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`, `= ${fmt(derived.gold.cost)} EGP (${t('mc.mfg.fee.paid')})`),
+        ml(t('ml.raw.pnl'), t('mc.val.minus.cost'), "N/A"),
+        ml(t('ml.sell.cashback'), `${fmt(derived.gold.gramsHeld)}g × ${derived.gold.cashbackPerGram} EGP/g`, t('mc.refunded.sell.full')),
         divider(),
-        ml(
-          "Net PnL:",
-          "(value + cashback) − cost",
-          "PnL unavailable — live price feature in development",
-          "math-total",
-        ),
+        ml(t('ml.net.pnl'), t('mc.val.cb.minus.cost'), t('mc.pnl.unavail'), "math-total"),
       ].join("");
     }
     if (view === "liquid") {
       return [
-        ml(
-          "Bareeq:",
-          `${fmt(derived.abr.unitsHeld)} certs × ${derived.abr.nav.toFixed(2)}`,
-          `= ${fmt(derived.abr.value)} EGP`,
-        ),
-        ml(
-          "Real Estate:",
-          `${fmt(derived.re.unitsHeld)} certs × ${derived.re.nav.toFixed(2)}`,
-          `= ${fmt(derived.re.value)} EGP`,
-        ),
+        ml(t('ml.bareeq'), `${fmt(derived.abr.unitsHeld)} certs × ${derived.abr.nav.toFixed(2)}`, `= ${fmt(derived.abr.value)} EGP`),
+        ml(t('ml.re'), `${fmt(derived.re.unitsHeld)} certs × ${derived.re.nav.toFixed(2)}`, `= ${fmt(derived.re.value)} EGP`),
         divider(),
-        ml(
-          "Combined NAV:",
-          `${fmt(derived.abr.value)} + ${fmt(derived.re.value)}`,
-          `= ${fmt(derived.liquid.value)} EGP`,
-          "math-total",
-        ),
-        ml(
-          "Cost Basis:",
-          `${fmt(derived.abr.costBasisTotal)} + ${fmt(derived.re.costBasisTotal)}`,
-          `= ${fmt(derived.liquid.cost)} EGP`,
-        ),
-        ml(
-          "PnL:",
-          `${fmt(derived.liquid.value)} − ${fmt(derived.liquid.cost)}`,
-          `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP (${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
-          derived.liquid.pnl >= 0 ? "math-total" : "math-total neg",
-        ),
+        ml(t('ml.combined.nav'), `${fmt(derived.abr.value)} + ${fmt(derived.re.value)}`, `= ${fmt(derived.liquid.value)} EGP`, "math-total"),
+        ml(t('ml.cost.basis'), `${fmt(derived.abr.costBasisTotal)} + ${fmt(derived.re.costBasisTotal)}`, `= ${fmt(derived.liquid.cost)} EGP`),
+        ml(t('ml.pnl'), `${fmt(derived.liquid.value)} − ${fmt(derived.liquid.cost)}`, `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP (${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`, derived.liquid.pnl >= 0 ? "math-total" : "math-total neg"),
       ].join("");
     }
     return [
       derived.gold.pnlAvailable
-        ? ml(
-            "Gold 24K (live sell price):",
-            `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.livePricePerGram!)} EGP/g`,
-            `= ${fmt(derived.gold.value!)} EGP`,
-          )
-        : ml(
-            "Gold (at cost, live price pending):",
-            `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`,
-            `= ${fmt(derived.gold.cost)} EGP (mfg fee included)`,
-          ),
-      ml(
-        "Bareeq:",
-        `${fmt(derived.abr.unitsHeld)} certs × ${derived.abr.nav.toFixed(2)}`,
-        `= ${fmt(derived.abr.value)} EGP`,
-      ),
-      ml(
-        "Real Estate:",
-        `${fmt(derived.re.unitsHeld)} × ${derived.re.nav.toFixed(2)}`,
-        `= ${fmt(derived.re.value)} EGP`,
-      ),
-      ml(
-        "Certificates:",
-        `${CERTS_DATA.length} certs · avg ${derived.certTotals.weightedAvgRate.toFixed(1)}% APY`,
-        `= ${fmt(derived.certTotals.totalPrincipal)} EGP`,
-      ),
+        ? ml(t('ml.gold.live.price'), `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.livePricePerGram!)} EGP/g`, `= ${fmt(derived.gold.value!)} EGP`)
+        : ml(t('ml.gold.at.cost'), `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`, `= ${fmt(derived.gold.cost)} EGP (${t('mc.mfg.fee.incl')})`),
+      ml(t('ml.bareeq'), `${fmt(derived.abr.unitsHeld)} certs × ${derived.abr.nav.toFixed(2)}`, `= ${fmt(derived.abr.value)} EGP`),
+      ml(t('ml.re'), `${fmt(derived.re.unitsHeld)} × ${derived.re.nav.toFixed(2)}`, `= ${fmt(derived.re.value)} EGP`),
+      ml(t('ml.certificates.label'), `${CERTS_DATA.length} certs · avg ${derived.certTotals.weightedAvgRate.toFixed(1)}% APY`, `= ${fmt(derived.certTotals.totalPrincipal)} EGP`),
       divider(),
-      ml("Total Value:", "", `${fmt(derived.total.value)} EGP`, "math-total"),
-      ml("Total Cost:", "", `~${fmt(derived.total.cost)} EGP`),
-      ml(
-        "PnL:",
-        "",
-        `${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} (${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
-        derived.total.pnl >= 0 ? "math-total" : "math-total neg",
-      ),
+      ml(t('ml.total.value'), "", `${fmt(derived.total.value)} EGP`, "math-total"),
+      ml(t('ml.total.cost'), "", `~${fmt(derived.total.cost)} EGP`),
+      ml(t('ml.pnl'), "", `${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} (${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`, derived.total.pnl >= 0 ? "math-total" : "math-total neg"),
     ].join("");
   }
 
@@ -518,8 +456,8 @@ export function initDashboardBehavior(
           ? derived.gold.livePricePerGram! + derived.gold.cashbackPerGram
           : null;
         avgVsSell.textContent = effectiveSell !== null
-          ? `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: ${fmt2(effectiveSell)} EGP/g`
-          : `My Avg: ${fmt2(derived.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: live price pending`;
+          ? `${t('perf.my.avg')} ${fmt2(derived.gold.avgCostPerGram)} EGP/g ${t('perf.vs.sell.cb')} ${fmt2(effectiveSell)} EGP/g`
+          : `${t('perf.my.avg')} ${fmt2(derived.gold.avgCostPerGram)} EGP/g ${t('perf.vs.sell.cb')} ${t('attr.price.pending')}`;
         (avgVsSell as HTMLElement).style.color = effectiveSell !== null
           ? effectiveSell >= derived.gold.avgCostPerGram ? "var(--teal)" : "var(--coral)"
           : "var(--dim)";
@@ -542,7 +480,7 @@ export function initDashboardBehavior(
       // Liquid: funds-only yield (no certificates)
       const fundsMonthly = derived.abr.monthlyYield;
       if (yieldEl) yieldEl.textContent = `+${fmt(Math.round(fundsMonthly))} EGP/mo`;
-      if (subEl)   subEl.textContent   = `ABR ${fmt(derived.abr.apyPercent)}% · funds only`;
+      if (subEl)   subEl.textContent   = `ABR ${fmt(derived.abr.apyPercent)}% · ${t('perf.funds.only')}`;
       if (certRow) certRow.style.display = "none";
       if (totalRes) totalRes.textContent = `${fmt(Math.round(fundsMonthly))} EGP/mo`;
     } else {
@@ -641,6 +579,19 @@ export function initDashboardBehavior(
       const text = T[lang][key] ?? T.en[key];
       if (text !== undefined) node.textContent = text;
     });
+
+    // Refresh dynamically-generated info box content that doesn't use data-i18n
+    const allocDetailText = el("alloc-detail-text");
+    if (allocDetailText) allocDetailText.textContent = allocInsight(derived, lang);
+
+    const insightsBody = el("insights-body");
+    if (insightsBody) insightsBody.innerHTML = buildInsights(derived, lang);
+
+    const whGrade = el("wh-grade");
+    if (whGrade) whGrade.textContent = healthGrade(derived.health.overallScore, lang);
+
+    // Re-run DCA so drop texts update
+    (win.calcGoldDca as () => void)();
 
     // Re-run setView to refresh hero title/sub, view label, and pill labels
     (win.setView as (view: string) => void)(currentView);
@@ -832,13 +783,13 @@ export function initDashboardBehavior(
       if (k === key) opt.classList.add(sortDesc ? "active-desc" : "active");
     });
     const label = el("pnl-sort-label");
-    const labels: Record<string, string> = {
-      value: "By Value",
-      pnl: "By PnL",
-      pct: "By %",
-      name: "By Name",
+    const sortKeyMap: Record<string, [string, string]> = {
+      value: ['sort.by.value', 'sort.by.value'],
+      pnl:   ['sort.by.pnl',   'sort.by.pnl'],
+      pct:   ['sort.by.pct',   'sort.by.pct'],
+      name:  ['sort.by.name',  'sort.by.name'],
     };
-    if (label) label.textContent = labels[key] || "Default";
+    if (label) label.textContent = sortKeyMap[key] ? t(sortKeyMap[key][0]) : t('sort.default');
     el("pnl-sort-popover")?.classList.remove("open");
   };
 
@@ -907,8 +858,8 @@ export function initDashboardBehavior(
     (el(`dca-${prefix}-avg`) as HTMLElement).textContent = `${fmt2(newAvg)} EGP/pure-g`;
     (el(`dca-${prefix}-drop`) as HTMLElement).textContent =
       avgDrop >= 0
-        ? `↓ drops ${fmt2(avgDrop)} EGP/pure-g from current avg`
-        : `↑ rises ${fmt2(-avgDrop)} EGP/pure-g from current avg`;
+        ? `↓ ${t('dca.avg.drops')} ${fmt2(avgDrop)} ${t('dca.avg.unit')}`
+        : `↑ ${t('dca.avg.rises')} ${fmt2(-avgDrop)} ${t('dca.avg.unit')}`;
     const pnlEl = el(`dca-${prefix}-pnl`) as HTMLElement;
     pnlEl.textContent = `${adjustedPnl >= 0 ? "+" : ""}${fmt(Math.round(adjustedPnl))} EGP (${adjustedPnlPct >= 0 ? "+" : ""}${adjustedPnlPct.toFixed(1)}%)`;
     pnlEl.classList.toggle("pos", adjustedPnl >= 0);
@@ -928,7 +879,7 @@ export function initDashboardBehavior(
 
     if (buyPrice24 === null || sellPrice24 === null) {
       (["s1", "s2", "s3", "s4"] as const).forEach(clearGoldDcaScenario);
-      if (note) note.textContent = "⚠️ Waiting for live gold prices from goldbullioneg.com — scenarios will appear once the first scrape completes.";
+      if (note) note.textContent = t('dca.note.waiting');
       return;
     }
 
@@ -954,7 +905,7 @@ export function initDashboardBehavior(
       );
     }
 
-    if (note) note.textContent = "ℹ️ Prices from goldbullioneg.com (live, auto-refreshed every 5 min). Manufacturing fees and cashback from the fixed dealer fee schedule.";
+    if (note) note.textContent = t('dca.note.live');
   };
 
   win.saveGrowthSnapshot = async () => {
@@ -971,7 +922,7 @@ export function initDashboardBehavior(
 
   win.openInsights = () => {
     const ts = el("insights-timestamp");
-    if (ts) ts.textContent = "Generated: " + new Date().toLocaleString();
+    if (ts) ts.textContent = `${t('insights.generated')} ${new Date().toLocaleString()}`;
     el("insight-overlay")?.classList.add("open");
   };
   win.closeInsights = () => el("insight-overlay")?.classList.remove("open");
@@ -1011,7 +962,7 @@ export function initDashboardBehavior(
     const btn = el("nav-apply-btn") as HTMLButtonElement | null;
     if (btn) {
       btn.disabled = true;
-      btn.textContent = "Saving…";
+      btn.textContent = t('btn.saving');
     }
     try {
       await Promise.all([
