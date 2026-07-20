@@ -75,6 +75,10 @@ export const T: Record<Lang, Record<string, string>> = {
     'dca.pay'         : 'Pay',
     'dca.avg'         : 'New Average',
     'dca.pnl'         : 'Adjusted PnL',
+    // Gold hero stat row
+    'gold.stat.avg'   : 'Avg Cost',
+    'gold.stat.grams' : 'Grams Held',
+    'gold.stat.live'  : 'Live Price',
     // Certificates section
     'certs.hero.label': 'NBE Certificates · Total Principal',
     'certs.hero.sub'  : 'Principal Balance · EGP',
@@ -388,6 +392,10 @@ export const T: Record<Lang, Record<string, string>> = {
     'dca.pay'         : 'ادفع',
     'dca.avg'         : 'متوسط جديد',
     'dca.pnl'         : 'ر/خ معدّل',
+    // Gold hero stat row
+    'gold.stat.avg'   : 'متوسط التكلفة',
+    'gold.stat.grams' : 'الجرامات المحتجزة',
+    'gold.stat.live'  : 'السعر الحي',
     // Certificates section
     'certs.hero.label': 'شهادات البنك الأهلي · إجمالي رأس المال',
     'certs.hero.sub'  : 'رصيد رأس المال · ج.م',

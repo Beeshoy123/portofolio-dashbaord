@@ -517,6 +517,21 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
         <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px" id="hero-sublabel">Total Cost Basis · EGP</div>
         <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em" id="s-total">${fmt(d.total.cost)} EGP</div>
         <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} <span data-i18n="hero.market.value">Market Value:</span> ${fmt(d.total.value)} EGP (<span data-i18n="hero.net.pnl">net PnL</span> ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
+        <!-- GOLD STAT ROW — visible only in gold view, shown/hidden by setView() -->
+        <div id="gold-hero-stats" style="display:none;flex-wrap:wrap;gap:20px;margin-top:16px">
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a7a74" data-i18n="gold.stat.avg">Avg Cost</div>
+            <div style="font-size:16px;font-weight:800;color:var(--ink)" id="gold-stat-avg">${fmt(d.gold.avgCostPerGram)} <span style="font-size:11px;font-weight:600;color:#5a7a74">EGP/g</span></div>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a7a74" data-i18n="gold.stat.grams">Grams Held</div>
+            <div style="font-size:16px;font-weight:800;color:var(--ink)" id="gold-stat-grams">${fmt(d.gold.gramsHeld)} <span style="font-size:11px;font-weight:600;color:#5a7a74">g</span></div>
+          </div>
+          <div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a7a74" data-i18n="gold.stat.live">Live Price</div>
+            <div style="font-size:16px;font-weight:800;color:${d.gold.pnlAvailable ? "var(--teal)" : "#5a7a74"}" id="gold-stat-live">${d.gold.pnlAvailable ? `${fmt(d.gold.livePricePerGram!)} <span style="font-size:11px;font-weight:600;color:#5a7a74">EGP/g</span>` : `<span style="font-size:11px;font-weight:600" data-i18n="attr.price.pending">live price pending</span>`}</div>
+          </div>
+        </div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>
       </div>
       <div id="rate-box-container" style="display:none"></div>

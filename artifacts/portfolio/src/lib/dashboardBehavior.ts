@@ -237,6 +237,9 @@ export function initDashboardBehavior(
     const cp = el("certs-placeholder");
     if (cp) cp.style.display = view === "certs" ? "block" : "none";
 
+    const ghs = el("gold-hero-stats");
+    if (ghs) ghs.style.display = view === "gold" ? "flex" : "none";
+
     const btns = ["total", "gold", "liquid", "certs"];
     const idx = btns.indexOf(view);
     const bar = el("view-toggle-bar");
@@ -912,10 +915,11 @@ export function initDashboardBehavior(
   }
 
   function clearGoldDcaScenario(prefix: "s1" | "s2" | "s3" | "s4") {
-    (el(`dca-${prefix}-pay`) as HTMLElement).textContent = "—";
-    (el(`dca-${prefix}-avg`) as HTMLElement).textContent = "—";
-    (el(`dca-${prefix}-drop`) as HTMLElement).textContent = "—";
-    (el(`dca-${prefix}-pnl`) as HTMLElement).textContent = "—";
+    const setText = (id: string, v: string) => { const e = el(id); if (e) e.textContent = v; };
+    setText(`dca-${prefix}-pay`, "—");
+    setText(`dca-${prefix}-avg`, "—");
+    setText(`dca-${prefix}-drop`, "—");
+    setText(`dca-${prefix}-pnl`, "—");
   }
 
   win.calcGoldDca = () => {
