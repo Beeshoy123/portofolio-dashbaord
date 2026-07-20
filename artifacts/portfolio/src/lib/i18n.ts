@@ -112,7 +112,6 @@ export const T: Record<Lang, Record<string, string>> = {
     'modal.nav.abr.certs': 'Bareeq Certs held',
     'modal.nav.re.nav'   : 'Real Estate NAV',
     'modal.nav.re.certs' : 'Real Estate Certs',
-    'btn.apply'       : 'Apply & Save',
     // AI Scanner drawer
     'scan.title'      : '📸 AI Scanner',
     'scan.close'      : 'Close',
@@ -201,7 +200,7 @@ export const T: Record<Lang, Record<string, string>> = {
     'card.cohort.gold'    : '📊 Cohort Analysis · Gold Purchases',
     'card.cohort.batches' : '📊 Cohort Analysis · Buy Batches',
     'cohort.empty'        : 'No gold transactions recorded yet.',
-    'cohort.profit.formula': 'Profit = (Units × Current NAV) − Invested',
+    'cohort.fund.profit.formula': 'Profit = (Units × Current NAV) − Invested',
     // Income view sub-labels
     'perf.weighted.avg'   : 'weighted avg',
     'perf.blended.on.total': 'blended annual yield on total wallet',
@@ -254,6 +253,85 @@ export const T: Record<Lang, Record<string, string>> = {
     'insights.generated'  : 'Generated:',
     // Saving button
     'btn.saving'          : 'Saving…',
+    'btn.apply'           : 'Apply & Save',
+    // Hero chg line parts
+    'hero.chg.mkt.value'  : 'Market Value:',
+    'hero.chg.net.pnl'    : 'net PnL',
+    'hero.chg.cashback'   : '+ cashback',
+    'hero.chg.avg.apy'    : 'avg APY',
+    'hero.pnl.unavail.dev': 'PnL unavailable — live price feature in development',
+    // Performance card headlines
+    'perf.net.word'       : 'net',
+    'perf.egp.net'        : 'EGP net',
+    'perf.pnl.unavail.short': 'PnL unavailable',
+    // Performance PnL sub-label parts
+    'perf.pnl.raw'        : 'raw',
+    'perf.pnl.cb.on.sell' : 'cashback on sell',
+    'perf.pnl.cb.rate'    : 'Cashback rate on file:',
+    'perf.pnl.applied'    : '(applied on sell)',
+    // PnL row sub descriptions
+    'pnl.sub.physical'    : 'physical',
+    'pnl.sub.fixed.income': 'Fixed Income',
+    'pnl.sub.nav'         : 'NAV',
+    'pnl.sub.apy'         : 'APY',
+    'pnl.sub.equity'      : 'Equity Fund',
+    'pnl.sub.nbe.income'  : 'NBE · interest income',
+    // Gold PnL row meta
+    'pnl.gold.sell.cb'    : '(sell + cashback)',
+    'pnl.gold.pending'    : 'live price pending',
+    // heroMath calc strings
+    'mc.live.price.label' : 'live price',
+    'mc.certs.avg.apy'    : 'certs · avg',
+    'mc.apy.label'        : 'APY',
+    // DCA avg unit
+    'unit.egp.per.pure.g' : 'EGP/pure-g',
+    // Cert display
+    'cert.badge.soon'     : 'Soon',
+    'cert.days.left'      : 'd left',
+    'cert.more.suffix'    : 'more certificates',
+    'cert.count.single'   : 'certificate',
+    'cert.count.plural'   : 'certificates',
+    'cert.avg.apy.prefix' : 'Avg',
+    'cert.maturing.unit'  : 'certs',
+    // EF % of target
+    'ef.of.target'        : 'of',
+    // Cohort table headers — gold
+    'cohort.th.cohort'    : 'Cohort',
+    'cohort.th.date'      : 'Date',
+    'cohort.th.paid'      : 'Paid (EGP)',
+    'cohort.th.weight'    : 'Weight',
+    'cohort.th.bar.karat' : 'Bar / Karat',
+    'cohort.th.avg.cost'  : 'Avg Cost/g',
+    'cohort.th.curr.value': 'Current Value (EGP)',
+    'cohort.th.profit.cb' : 'Profit incl. Cashback',
+    'cohort.th.return'    : 'Return (%)',
+    // Cohort table headers — fund
+    'cohort.th.invested'  : 'Invested (EGP)',
+    'cohort.th.units'     : 'Units',
+    'cohort.th.avg.unit'  : 'Avg. Cost/Unit',
+    'cohort.th.profit'    : 'Profit (EGP)',
+    // Cohort shared
+    'cohort.total'        : 'Total',
+    'cohort.live.pending' : 'live pending',
+    'cohort.no.buys'      : 'No buy transactions recorded yet.',
+    'cohort.price.pending': '⏳ Live sell price pending — goldbullioneg.com scrape in progress',
+    'cohort.sell.prefix'  : 'Sell:',
+    'cohort.cashback.prefix': 'Cashback:',
+    'cohort.profit.formula': 'Profit = (Value + Cashback) − Paid',
+    'cohort.fund.abr.note': 'Fixed Income · Accrual — NAV grows daily, no yield harvest',
+    'cohort.fund.re.note' : 'Equity Fund · NAV Volatility — avg cost basis',
+    // Scanner UI
+    'scan.err.no.key'     : 'Please set your Gemini API key first (⚙️ Set API Key below).',
+    'scan.err.no.mode'    : 'Please select a scan mode (Order Confirmation or Fund NAV) first.',
+    'scan.err.no.fund'    : 'Could not identify the fund (ABR or RE). Try uploading a clearer screenshot.',
+    'scan.err.failed'     : 'Scan failed. Please try again.',
+    'scan.err.save.fail'  : 'Failed to save:',
+    'scan.result.fund'    : 'Fund',
+    'scan.result.nav'     : 'NAV',
+    'scan.result.units'   : 'Units Held',
+    'scan.btn.applying'   : 'Applying…',
+    'scan.btn.apply.dash' : 'Apply to Dashboard',
+    'scan.key.set'        : 'API Key: set ✓',
   },
 
   ar: {
@@ -347,7 +425,6 @@ export const T: Record<Lang, Record<string, string>> = {
     'modal.nav.abr.certs': 'وحدات بريق المحتازة',
     'modal.nav.re.nav'   : 'NAV العقارات',
     'modal.nav.re.certs' : 'وحدات العقارات المحتازة',
-    'btn.apply'       : 'تطبيق وحفظ',
     // AI Scanner drawer
     'scan.title'      : '📸 الماسح بالذكاء الاصطناعي',
     'scan.close'      : 'إغلاق',
@@ -436,7 +513,7 @@ export const T: Record<Lang, Record<string, string>> = {
     'card.cohort.gold'    : '📊 تحليل الدفعات · مشتريات الذهب',
     'card.cohort.batches' : '📊 تحليل الدفعات · دفعات الشراء',
     'cohort.empty'        : 'لا توجد معاملات ذهب مسجلة بعد.',
-    'cohort.profit.formula': 'الربح = (الوحدات × NAV الحالي) − المستثمر',
+    'cohort.fund.profit.formula': 'الربح = (الوحدات × NAV الحالي) − المستثمر',
     // Income view sub-labels
     'perf.weighted.avg'   : 'متوسط مرجح',
     'perf.blended.on.total': 'عائد سنوي مدمج على إجمالي المحفظة',
@@ -489,5 +566,84 @@ export const T: Record<Lang, Record<string, string>> = {
     'insights.generated'  : 'تم الإنشاء:',
     // Saving button
     'btn.saving'          : 'جارٍ الحفظ…',
+    'btn.apply'           : 'تطبيق وحفظ',
+    // Hero chg line parts
+    'hero.chg.mkt.value'  : 'القيمة السوقية:',
+    'hero.chg.net.pnl'    : 'ر/خ صافي',
+    'hero.chg.cashback'   : '+ استرداد',
+    'hero.chg.avg.apy'    : 'متوسط العائد',
+    'hero.pnl.unavail.dev': 'ر/خ غير متاح — ميزة السعر الحي قيد التطوير',
+    // Performance card headlines
+    'perf.net.word'       : 'صافي',
+    'perf.egp.net'        : 'ج.م صافي',
+    'perf.pnl.unavail.short': 'ر/خ غير متاح',
+    // Performance PnL sub-label parts
+    'perf.pnl.raw'        : 'خام',
+    'perf.pnl.cb.on.sell' : 'استرداد عند البيع',
+    'perf.pnl.cb.rate'    : 'معدل الاسترداد المسجل:',
+    'perf.pnl.applied'    : '(يُطبَّق عند البيع)',
+    // PnL row sub descriptions
+    'pnl.sub.physical'    : 'مادي',
+    'pnl.sub.fixed.income': 'دخل ثابت',
+    'pnl.sub.nav'         : 'NAV',
+    'pnl.sub.apy'         : 'عائد سنوي',
+    'pnl.sub.equity'      : 'صندوق أسهم',
+    'pnl.sub.nbe.income'  : 'شهادات · دخل ثابت',
+    // Gold PnL row meta
+    'pnl.gold.sell.cb'    : '(بيع + استرداد)',
+    'pnl.gold.pending'    : 'السعر الحي معلق',
+    // heroMath calc strings
+    'mc.live.price.label' : 'السعر الحي',
+    'mc.certs.avg.apy'    : 'شهادة · متوسط',
+    'mc.apy.label'        : 'عائد',
+    // DCA avg unit
+    'unit.egp.per.pure.g' : 'ج.م/جم نقي',
+    // Cert display
+    'cert.badge.soon'     : 'قريباً',
+    'cert.days.left'      : 'يوم متبقي',
+    'cert.more.suffix'    : 'شهادات أخرى',
+    'cert.count.single'   : 'شهادة',
+    'cert.count.plural'   : 'شهادات',
+    'cert.avg.apy.prefix' : 'متوسط',
+    'cert.maturing.unit'  : 'شهادة',
+    // EF % of target
+    'ef.of.target'        : 'من',
+    // Cohort table headers — gold
+    'cohort.th.cohort'    : 'دفعة',
+    'cohort.th.date'      : 'التاريخ',
+    'cohort.th.paid'      : 'المدفوع (ج.م)',
+    'cohort.th.weight'    : 'الوزن',
+    'cohort.th.bar.karat' : 'سبيكة / قيراط',
+    'cohort.th.avg.cost'  : 'متوسط التكلفة/جم',
+    'cohort.th.curr.value': 'القيمة الحالية (ج.م)',
+    'cohort.th.profit.cb' : 'الربح شامل الاسترداد',
+    'cohort.th.return'    : 'العائد (%)',
+    // Cohort table headers — fund
+    'cohort.th.invested'  : 'المستثمر (ج.م)',
+    'cohort.th.units'     : 'وحدات',
+    'cohort.th.avg.unit'  : 'متوسط التكلفة/وحدة',
+    'cohort.th.profit'    : 'الربح (ج.م)',
+    // Cohort shared
+    'cohort.total'        : 'الإجمالي',
+    'cohort.live.pending' : 'السعر معلق',
+    'cohort.no.buys'      : 'لا توجد معاملات شراء مسجلة بعد.',
+    'cohort.price.pending': '⏳ السعر الحي معلق — scrape goldbullioneg.com قيد التشغيل',
+    'cohort.sell.prefix'  : 'بيع:',
+    'cohort.cashback.prefix': 'استرداد:',
+    'cohort.profit.formula': 'الربح = (القيمة + الاسترداد) − المدفوع',
+    'cohort.fund.abr.note': 'دخل ثابت · تراكمي — NAV يرتفع يومياً، بلا توزيعات',
+    'cohort.fund.re.note' : 'صندوق أسهم · تذبذب NAV — متوسط التكلفة',
+    // Scanner UI
+    'scan.err.no.key'     : 'يرجى تعيين مفتاح Gemini API أولاً (⚙️ تعيين مفتاح API أدناه).',
+    'scan.err.no.mode'    : 'يرجى اختيار وضع المسح (تأكيد الطلب أو NAV الصندوق) أولاً.',
+    'scan.err.no.fund'    : 'تعذّر التعرف على الصندوق (ABR أو RE). جرّب رفع لقطة شاشة أوضح.',
+    'scan.err.failed'     : 'فشل المسح. حاول مجدداً.',
+    'scan.err.save.fail'  : 'فشل الحفظ:',
+    'scan.result.fund'    : 'الصندوق',
+    'scan.result.nav'     : 'NAV',
+    'scan.result.units'   : 'الوحدات المحتفظ بها',
+    'scan.btn.applying'   : 'جارٍ التطبيق…',
+    'scan.btn.apply.dash' : 'تطبيق على لوحة التحكم',
+    'scan.key.set'        : 'مفتاح API: مُعيَّن ✓',
   },
 };

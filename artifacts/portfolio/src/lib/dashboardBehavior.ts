@@ -45,7 +45,7 @@ export function initDashboardBehavior(
 
   function updateTime() {
     const now = new Date();
-    const t = now.toLocaleTimeString("en-US", {
+    const t = now.toLocaleTimeString(currentLang === 'ar' ? 'ar-EG' : 'en-US', {
       hour: "2-digit",
       minute: "2-digit",
       second: "2-digit",
@@ -105,7 +105,7 @@ export function initDashboardBehavior(
         ].join("");
       }
       return [
-        ml(t('ml.curr.value'), `${fmt(derived.gold.gramsHeld)}g × live price`, t('mc.live.price.unavail')),
+        ml(t('ml.curr.value'), `${fmt(derived.gold.gramsHeld)}g × ${t('mc.live.price.label')}`, t('mc.live.price.unavail')),
         ml(t('ml.cost.basis'), `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`, `= ${fmt(derived.gold.cost)} EGP (${t('mc.mfg.fee.paid')})`),
         ml(t('ml.raw.pnl'), t('mc.val.minus.cost'), "N/A"),
         ml(t('ml.sell.cashback'), `${fmt(derived.gold.gramsHeld)}g × ${derived.gold.cashbackPerGram} EGP/g`, t('mc.refunded.sell.full')),
@@ -129,7 +129,7 @@ export function initDashboardBehavior(
         : ml(t('ml.gold.at.cost'), `${fmt(derived.gold.gramsHeld)}g × ${fmt(derived.gold.avgCostPerGram)} EGP/g`, `= ${fmt(derived.gold.cost)} EGP (${t('mc.mfg.fee.incl')})`),
       ml(t('ml.bareeq'), `${fmt(derived.abr.unitsHeld)} certs × ${derived.abr.nav.toFixed(2)}`, `= ${fmt(derived.abr.value)} EGP`),
       ml(t('ml.re'), `${fmt(derived.re.unitsHeld)} × ${derived.re.nav.toFixed(2)}`, `= ${fmt(derived.re.value)} EGP`),
-      ml(t('ml.certificates.label'), `${CERTS_DATA.length} certs · avg ${derived.certTotals.weightedAvgRate.toFixed(1)}% APY`, `= ${fmt(derived.certTotals.totalPrincipal)} EGP`),
+      ml(t('ml.certificates.label'), `${CERTS_DATA.length} ${t('mc.certs.avg.apy')} ${derived.certTotals.weightedAvgRate.toFixed(1)}% ${t('mc.apy.label')}`, `= ${fmt(derived.certTotals.totalPrincipal)} EGP`),
       divider(),
       ml(t('ml.total.value'), "", `${fmt(derived.total.value)} EGP`, "math-total"),
       ml(t('ml.total.cost'), "", `~${fmt(derived.total.cost)} EGP`),
@@ -147,7 +147,7 @@ export function initDashboardBehavior(
       title: string; titleAr: string;
       sub: string;   subAr: string;
       val: string;
-      chg: string;
+      chg: string;   chgAr: string;
       rates: string;
       sentiment: "up" | "down" | "neutral";
     }
@@ -156,7 +156,8 @@ export function initDashboardBehavior(
       title: "Total Portfolio Value",    titleAr: "إجمالي قيمة المحفظة",
       sub: "Total Cost Basis · EGP",     subAr: "إجمالي تكلفة الشراء · ج.م",
       val: `${fmt(derived.total.cost)} EGP`,
-      chg: `Market Value: ${fmt(derived.total.value)} EGP (net PnL ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} EGP, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
+      chg:   `Market Value: ${fmt(derived.total.value)} EGP (net PnL ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} EGP, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
+      chgAr: `القيمة السوقية: ${fmt(derived.total.value)} ج.م (ر/خ صافي ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} ج.م، ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`
         : `Gold: Live price unavailable<br>USD/EGP: ${derived.settings.usdEgpRate.toFixed(2)}`,
@@ -169,6 +170,9 @@ export function initDashboardBehavior(
       chg: derived.gold.pnlAvailable
         ? `Market Value: ${fmt(derived.gold.value!)} EGP (net PnL ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP, ${derived.gold.pnlPct!.toFixed(1)}% + cashback)`
         : "PnL unavailable — live price feature in development",
+      chgAr: derived.gold.pnlAvailable
+        ? `القيمة السوقية: ${fmt(derived.gold.value!)} ج.م (ر/خ صافي ${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} ج.م، ${derived.gold.pnlPct!.toFixed(1)}% + استرداد)`
+        : "ر/خ غير متاح — ميزة السعر الحي قيد التطوير",
       rates: derived.gold.pnlAvailable
         ? `Sell: ${fmt(derived.gold.livePricePerGram!)} EGP/g · Buy: ${fmt((portfolio.gold as any).buyPrice24k)} EGP/g<br>Cashback: ${fmt2(derived.gold.cashbackPerGram)} EGP/g on sell`
         : `Avg cost: ${fmt(derived.gold.avgCostPerGram)} EGP/g (mfg fee incl.)<br>Market: Live price unavailable<br>Cashback: ${fmt2(derived.gold.cashbackPerGram)} EGP/g on sell`,
@@ -182,7 +186,8 @@ export function initDashboardBehavior(
       title: "Liquid Assets · Funds",    titleAr: "الأصول السائلة · صناديق",
       sub: "Cost Basis · EGP",           subAr: "تكلفة الشراء · ج.م",
       val: `${fmt(derived.liquid.cost)} EGP`,
-      chg: `Market Value: ${fmt(derived.liquid.value)} EGP (net PnL ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
+      chg:   `Market Value: ${fmt(derived.liquid.value)} EGP (net PnL ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
+      chgAr: `القيمة السوقية: ${fmt(derived.liquid.value)} ج.م (ر/خ صافي ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} ج.م، ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
       rates: ``,
       sentiment: derived.liquid.pnl >= 0 ? "up" : "down",
     },
@@ -190,7 +195,8 @@ export function initDashboardBehavior(
       title: "NBE Certificates",         titleAr: "شهادات بنك مصر",
       sub: "Principal Balance · EGP",    subAr: "رصيد رأس المال · ج.م",
       val: `${fmt(derived.certTotals.totalPrincipal)} EGP`,
-      chg: `${derived.certTotals.weightedAvgRate.toFixed(1)}% avg APY · +${fmt(derived.certTotals.totalMonthly)} EGP/mo`,
+      chg:   `${derived.certTotals.weightedAvgRate.toFixed(1)}% avg APY · +${fmt(derived.certTotals.totalMonthly)} EGP/mo`,
+      chgAr: `${derived.certTotals.weightedAvgRate.toFixed(1)}% متوسط عائد · +${fmt(derived.certTotals.totalMonthly)} ج.م/شهر`,
       rates: `Avg APY: ${derived.certTotals.weightedAvgRate.toFixed(1)}%<br>Monthly yield: ${fmt(derived.certTotals.totalMonthly)} EGP`,
       sentiment: "neutral",
     },
@@ -257,7 +263,7 @@ export function initDashboardBehavior(
     if (heroVal) heroVal.textContent = hcfg.val;
     const heroChg = el("s-total-chg");
     if (heroChg) {
-      heroChg.textContent = `${SENTIMENT_ARROW[hcfg.sentiment]} ${hcfg.chg}`;
+      heroChg.textContent = `${SENTIMENT_ARROW[hcfg.sentiment]} ${currentLang === 'ar' ? hcfg.chgAr : hcfg.chg}`;
       heroChg.style.color = SENTIMENT_COLOR[hcfg.sentiment];
       heroChg.classList.toggle("pos", hcfg.sentiment !== "down");
       heroChg.classList.toggle("neg", hcfg.sentiment === "down");
@@ -328,12 +334,14 @@ export function initDashboardBehavior(
       pnlUpdate: {
         icon: "🥇",
         headline: () => derived.gold.pnlAvailable
-          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
-          : "PnL unavailable",
+          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} ${t('perf.egp.net')}`
+          : t('perf.pnl.unavail.short'),
         headlineColor: () => derived.gold.pnlAvailable
           ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
           : "var(--dim)",
-        sub: () => ``,
+        sub: () => derived.gold.pnlAvailable
+          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% ${t('perf.pnl.raw')} · ${fmt2(derived.gold.cashbackPerGram)} EGP/g ${t('perf.pnl.cb.on.sell')}`
+          : `${t('perf.pnl.cb.rate')} ${fmt2(derived.gold.cashbackPerGram)} EGP/g ${t('perf.pnl.applied')}`,
         rowFilter: "gold",
         showAvgVsSell: true,
       },
@@ -348,7 +356,7 @@ export function initDashboardBehavior(
       growthLabelAr: "نمو المدخرات · شهر بشهر",
       pnlUpdate: {
         icon: "💧",
-        headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP net · ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%`,
+        headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} ${t('perf.egp.net')} · ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%`,
         headlineColor: () => derived.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)",
         sub: () => ``,
         rowFilter: "liquid",
@@ -368,12 +376,14 @@ export function initDashboardBehavior(
       pnlUpdate: {
         icon: "🥇",
         headline: () => derived.gold.pnlAvailable
-          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} EGP net`
-          : "PnL unavailable",
+          ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} ${t('perf.egp.net')}`
+          : t('perf.pnl.unavail.short'),
         headlineColor: () => derived.gold.pnlAvailable
           ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
           : "var(--dim)",
-        sub: () => ``,
+        sub: () => derived.gold.pnlAvailable
+          ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% ${t('perf.pnl.raw')} · ${fmt2(derived.gold.cashbackPerGram)} EGP/g ${t('perf.pnl.cb.on.sell')}`
+          : `${t('perf.pnl.cb.rate')} ${fmt2(derived.gold.cashbackPerGram)} EGP/g ${t('perf.pnl.applied')}`,
         rowFilter: "all",
         showAvgVsSell: true,
       },
@@ -595,6 +605,41 @@ export function initDashboardBehavior(
 
     // Re-run setView to refresh hero title/sub, view label, and pill labels
     (win.setView as (view: string) => void)(currentView);
+
+    // Refresh pnl-row sub descriptions that mix live numbers with bilingual labels
+    const pnlSubGold = el("pnl-row-sub-gold");
+    if (pnlSubGold) pnlSubGold.innerHTML =
+      `${fmt(derived.gold.gramsHeld)}g <span data-i18n="pnl.sub.physical">${lang === 'ar' ? 'مادي' : 'physical'}</span>`;
+
+    const pnlSubAbr = el("pnl-row-sub-abr");
+    if (pnlSubAbr) pnlSubAbr.innerHTML = lang === 'ar'
+      ? `<span data-i18n="pnl.sub.fixed.income">دخل ثابت</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(derived.abr.nav)} ج.م · ${fmt(derived.abr.apyPercent)}% <span data-i18n="pnl.sub.apy">عائد سنوي</span>`
+      : `<span data-i18n="pnl.sub.fixed.income">Fixed Income</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(derived.abr.nav)} EGP · ${fmt(derived.abr.apyPercent)}% <span data-i18n="pnl.sub.apy">APY</span>`;
+
+    const pnlSubRe = el("pnl-row-sub-re");
+    if (pnlSubRe) pnlSubRe.innerHTML = lang === 'ar'
+      ? `<span data-i18n="pnl.sub.equity">صندوق أسهم</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(derived.re.nav)} ج.م`
+      : `<span data-i18n="pnl.sub.equity">Equity Fund</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(derived.re.nav)} EGP`;
+
+    // Refresh DCA sub paragraph
+    const dcaSubEl = el("dca-sub");
+    if (dcaSubEl) dcaSubEl.textContent = lang === 'ar'
+      ? `تحتفظ بـ ${fmt(derived.gold.gramsHeld)}جم (محسوبة بالذهب النقي) بمتوسط ${fmt(derived.gold.avgCostPerGram)} ج.م/جم نقي. السيناريوهات تُحسب تلقائياً من أسعار goldbullioneg.com الحية (تتجدد كل 5 دقائق). رسوم تصنيع على كل شراء، واسترداد على كل بيع — وفق جدول رسوم الموزع الثابت.`
+      : `You hold ${fmt(derived.gold.gramsHeld)}g (pure-gold-adjusted) @ ${fmt(derived.gold.avgCostPerGram)} EGP/pure-g avg. Scenarios are auto-calculated from live goldbullioneg.com prices (refreshed every 5 min). Manufacturing fee on every buy, cashback on every sell — per the fixed dealer fee schedule.`;
+
+    // Re-render cert table and timeline (date locale, badge text, "d left", etc.)
+    renderCerts();
+
+    // Refresh PnL sort label (translates "Default" / active sort key name on lang switch)
+    const sortLabel = el("pnl-sort-label");
+    if (sortLabel) {
+      const sortKeyMap: Record<string, string> = {
+        value: 'sort.by.value', pnl: 'sort.by.pnl', pct: 'sort.by.pct', name: 'sort.by.name',
+      };
+      sortLabel.textContent = currentSortKey && sortKeyMap[currentSortKey]
+        ? t(sortKeyMap[currentSortKey])
+        : t('sort.default');
+    }
   }
 
   win.toggleLang = () => {
@@ -855,7 +900,7 @@ export function initDashboardBehavior(
     const adjustedPnlPct = newCost > 0 ? (adjustedPnl / newCost) * 100 : 0;
 
     (el(`dca-${prefix}-pay`) as HTMLElement).textContent = `${fmt(Math.round(pay))} EGP`;
-    (el(`dca-${prefix}-avg`) as HTMLElement).textContent = `${fmt2(newAvg)} EGP/pure-g`;
+    (el(`dca-${prefix}-avg`) as HTMLElement).textContent = `${fmt2(newAvg)} ${t('unit.egp.per.pure.g')}`;
     (el(`dca-${prefix}-drop`) as HTMLElement).textContent =
       avgDrop >= 0
         ? `↓ ${t('dca.avg.drops')} ${fmt2(avgDrop)} ${t('dca.avg.unit')}`
@@ -973,7 +1018,7 @@ export function initDashboardBehavior(
     } finally {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = "Apply & Save";
+        btn.textContent = t('btn.apply');
       }
     }
   };
@@ -992,7 +1037,7 @@ export function initDashboardBehavior(
     if (key && !key.startsWith("•")) {
       localStorage.setItem("gemini_api_key", key);
       const status = el("scan-key-status");
-      if (status) status.textContent = "API Key: set ✓";
+      if (status) status.textContent = t('scan.key.set');
     }
     el("apikey-overlay")?.classList.remove("open");
   };
@@ -1015,11 +1060,11 @@ export function initDashboardBehavior(
   async function runScan(dataUrl: string) {
     const apiKey = localStorage.getItem("gemini_api_key");
     if (!apiKey) {
-      showScanError("Please set your Gemini API key first (⚙️ Set API Key below).");
+      showScanError(t('scan.err.no.key'));
       return;
     }
     if (!currentScanMode) {
-      showScanError("Please select a scan mode (Order Confirmation or Fund NAV) first.");
+      showScanError(t('scan.err.no.mode'));
       return;
     }
 
@@ -1075,9 +1120,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       }
 
       if (!data.fund || !["abr", "re"].includes(data.fund as string)) {
-        throw new Error(
-          "Could not identify the fund (ABR or RE). Try uploading a clearer screenshot.",
-        );
+        throw new Error(t('scan.err.no.fund'));
       }
 
       pendingScanResult = {
@@ -1095,12 +1138,12 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
           const fundName =
             pendingScanResult.fund === "abr" ? "Bareeq (ABR)" : "Real Estate (BRE)";
           body.innerHTML = [
-            `<div class="scan-result-row"><span>Fund</span><span>${fundName}</span></div>`,
+            `<div class="scan-result-row"><span>${t('scan.result.fund')}</span><span>${fundName}</span></div>`,
             pendingScanResult.nav != null
-              ? `<div class="scan-result-row"><span>NAV</span><span>${pendingScanResult.nav.toFixed(4)}</span></div>`
+              ? `<div class="scan-result-row"><span>${t('scan.result.nav')}</span><span>${pendingScanResult.nav.toFixed(4)}</span></div>`
               : "",
             pendingScanResult.unitsHeld != null
-              ? `<div class="scan-result-row"><span>Units Held</span><span>${pendingScanResult.unitsHeld.toLocaleString()}</span></div>`
+              ? `<div class="scan-result-row"><span>${t('scan.result.units')}</span><span>${pendingScanResult.unitsHeld.toLocaleString()}</span></div>`
               : "",
           ]
             .filter(Boolean)
@@ -1111,7 +1154,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     } catch (err) {
       if (processingEl) (processingEl as HTMLElement).style.display = "none";
       showScanError(
-        err instanceof Error ? err.message : "Scan failed. Please try again.",
+        err instanceof Error ? err.message : t('scan.err.failed'),
       );
     }
   }
@@ -1148,7 +1191,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   win.applyScanResult = async () => {
     if (!pendingScanResult) return;
     const btn = el("scan-apply-btn") as HTMLButtonElement | null;
-    if (btn) { btn.disabled = true; btn.textContent = "Applying…"; }
+    if (btn) { btn.disabled = true; btn.textContent = t('scan.btn.applying'); }
     try {
       const { fund, nav, unitsHeld } = pendingScanResult;
       const body: { nav?: number; unitsHeld?: number } = {};
@@ -1159,11 +1202,11 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       el("scan-overlay")?.classList.remove("open");
     } catch (err) {
       showScanError(
-        "Failed to save: " +
+        t('scan.err.save.fail') + " " +
           (err instanceof Error ? err.message : "Unknown error"),
       );
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = "Apply to Dashboard"; }
+      if (btn) { btn.disabled = false; btn.textContent = t('scan.btn.apply.dash'); }
     }
   };
 
@@ -1217,13 +1260,13 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       const mat = new Date(c.maturity);
       const daysLeft = Math.ceil((mat.getTime() - today.getTime()) / 86400000);
       const badge = daysLeft < 90
-        ? '<span style="background:var(--coral-soft);color:var(--coral);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">Soon</span>'
+        ? `<span style="background:var(--coral-soft);color:var(--coral);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">${t('cert.badge.soon')}</span>`
         : "";
       return `<tr data-maturity="${c.maturity}" data-rate="${c.rate}">
         <td><div class="ah-asset-name">${c.name}</div></td>
         <td style="font-weight:700">${fmt(c.value)} EGP</td>
         <td style="color:var(--teal);font-weight:700">${c.rate}%</td>
-        <td>${mat.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} ${badge}</td>
+        <td>${mat.toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: "short", day: "numeric", year: "numeric" })} ${badge}</td>
         <td style="color:var(--teal);font-weight:700">${fmt(c.monthly)} EGP</td>
       </tr>`;
     }).join("");
@@ -1277,12 +1320,12 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
                   : "var(--teal)";
             return `<div class="cert-timeline-item">
           <div class="cert-timeline-dot" style="background:${color}"></div>
-          <div><div class="cert-timeline-name">${c.name}</div><div class="cert-timeline-date">${mat.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${daysLeft}d left</div><div class="cert-timeline-amount">${fmt(c.value)} EGP @ ${c.rate}%</div></div>
+          <div><div class="cert-timeline-name">${c.name}</div><div class="cert-timeline-date">${mat.toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: "short", day: "numeric", year: "numeric" })} · ${daysLeft}${t('cert.days.left')}</div><div class="cert-timeline-amount">${fmt(c.value)} EGP @ ${c.rate}%</div></div>
         </div>`;
           })
           .join("") +
         (sorted.length > 6
-          ? `<div style="font-size:10px;color:var(--dim);padding:8px 0">+ ${sorted.length - 6} more certificates</div>`
+          ? `<div style="font-size:10px;color:var(--dim);padding:8px 0">+ ${sorted.length - 6} ${t('cert.more.suffix')}</div>`
           : "");
     }
     if (rateBreak) {
@@ -1297,7 +1340,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         .map(
           ([rate, info]) => `
         <div class="cert-rate-row">
-          <div><div style="font-size:12px;font-weight:700;color:var(--ink)">${rate}% APY</div><div style="font-size:10px;color:var(--dim)">${info.count} certificate${info.count > 1 ? "s" : ""}</div></div>
+          <div><div style="font-size:12px;font-weight:700;color:var(--ink)">${rate}% APY</div><div style="font-size:10px;color:var(--dim)">${info.count} ${info.count > 1 ? t('cert.count.plural') : t('cert.count.single')}</div></div>
           <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--teal)">${fmt(info.total)} EGP</div><div style="font-size:10px;color:var(--dim)">${fmt(Math.round((info.total * +rate) / 100 / 12))}/mo</div></div>
         </div>`,
         )

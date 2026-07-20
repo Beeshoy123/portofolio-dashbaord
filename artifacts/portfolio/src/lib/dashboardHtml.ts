@@ -127,7 +127,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
       : `<td style="color:var(--dim)">—</td>`;
     const profitCell = priceAvail
       ? `<td style="font-weight:700;color:${profitColor}">${profitNet! >= 0 ? "+" : ""}${fmt2(profitNet!)}</td>`
-      : `<td style="color:var(--dim);font-size:10px">live pending</td>`;
+      : `<td style="color:var(--dim);font-size:10px" data-i18n="cohort.live.pending">live pending</td>`;
     const returnCell = priceAvail
       ? `<td style="font-weight:800;color:${profitColor}">${returnPct! >= 0 ? "+" : ""}${returnPct!.toFixed(2)}%</td>`
       : `<td style="color:var(--dim)">—</td>`;
@@ -152,14 +152,14 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
     : `<td style="color:var(--dim)">—</td>`;
   const totalProfitCell = priceAvail
     ? `<td style="font-weight:800;color:${totalProfitColor}">${totalProfit >= 0 ? "+" : ""}${fmt2(totalProfit)}</td>`
-    : `<td style="color:var(--dim);font-size:10px">live pending</td>`;
+    : `<td style="color:var(--dim);font-size:10px" data-i18n="cohort.live.pending">live pending</td>`;
   const totalReturnCell = priceAvail && totalReturnPct !== null
     ? `<td style="font-weight:800;color:${totalProfitColor}">${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(2)}%</td>`
     : `<td style="color:var(--dim)">—</td>`;
 
   const priceNote = priceAvail
-    ? `Sell: <b>${fmt(livePrice!)} EGP/g</b> · Cashback: <b>${fmt2(cashback)} EGP/g</b> · Profit = (Value + Cashback) − Paid`
-    : `⏳ Live sell price pending — goldbullioneg.com scrape in progress`;
+    ? `<span data-i18n="cohort.sell.prefix">Sell:</span> <b>${fmt(livePrice!)} EGP/g</b> · <span data-i18n="cohort.cashback.prefix">Cashback:</span> <b>${fmt2(cashback)} EGP/g</b> · <span data-i18n="cohort.profit.formula">Profit = (Value + Cashback) − Paid</span>`
+    : `<span data-i18n="cohort.price.pending">⏳ Live sell price pending — goldbullioneg.com scrape in progress</span>`;
 
   return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="gold-cohort">
     <div class="card">
@@ -170,20 +170,20 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table class="ah-table" style="min-width:640px">
           <thead><tr>
-            <th>Cohort</th>
-            <th>Date</th>
-            <th>Paid (EGP)</th>
-            <th>Weight</th>
-            <th>Bar / Karat</th>
-            <th>Avg Cost/g</th>
-            <th>Current Value (EGP)</th>
-            <th>Profit incl. Cashback</th>
-            <th>Return (%)</th>
+            <th><span data-i18n="cohort.th.cohort">Cohort</span></th>
+            <th><span data-i18n="cohort.th.date">Date</span></th>
+            <th><span data-i18n="cohort.th.paid">Paid (EGP)</span></th>
+            <th><span data-i18n="cohort.th.weight">Weight</span></th>
+            <th><span data-i18n="cohort.th.bar.karat">Bar / Karat</span></th>
+            <th><span data-i18n="cohort.th.avg.cost">Avg Cost/g</span></th>
+            <th><span data-i18n="cohort.th.curr.value">Current Value (EGP)</span></th>
+            <th><span data-i18n="cohort.th.profit.cb">Profit incl. Cashback</span></th>
+            <th><span data-i18n="cohort.th.return">Return (%)</span></th>
           </tr></thead>
           <tbody>
             ${dataRows.join("")}
             <tr class="cohort-total-row">
-              <td colspan="2" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)">Total</td>
+              <td colspan="2" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)"><span data-i18n="cohort.total">Total</span></td>
               <td style="font-weight:800">${fmt2(totalPaid)}</td>
               <td style="font-weight:800">${fmt(totalGrams)}g</td>
               <td style="color:var(--dim)">—</td>
@@ -230,6 +230,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     fundTypeNote: string,
     accentColor: string,
   ): string {
+    const fundTypeNoteKey = assetKey === 'abr' ? 'cohort.fund.abr.note' : 'cohort.fund.re.note';
     type Tx = Portfolio["transactions"][number];
     const buys = p.transactions
       .filter((tx: Tx) => tx.assetType === assetKey && tx.txType === "buy")
@@ -242,9 +243,9 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
       return `<div style="margin-bottom:24px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <div style="font-size:12px;font-weight:800;color:var(--fg)">${label}</div>
-          <div style="font-size:10px;color:var(--dim);background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid var(--edge)">${fundTypeNote}</div>
+          <div style="font-size:10px;color:var(--dim);background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid var(--edge)"><span data-i18n="${fundTypeNoteKey}">${fundTypeNote}</span></div>
         </div>
-        <div style="font-size:11px;color:var(--dim);padding:12px 0">No buy transactions recorded yet.</div>
+        <div style="font-size:11px;color:var(--dim);padding:12px 0" data-i18n="cohort.no.buys">No buy transactions recorded yet.</div>
       </div>`;
     }
 
@@ -293,7 +294,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
       totalUnits > 0 ? totalInvested / totalUnits : 0;
 
     const totalRow = `<tr class="cohort-total-row">
-      <td colspan="2" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)">Total</td>
+      <td colspan="2" style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)"><span data-i18n="cohort.total">Total</span></td>
       <td style="font-weight:800">${fmt2(totalInvested)}</td>
       <td style="font-weight:800">${fmt(totalUnits)}</td>
       <td style="color:var(--dim)">${fmt2(totalAvgCost)}</td>
@@ -305,20 +306,20 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     return `<div style="margin-bottom:24px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
         <div style="font-size:12px;font-weight:800;color:var(--fg)">${label}</div>
-        <div style="font-size:9.5px;color:${accentColor};background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid ${accentColor};opacity:.8">${fundTypeNote}</div>
+        <div style="font-size:9.5px;color:${accentColor};background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid ${accentColor};opacity:.8"><span data-i18n="${fundTypeNoteKey}">${fundTypeNote}</span></div>
         <div style="font-size:9.5px;color:var(--dim);margin-left:auto">NAV: <b style="color:var(--fg)">${fmt2(currentNav)}</b> EGP</div>
       </div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table class="ah-table" style="min-width:580px">
           <thead><tr>
-            <th>Cohort</th>
-            <th>Date</th>
-            <th>Invested (EGP)</th>
-            <th>Units</th>
-            <th>Avg. Cost/Unit</th>
-            <th>Current Value (EGP)</th>
-            <th>Profit (EGP)</th>
-            <th>Return (%)</th>
+            <th><span data-i18n="cohort.th.cohort">Cohort</span></th>
+            <th><span data-i18n="cohort.th.date">Date</span></th>
+            <th><span data-i18n="cohort.th.invested">Invested (EGP)</span></th>
+            <th><span data-i18n="cohort.th.units">Units</span></th>
+            <th><span data-i18n="cohort.th.avg.unit">Avg. Cost/Unit</span></th>
+            <th><span data-i18n="cohort.th.curr.value">Current Value (EGP)</span></th>
+            <th><span data-i18n="cohort.th.profit">Profit (EGP)</span></th>
+            <th><span data-i18n="cohort.th.return">Return (%)</span></th>
           </tr></thead>
           <tbody>
             ${dataRows}
@@ -333,7 +334,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px">
         <div class="card-lbl" data-i18n="card.cohort.batches">📊 Cohort Analysis · Buy Batches</div>
-        <div style="font-size:9.5px;color:var(--dim)" data-i18n="cohort.profit.formula">Profit = (Units × Current NAV) − Invested</div>
+        <div style="font-size:9.5px;color:var(--dim)" data-i18n="cohort.fund.profit.formula">Profit = (Units × Current NAV) − Invested</div>
       </div>
       ${buildFundTable("abr", d.abr.nav, "🏦 Bareeq Fund (ABR)", "Fixed Income · Accrual — NAV grows daily, no yield harvest", "var(--teal)")}
       <div style="height:1px;background:var(--edge);margin-bottom:20px"></div>
@@ -416,19 +417,19 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       : "var(--dim)";
   const goldAvgVsSellLabel =
     goldEffectiveSellPerGram !== null
-      ? `My Avg: ${fmt2(d.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: ${fmt2(goldEffectiveSellPerGram)} EGP/g`
-      : `My Avg: ${fmt2(d.gold.avgCostPerGram)} EGP/g vs Sell+Cashback: live price pending`;
+      ? `<span data-i18n="perf.my.avg">My Avg:</span> ${fmt2(d.gold.avgCostPerGram)} EGP/g <span data-i18n="perf.vs.sell.cb">vs Sell+Cashback:</span> ${fmt2(goldEffectiveSellPerGram)} EGP/g`
+      : `<span data-i18n="perf.my.avg">My Avg:</span> ${fmt2(d.gold.avgCostPerGram)} EGP/g <span data-i18n="perf.vs.sell.cb">vs Sell+Cashback:</span> <span data-i18n="attr.price.pending">live price pending</span>`;
   // Gold row in the P&L breakdown list.
   const goldPnlRowRight = d.gold.pnlAvailable
-    ? `<div class="pnl-row-val" style="color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"}">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</div><div style="font-size:9.5px;color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.gold.pnlPct!)} (sell + cashback)</div>`
-    : `<div class="pnl-row-val" style="color:var(--dim)">N/A</div><div style="font-size:9.5px;color:var(--dim);font-weight:600">live price pending</div>`;
+    ? `<div class="pnl-row-val" style="color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"}">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</div><div id="gold-pnl-row-meta" style="font-size:9.5px;color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.gold.pnlPct!)} <span data-i18n="pnl.gold.sell.cb">(sell + cashback)</span></div>`
+    : `<div class="pnl-row-val" style="color:var(--dim)">N/A</div><div id="gold-pnl-row-meta" style="font-size:9.5px;color:var(--dim);font-weight:600" data-i18n="pnl.gold.pending">live price pending</div>`;
   // ── Total-view performance panel helpers ─────────────────────────────────
   const totCapColor = d.total.capitalPnl >= 0 ? "var(--teal)" : "var(--coral)";
-  const totCapLabel = `${d.total.capitalPnl >= 0 ? "+" : ""}${fmt(d.total.capitalPnl)} EGP net`;
+  const totCapLabel = `${d.total.capitalPnl >= 0 ? "+" : ""}${fmt(d.total.capitalPnl)} EGP <span data-i18n="perf.net.word">net</span>`;
   const totCapPctStr = pctStr(d.total.cost > 0 ? (d.total.capitalPnl / d.total.cost) * 100 : 0);
   const goldCapLabel = d.gold.pnlAvailable
     ? `${(d.gold.netPnl ?? 0) >= 0 ? "+" : ""}${fmt(d.gold.netPnl ?? 0)} EGP`
-    : "live price pending";
+    : `<span data-i18n="attr.price.pending">live price pending</span>`;
   const goldCapColor = d.gold.pnlAvailable
     ? (d.gold.netPnl ?? 0) >= 0 ? "var(--teal)" : "var(--coral)"
     : "var(--dim)";
@@ -578,10 +579,10 @@ ${buildCohortAnalysis(p, d)}
         </div>
       </div>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px" id="pnl-rows">
-        <div class="pnl-row" data-perf-group="gold"><div><div class="pnl-row-name">🥇 Gold 24K</div><div class="pnl-row-sub">${fmt(d.gold.gramsHeld)}g physical</div></div><div style="text-align:right">${goldPnlRowRight}</div></div>
-        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub">Fixed Income · NAV ${fmt2(d.abr.nav)} EGP · ${fmt(d.abr.apyPercent)}% APY</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--teal)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--teal);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
-        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏢 Real Est.</div><div class="pnl-row-sub">Equity Fund · NAV ${fmt2(d.re.nav)} EGP</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"}">${signedFmt(d.re.pnl)} EGP</div><div style="font-size:9.5px;color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.re.pnlPct)}</div></div></div>
-        <div class="pnl-row" data-perf-group="certs"><div><div class="pnl-row-name">📜 Certificates</div><div class="pnl-row-sub">NBE · interest income</div></div><div style="text-align:right"><div class="pnl-row-val" id="cert-pnl-val" style="color:var(--teal)">${signedFmt(d.certTotals.annualYield)} EGP/yr</div><div style="font-size:9.5px;color:var(--teal);font-weight:600" id="cert-pnl-pct">${pctStr(d.certTotals.weightedAvgRate)} APY</div></div></div>
+        <div class="pnl-row" data-perf-group="gold"><div><div class="pnl-row-name">🥇 Gold 24K</div><div class="pnl-row-sub" id="pnl-row-sub-gold">${fmt(d.gold.gramsHeld)}g <span data-i18n="pnl.sub.physical">physical</span></div></div><div style="text-align:right">${goldPnlRowRight}</div></div>
+        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub" id="pnl-row-sub-abr"><span data-i18n="pnl.sub.fixed.income">Fixed Income</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.abr.nav)} EGP · ${fmt(d.abr.apyPercent)}% <span data-i18n="pnl.sub.apy">APY</span></div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--teal)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--teal);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
+        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏢 Real Est.</div><div class="pnl-row-sub" id="pnl-row-sub-re"><span data-i18n="pnl.sub.equity">Equity Fund</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.re.nav)} EGP</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"}">${signedFmt(d.re.pnl)} EGP</div><div style="font-size:9.5px;color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.re.pnlPct)}</div></div></div>
+        <div class="pnl-row" data-perf-group="certs"><div><div class="pnl-row-name">📜 Certificates</div><div class="pnl-row-sub" id="pnl-row-sub-certs" data-i18n="pnl.sub.nbe.income">NBE · interest income</div></div><div style="text-align:right"><div class="pnl-row-val" id="cert-pnl-val" style="color:var(--teal)">${signedFmt(d.certTotals.annualYield)} EGP/yr</div><div style="font-size:9.5px;color:var(--teal);font-weight:600" id="cert-pnl-pct">${pctStr(d.certTotals.weightedAvgRate)} APY</div></div></div>
       </div>
       <div class="math-section" id="math-gold">
         ${mathGoldRows}
@@ -776,7 +777,7 @@ ${buildCohortAnalysis(p, d)}
        replaced) by that live feed, never by a hardcoded number. -->
   <div class="card s-2" data-view-card="dca">
     <div class="card-lbl" data-i18n="card.dca">🪙 Buy More Gold — Scenario Calculator</div>
-    <p class="dca-sub">You hold ${fmt(d.gold.gramsHeld)}g (pure-gold-adjusted) @ ${fmt(d.gold.avgCostPerGram)} EGP/pure-g avg. Scenarios are auto-calculated from live goldbullioneg.com prices (refreshed every 5 min). Manufacturing fee on every buy, cashback on every sell — per the fixed dealer fee schedule.</p>
+    <p class="dca-sub" id="dca-sub">You hold ${fmt(d.gold.gramsHeld)}g (pure-gold-adjusted) @ ${fmt(d.gold.avgCostPerGram)} EGP/pure-g avg. Scenarios are auto-calculated from live goldbullioneg.com prices (refreshed every 5 min). Manufacturing fee on every buy, cashback on every sell — per the fixed dealer fee schedule.</p>
     <div class="dca-divider"></div>
     <div class="dca-scenarios">
       <div class="dca-scenario-card">
