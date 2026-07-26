@@ -80,3 +80,16 @@ _Populate as you build — explicit user instructions worth remembering across s
 ## Pointers
 
 - See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+
+## Windows Local Setup Notes (added after manual debugging session)
+
+- Use Git Bash, not PowerShell — PowerShell blocks npm scripts by default and this project uses Linux-only shell commands.
+- Use pnpm, not npm.
+- Frontend: from artifacts/portfolio, run: PORT=3000 BASE_PATH=// pnpm run dev
+- Backend: from artifacts/api-server, run: pnpm run build once, then PORT=8080 DATABASE_URL="postgresql://postgres@localhost:5432/portfolio_dev" pnpm run start
+- PostgreSQL 16 must be running locally. Service name: postgresql-x64-16. Set to auto-start via: Set-Service -Name postgresql-x64-16 -StartupType Automatic (run as Administrator).
+- Local passwordless access enabled via pg_hba.conf (C:\Program Files\PostgreSQL\16\data\pg_hba.conf), changing scram-sha-256 to trust on the two 127.0.0.1/32 and ::1/128 lines, then restarting the service.
+- Database created via: psql -U postgres -c "CREATE DATABASE portfolio_dev;"
+- Tables created via drizzle-kit from lib/db folder: DATABASE_URL="postgresql://postgres@localhost:5432/portfolio_dev" pnpm run push
+- Known bug: lib/db/drizzle.config.ts originally failed to find the schema file on Windows due to backslash paths. Fixed by appending .replace(/\\/g, '/') to the schemaPath line.
+- Known typo: the actual folder name is portofolio-dashbaord (not "dashboard") — this typo is consistent throughout the project, do not "fix" it.
