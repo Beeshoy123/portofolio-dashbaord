@@ -485,6 +485,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   <button class="view-btn gold-view" id="view-btn-gold" onclick="setView('gold')">🥇 Gold</button>
   <button class="view-btn liquid-view" id="view-btn-liquid" onclick="setView('liquid')">💧 Liquid</button>
   <button class="view-btn cert-view" id="view-btn-certs" onclick="setView('certs')">🏦 Certificates</button>
+  <button class="view-btn ai-view" id="view-btn-ai" onclick="setView('ai')">🤖 AI Insights</button>
 </div>
 <div class="view-label" id="view-label">All assets · full portfolio</div>
 
@@ -829,6 +830,23 @@ ${buildCohortAnalysis(p, d)}
       </div>
     </div>
     <div class="note-chip" style="margin-top:14px" id="dca-note">${d.gold.pnlAvailable ? `ℹ️ Prices from goldbullioneg.com (live). Manufacturing fees and cashback from the fixed dealer fee schedule. Refreshes every 5 min.` : `⚠️ Waiting for live gold prices from goldbullioneg.com — scenarios will appear once the first scrape completes.`}</div>
+  </div>
+
+
+  <!-- AI INSIGHTS VIEW -->
+  <div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="ai-insights">
+    <div class="card" style="padding:26px 28px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+        <span style="font-size:22px">🤖</span>
+        <div>
+          <div style="font-weight:700;font-size:15px" data-i18n="ai.title">AI Insights</div>
+          <div style="font-size:10.5px;color:var(--dim)" data-i18n="ai.subtitle">Automated analysis of your portfolio health and allocation</div>
+        </div>
+      </div>
+      <div id="ai-insights-body">
+        ${buildInsights(d)}
+      </div>
+    </div>
   </div>
 
 </div><!-- /bento -->

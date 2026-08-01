@@ -84,6 +84,12 @@ export function initDashboardBehavior(
       cards: [],
       assetGroup: "certs",
     },
+    ai: {
+      label: "AI Insights · portfolio analysis",
+      labelAr: "رؤى الذكاء الاصطناعي · تحليل المحفظة",
+      cards: ["ai-insights"],
+      assetGroup: null,
+    },
   };
 
   const ml = (label: string, calc: string, result: string, cls = "") =>
@@ -222,7 +228,7 @@ export function initDashboardBehavior(
     const cfg = VIEW_CONFIG[view] || VIEW_CONFIG.total;
     el("view-label")!.textContent = currentLang === 'ar' ? cfg.labelAr : cfg.label;
 
-    ["total", "gold", "liquid", "certs"].forEach((v) => {
+    ["total", "gold", "liquid", "certs", "ai"].forEach((v) => {
       el(`view-btn-${v}`)?.classList.toggle("active", v === view);
     });
 
@@ -580,6 +586,7 @@ export function initDashboardBehavior(
       'view-btn-gold':   ['🥇 Gold',          '🥇 ذهب'],
       'view-btn-liquid': ['💧 Liquid',        '💧 سيولة'],
       'view-btn-certs':  ['🏦 Certificates',  '🏦 شهادات'],
+      'view-btn-ai':     ['🤖 AI Insights',   '🤖 رؤى الذكاء الاصطناعي'],
     };
     Object.entries(NAV_LABELS).forEach(([id, [en, ar]]) => {
       const btn = el(id);
@@ -599,6 +606,8 @@ export function initDashboardBehavior(
 
     const insightsBody = el("insights-body");
     if (insightsBody) insightsBody.innerHTML = buildInsights(derived, lang);
+    const aiInsightsBody = el("ai-insights-body");
+    if (aiInsightsBody) aiInsightsBody.innerHTML = buildInsights(derived, lang);
 
     const whGrade = el("wh-grade");
     if (whGrade) whGrade.textContent = healthGrade(derived.health.overallScore, lang);

@@ -240,7 +240,7 @@ html[lang="ar"] .settings-dropdown { right: auto; left: 0; }
   position: relative; z-index: 1;
 }
 .view-btn.active { color: #fff; }
-.view-btn.gold-view.active, .view-btn.liquid-view.active { color: #fff; }
+.view-btn.gold-view.active, .view-btn.liquid-view.active, .view-btn.ai-view.active { color: #fff; }
 
 .view-label {
   font-size: 10px;
