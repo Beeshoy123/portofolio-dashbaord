@@ -836,15 +836,34 @@ ${buildCohortAnalysis(p, d)}
   <!-- AI INSIGHTS VIEW -->
   <div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="ai-insights">
     <div class="card" style="padding:26px 28px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-        <span style="font-size:22px">🤖</span>
-        <div>
-          <div style="font-weight:700;font-size:15px" data-i18n="ai.title">AI Insights</div>
-          <div style="font-size:10.5px;color:var(--dim)" data-i18n="ai.subtitle">Automated analysis of your portfolio health and allocation</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">🤖</span>
+          <div>
+            <div style="font-weight:700;font-size:15px" data-i18n="ai.title">AI Insights</div>
+            <div style="font-size:10.5px;color:var(--dim)" data-i18n="ai.subtitle">Automated analysis of your portfolio health and allocation</div>
+          </div>
         </div>
+        <button
+          id="scraper-run-btn"
+          onclick="runPriceChecker()"
+          style="display:flex;align-items:center;gap:6px;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
+          🔄 <span id="scraper-btn-label">Refresh prices</span>
+        </button>
       </div>
+
+      <!-- Status line shown while scraper runs or after it completes -->
+      <div id="scraper-status" style="display:none;font-size:10.5px;color:var(--dim);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-radius:8px"></div>
+
+      <!-- Portfolio health insights (always visible) -->
       <div id="ai-insights-body">
         ${buildInsights(d)}
+      </div>
+
+      <!-- Price comparison table — shown after a successful scraper run -->
+      <div id="price-checker-results" style="display:none;margin-top:20px">
+        <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:10px">📊 Market Comparison</div>
+        <div id="price-checker-table"></div>
       </div>
     </div>
   </div>

@@ -978,6 +978,87 @@ export function initDashboardBehavior(
     }
   };
 
+  win.runPriceChecker = async () => {
+    const btn = el("scraper-run-btn") as HTMLButtonElement | null;
+    const label = el("scraper-btn-label");
+    const statusEl = el("scraper-status");
+    const resultsEl = el("price-checker-results");
+    const tableEl = el("price-checker-table");
+
+    if (btn) btn.disabled = true;
+    if (label) label.textContent = "Running…";
+    if (statusEl) { statusEl.style.display = "block"; statusEl.textContent = "⏳ Fetching prices from FoudaLens — this takes 1–2 minutes…"; }
+
+    try {
+      const runResp = await fetch("/api/scraper/run", { method: "POST" });
+      if (!runResp.ok) {
+        const err = await runResp.json().catch(() => ({ error: "Unknown error" }));
+        if (statusEl) statusEl.textContent = `❌ Run failed: ${(err as any).error ?? runResp.statusText}`;
+        return;
+      }
+
+      // Fetch the snapshots now that the run succeeded
+      const snapResp = await fetch("/api/scraper/snapshots");
+      if (!snapResp.ok) { if (statusEl) statusEl.textContent = "❌ Could not load snapshots after run."; return; }
+      const { snapshots, lastRunAt } = (await snapResp.json()) as { snapshots: any[]; lastRunAt: string | null };
+
+      if (statusEl) {
+        const ts = lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now";
+        const ok = snapshots.filter((s: any) => s.raw_fetch_ok).length;
+        statusEl.textContent = `✅ Done at ${ts} · ${ok}/${snapshots.length} entities fetched successfully`;
+      }
+
+      // Build comparison table grouped by entity_type
+      if (tableEl && resultsEl) {
+        const funds = snapshots.filter((s: any) => s.entity_type === "fund" && s.raw_fetch_ok);
+        const stocks = snapshots.filter((s: any) => s.entity_type === "stock" && s.raw_fetch_ok);
+        const indices = snapshots.filter((s: any) => s.entity_type === "index" && s.raw_fetch_ok);
+
+        const fmtPct = (v: any) => v != null ? `${Number(v) >= 0 ? "+" : ""}${Number(v).toFixed(2)}%` : "—";
+        const fmtNum = (v: any) => v != null ? Number(v).toFixed(2) : "—";
+        const heldTag = (s: any) => s.is_held ? ' <span style="background:var(--teal);color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px">HELD</span>' : "";
+
+        const tableRow = (s: any) => `
+          <tr style="border-bottom:1px solid var(--edge)">
+            <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}${heldTag(s)}</td>
+            <td style="padding:6px 8px;color:var(--dim);font-size:10px">${s.name}</td>
+            <td style="padding:6px 8px;text-align:right">${fmtNum(s.nav_or_price)}</td>
+            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_30d_percent) >= 0 ? "var(--teal)" : "var(--coral)"}">${fmtPct(s.return_30d_percent)}</td>
+            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_ytd_percent) >= 0 ? "var(--teal)" : "var(--coral)"}">${fmtPct(s.return_ytd_percent)}</td>
+            <td style="padding:6px 8px;text-align:right">${s.total_score != null ? Number(s.total_score).toFixed(0) + "/100" : "—"}</td>
+          </tr>`;
+
+        const sectionHeader = (title: string) => `
+          <tr style="background:var(--bg)">
+            <td colspan="6" style="padding:8px 8px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">${title}</td>
+          </tr>`;
+
+        const thead = `<thead><tr style="border-bottom:2px solid var(--edge)">
+          <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Ticker</th>
+          <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Name</th>
+          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">NAV/Price</th>
+          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">30d</th>
+          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">YTD</th>
+          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">Score</th>
+        </tr></thead>`;
+
+        const rows = [
+          ...(funds.length ? [sectionHeader("Funds"), ...funds.sort((a: any, b: any) => Number(b.return_30d_percent ?? -999) - Number(a.return_30d_percent ?? -999)).map(tableRow)] : []),
+          ...(stocks.length ? [sectionHeader("Stocks"), ...stocks.sort((a: any, b: any) => Number(b.total_score ?? 0) - Number(a.total_score ?? 0)).map(tableRow)] : []),
+          ...(indices.length ? [sectionHeader("Indices"), ...indices.map(tableRow)] : []),
+        ];
+
+        tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px">${thead}<tbody>${rows.join("")}</tbody></table>`;
+        resultsEl.style.display = "block";
+      }
+    } catch (err: any) {
+      if (statusEl) statusEl.textContent = `❌ Network error: ${err?.message ?? "Unknown"}`;
+    } finally {
+      if (btn) btn.disabled = false;
+      if (label) label.textContent = "Refresh prices";
+    }
+  };
+
   win.openInsights = () => {
     const ts = el("insights-timestamp");
     if (ts) ts.textContent = `${t('insights.generated')} ${new Date().toLocaleString()}`;
