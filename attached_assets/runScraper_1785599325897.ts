@@ -63,8 +63,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export { main as runScraper };
-
 export async function main() {
   const watchlist = await getWatchlist();
   console.log(`Loaded ${watchlist.length} entities from comparison_watchlist`);
