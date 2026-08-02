@@ -61,7 +61,19 @@ async function getLatestSnapshots(): Promise<Map<number, LatestSnapshotRow>> {
   );
   const map = new Map<number, LatestSnapshotRow>();
   for (const row of result.rows) {
-    map.set(row.watchlist_id, row);
+    // node-postgres returns numeric columns as strings; coerce them to JS
+    // numbers here so every downstream caller gets the correct type.
+    map.set(row.watchlist_id, {
+      ...row,
+      return_30d_percent:    row.return_30d_percent    !== null ? Number(row.return_30d_percent)    : null,
+      return_ytd_percent:    row.return_ytd_percent    !== null ? Number(row.return_ytd_percent)    : null,
+      return_1y_percent:     row.return_1y_percent     !== null ? Number(row.return_1y_percent)     : null,
+      sector_rank:           row.sector_rank           !== null ? Number(row.sector_rank)           : null,
+      total_score:           row.total_score           !== null ? Number(row.total_score)           : null,
+      pe_ratio:              row.pe_ratio              !== null ? Number(row.pe_ratio)              : null,
+      dividend_yield_percent: row.dividend_yield_percent !== null ? Number(row.dividend_yield_percent) : null,
+      market_cap:            row.market_cap            !== null ? Number(row.market_cap)            : null,
+    });
   }
   return map;
 }
@@ -807,7 +819,16 @@ export async function judgeAllHoldings(
   period: ReturnPeriod = "return_1y"
 ): Promise<HoldingVerdict[]> {
   const watchlist = await getWatchlist();
-  const heldTickers = watchlist.filter((w) => w.is_held).map((w) => w.ticker);
+  // Derive "held" from the live funds table rather than the static is_held flag:
+  // a fund counts as held iff it has a funds_table_key link AND units_held > 0.
+  const heldResult = await pool.query<{ ticker: string }>(
+    `SELECT cw.ticker
+       FROM comparison_watchlist cw
+       JOIN funds f ON f.key = cw.funds_table_key
+      WHERE cw.funds_table_key IS NOT NULL
+        AND f.units_held > 0`
+  );
+  const heldTickers = heldResult.rows.map((r) => r.ticker);
 
   const verdicts: HoldingVerdict[] = [];
   for (const ticker of heldTickers) {
