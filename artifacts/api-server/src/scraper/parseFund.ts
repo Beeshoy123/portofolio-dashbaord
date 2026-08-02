@@ -20,11 +20,30 @@ const FUND_PAGE_BASE = "https://foudalens.com/en/fund/";
  */
 function extractPercentNear(fullText: string, label: string): number | null {
   const idx = fullText.indexOf(label);
-  if (idx === -1) return null;
-  const window = fullText.slice(idx, idx + label.length + 40);
-  const match = window.match(/[-+]?\d+(\.\d+)?%/);
-  if (!match) return null;
-  return parseFloat(match[0].replace("%", ""));
+  if (idx === -1) {
+    console.warn(`[parseFundPage] label "${label}" not found on page at all — check for a wording/encoding change`);
+    return null;
+  }
+
+  // Confirmed via direct fetch of a live fund page: real order is
+  // label-then-value ("30-Day Return" ... "+11.79%"). Widened window
+  // (was 40) to tolerate any icon/tooltip markup between them, and the
+  // sign is now required (not optional) so we don't accidentally grab
+  // an unrelated bare percentage from surrounding copy.
+  const after = fullText.slice(idx, idx + label.length + 80);
+  const afterMatch = after.match(/[-+]\d+(\.\d+)?%/);
+  if (afterMatch) return parseFloat(afterMatch[0].replace("%", ""));
+
+  // Defensive fallback in case a template variant renders value-before-label,
+  // same pattern already used for NAV/score.
+  const before = fullText.slice(Math.max(0, idx - 80), idx);
+  const beforeMatch = before.match(/([-+]\d+(\.\d+)?)%(?!.*%)/);
+  if (beforeMatch) return parseFloat(beforeMatch[1]);
+
+  console.warn(
+    `[parseFundPage] label "${label}" found but no +/-N% value nearby. Context: "${fullText.slice(Math.max(0, idx - 40), idx + 100)}"`
+  );
+  return null;
 }
 
 function extractCagr(fullText: string): number | null {

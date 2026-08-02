@@ -1,0 +1,42 @@
+Fix extractPercentNear in scraper/parseFund.ts. Do not touch any other function in this file or any other file.
+
+This function is responsible for return_30d_percent and return_ytd_percent in comparison_snapshots, and it's the one function in this file that's never been verified against a real page — that's why every fund row on the dashboard shows "—" for 30d/YTD while NAV and Score work fine.
+
+Replace the current extractPercentNear with this exact version:
+
+ts
+function extractPercentNear(fullText: string, label: string): number | null {
+  const idx = fullText.indexOf(label);
+  if (idx === -1) {
+    console.warn(`[parseFundPage] label "${label}" not found on page at all — check for a wording/encoding change`);
+    return null;
+  }
+
+  // Confirmed via direct fetch of a live fund page: real order is
+  // label-then-value ("30-Day Return" ... "+11.79%"). Widened window
+  // (was 40) to tolerate any icon/tooltip markup between them, and the
+  // sign is now required (not optional) so we don't accidentally grab
+  // an unrelated bare percentage from surrounding copy.
+  const after = fullText.slice(idx, idx + label.length + 80);
+  const afterMatch = after.match(/[-+]\d+(\.\d+)?%/);
+  if (afterMatch) return parseFloat(afterMatch[0].replace("%", ""));
+
+  // Defensive fallback in case a template variant renders value-before-label,
+  // same pattern already used for NAV/score.
+  const before = fullText.slice(Math.max(0, idx - 80), idx);
+  const beforeMatch = before.match(/([-+]\d+(\.\d+)?)%(?!.*%)/);
+  if (beforeMatch) return parseFloat(beforeMatch[1]);
+
+  console.warn(
+    `[parseFundPage] label "${label}" found but no +/-N% value nearby. Context: "${fullText.slice(Math.max(0, idx - 40), idx + 100)}"`
+  );
+  return null;
+}
+
+After making this change:
+
+Run the scraper again (trigger "Refresh prices" / whatever calls runScraper).
+Show me the full server console output from that run — specifically any lines starting with [parseFundPage].
+Do not modify extractCagr, extractPriceNear, extractScoreNear, extractRiskLevel, parseIndex.ts, parseStock.ts, or runScraper.ts — those are already confirmed working and out of scope for this change.
+
+Separately: leave signal, pe_ratio, dividend_yield_percent, market_cap, and sector_rank in parseStock.ts alone for now — I checked a live stock page directly and those 5 fields genuinely don't exist in the public HTML (they're subscriber-gated on FoudaLens). No amount of regex tuning will find them there, so don't spend time on it.
