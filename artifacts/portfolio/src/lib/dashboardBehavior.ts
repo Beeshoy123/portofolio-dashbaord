@@ -246,12 +246,12 @@ export function initDashboardBehavior(
     const ghs = el("gold-hero-stats");
     if (ghs) ghs.style.display = view === "gold" ? "flex" : "none";
 
-    const btns = ["total", "gold", "liquid", "certs"];
+    const btns = ["total", "gold", "liquid", "certs", "ai"];
     const idx = btns.indexOf(view);
     const bar = el("view-toggle-bar");
     const slider = el("view-toggle-slider");
     if (bar && slider) {
-      const btnWidth = bar.offsetWidth / 4;
+      const btnWidth = bar.offsetWidth / 5;
       const offset = 3 + idx * btnWidth + "px";
       if (currentLang === 'ar') {
         slider.style.right = offset;
