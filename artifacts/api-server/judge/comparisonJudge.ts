@@ -114,7 +114,11 @@ function getReturn(
   period: ReturnPeriod
 ): number | null {
   if (!snapshot) return null;
-  return snapshot[period] ?? null;
+  switch (period) {
+    case "return_30d": return snapshot.return_30d_percent ?? null;
+    case "return_ytd": return snapshot.return_ytd_percent ?? null;
+    case "return_1y":  return snapshot.return_1y_percent ?? null;
+  }
 }
 
 /**
