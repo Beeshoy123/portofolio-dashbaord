@@ -127,6 +127,7 @@ export async function parseFundPage(
 
     const html = await res.text();
     const $ = cheerio.load(html);
+    $("script, style, noscript").remove();
     // Use the full visible text of the page body for label-proximity matching.
     // This is deliberately resilient to class-name changes — FoudaLens may
     // restyle the page, but the label text ("30-Day Return", "NAV") is

@@ -144,6 +144,7 @@ export async function parseIndexPage(
 
     const html = await res.text();
     const $ = cheerio.load(html);
+    $("script, style, noscript").remove();
     const bodyText = $("body").text().replace(/\s+/g, " ");
 
     return targets.map((t) => {

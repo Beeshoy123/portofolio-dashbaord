@@ -346,6 +346,7 @@ async function tryPlainFetch(
 
   const html = await res.text();
   const $ = cheerio.load(html);
+  $("script, style, noscript").remove();
   const bodyText = $("body").text().replace(/\s+/g, " ");
 
   const priceMatch = bodyText.match(/(\d+(\.\d+)?)\s*EGP/);
