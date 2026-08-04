@@ -5,10 +5,14 @@
 // setInterval. `getGoldPrices()` is synchronous — callers get the last
 // successfully scraped values, or null if no scrape has succeeded yet.
 //
-// The page contains <a href="...?buy=N&sell=N&item=...عيار 24..."> links
-// for each karat. We scan all href attributes, decode percent-encoding,
-// and extract buy= / sell= from whichever link's item= param contains
-// "عيار 24" or "عيار 21".
+// Page structure (as of Aug 2026):
+//   <tr>
+//     <td> جرام عيار 24 <span>…</span></td>
+//     <td class="num" data-val="6703">6703</td>        ← buy (شراء)
+//     <td class="num td-arrow" data-val="6680">6680</td> ← sell (بيع)
+//   </tr>
+// We locate the <tr> whose first <td> contains "جرام عيار NN", then pull
+// the first two data-val integers after it as buy / sell respectively.
 // ─────────────────────────────────────────────────────────────────────────
 
 import { logger } from "./logger";
@@ -30,41 +34,42 @@ const FETCH_TIMEOUT_MS = 10_000;
 
 let cache: GoldPrices | null = null;
 
-/** Extract buy/sell prices (EGP/gram) for a given karat from raw HTML. */
+/** Extract buy/sell prices (EGP/gram) for a given karat from raw HTML.
+ *
+ * Strategy: find the <tr> whose first cell contains "جرام عيار NN", then
+ * grab the first two `data-val="DDDD"` integers that follow it in the same
+ * row — first is buy (شراء), second is sell (بيع).
+ */
 function extractKaratPrices(
   html: string,
   karat: "24" | "21",
 ): { buy: number; sell: number } | null {
-  const hrefRe = /href="([^"]+)"/g;
+  // Locate the row-start position where "جرام عيار NN" appears
+  const marker = `جرام عيار ${karat}`;
+  const markerIdx = html.indexOf(marker);
+  if (markerIdx === -1) return null;
+
+  // Find the <tr> that encloses this marker (search backwards)
+  const trStart = html.lastIndexOf("<tr", markerIdx);
+  if (trStart === -1) return null;
+
+  // Find the closing </tr> after the marker
+  const trEnd = html.indexOf("</tr>", markerIdx);
+  if (trEnd === -1) return null;
+
+  // Slice the row HTML and extract all data-val="DDDD" values
+  const rowHtml = html.slice(trStart, trEnd + 5);
+  const dataValRe = /data-val="(\d+)"/g;
+  const vals: number[] = [];
   let m: RegExpExecArray | null;
-
-  while ((m = hrefRe.exec(html)) !== null) {
-    let href = m[1];
-    // Decode percent-encoding so Arabic text is readable; ignore decode errors.
-    try {
-      href = decodeURIComponent(href);
-    } catch {
-      /* keep raw href */
-    }
-
-    // Check whether this link targets the right karat
-    // Pattern in item= param: " جرام عيار 24" or " جرام عيار 21"
-    if (!href.includes(`عيار ${karat}`) && !href.includes(`عيار\u00a0${karat}`)) {
-      continue;
-    }
-
-    const buyM = href.match(/[?&]buy=(\d+)/);
-    const sellM = href.match(/[?&]sell=(\d+)/);
-    if (buyM && sellM) {
-      const buy = parseInt(buyM[1], 10);
-      const sell = parseInt(sellM[1], 10);
-      if (buy > 0 && sell > 0) {
-        return { buy, sell };
-      }
-    }
+  while ((m = dataValRe.exec(rowHtml)) !== null) {
+    const v = parseInt(m[1], 10);
+    if (v > 0) vals.push(v);
   }
 
-  return null;
+  // Expect at least two values: [buy, sell]
+  if (vals.length < 2) return null;
+  return { buy: vals[0], sell: vals[1] };
 }
 
 async function scrape(): Promise<{
