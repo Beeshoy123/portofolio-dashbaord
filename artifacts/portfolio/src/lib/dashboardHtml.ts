@@ -870,6 +870,9 @@ ${buildCohortAnalysis(p, d)}
 
 </div><!-- /bento -->
 
+<!-- ROTATION VERDICT — populated async by loadRotationVerdicts() in dashboardBehavior.ts -->
+<div id="rotation-verdict-section" style="margin-top:var(--gap)"></div>
+
 <!-- CERTIFICATES DETAIL -->
 <div id="certs-placeholder" style="display:none;margin-top:var(--gap)">
   <div class="card dark" style="padding:26px 28px;margin-bottom:var(--gap)">

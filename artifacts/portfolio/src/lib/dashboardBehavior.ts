@@ -1605,6 +1605,231 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   // stale EGP prices) are updated without waiting for the user to click 🔄.
   void (win.doRefresh as () => Promise<void>)();
 
+  // ── Rotation Verdict ────────────────────────────────────────────────────
+  // Mirrors the formatting logic from judge/printVerdicts.ts formatGroup(),
+  // but renders HTML instead of plain text. Only shows second-opinion
+  // disagreements (agrees === false) — agreements are the quiet case.
+
+  // ── Rotation Verdict helpers ─────────────────────────────────────────────
+
+  function riskPill(tier: string | null): string {
+    if (!tier) return `<span style="color:var(--dim);font-size:9px">risk unknown</span>`;
+    const bg = tier === "Low" ? "rgba(61,174,110,.15)" : tier === "Medium" ? "rgba(217,154,43,.15)" : "rgba(224,90,80,.15)";
+    const fg = tier === "Low" ? "#3dae6e" : tier === "Medium" ? "#d99a2b" : "#e05a50";
+    return `<span style="background:${bg};color:${fg};border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700">${tier} risk</span>`;
+  }
+
+  function beatPill(beat: number, lose: number, incomplete: number): string {
+    const parts: string[] = [];
+    if (beat > 0) parts.push(`<span style="background:rgba(61,174,110,.12);color:#3dae6e;border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700">+${beat} ahead</span>`);
+    if (lose > 0) parts.push(`<span style="background:rgba(224,90,80,.12);color:#e05a50;border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700">${lose} behind</span>`);
+    if (incomplete > 0) parts.push(`<span style="background:var(--edge);color:var(--dim);border-radius:4px;padding:1px 7px;font-size:9px;font-weight:500">${incomplete} pending</span>`);
+    if (parts.length === 0) return `<span style="color:var(--dim);font-size:9px">no data</span>`;
+    return parts.join(" ");
+  }
+
+  function buildGroupRows(group: any, holdingReturn: number | null): string {
+    const labelMap: Record<string, string> = {
+      sector_sibling: "Sector Siblings",
+      manager_sibling: "Manager Siblings",
+      direct_stock: "Direct Stocks",
+      benchmark: "Benchmarks",
+    };
+    const label = labelMap[group.group_type] ?? group.group_type;
+
+    // compute max return across holding + all entries for bar scaling
+    const allReturns: number[] = group.entries
+      .map((e: any) => e.return_percent)
+      .filter((r: number | null) => r !== null) as number[];
+    if (holdingReturn !== null) allReturns.push(holdingReturn);
+    const maxReturn = allReturns.length > 0 ? Math.max(...allReturns) : 100;
+
+    const hasAnyData = group.entries.some((e: any) => e.return_percent !== null);
+    const allPending = !hasAnyData;
+
+    let rows: string;
+    if (allPending) {
+      rows = `<div style="color:var(--dim);font-size:10px;font-style:italic;padding:6px 0">No return data yet — scraper hasn't captured prices for this group.</div>`;
+    } else {
+      rows = group.entries.map((entry: any) => {
+        if (entry.return_percent === null) {
+          return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--edge)">
+            <span style="font-weight:700;font-size:10.5px;min-width:52px;color:var(--dim)">${entry.ticker}</span>
+            <span style="font-size:10px;color:var(--dim);font-style:italic">no data yet</span>
+          </div>`;
+        }
+
+        const ret: number = entry.return_percent;
+        const gap: number | null = entry.gap_percent;
+        const barWidthEntry = maxReturn > 0 ? Math.max(2, Math.round((Math.abs(ret) / maxReturn) * 100)) : 2;
+        const barWidthHolding = maxReturn > 0 && holdingReturn !== null
+          ? Math.max(2, Math.round((Math.abs(holdingReturn) / maxReturn) * 100))
+          : 0;
+        const retColor = ret >= 0 ? "var(--teal)" : "#e05a50";
+
+        const gapChip = gap !== null
+          ? gap >= 0
+            ? `<span style="background:rgba(61,174,110,.12);color:#3dae6e;font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">+${gap.toFixed(1)}pp ahead</span>`
+            : `<span style="background:rgba(224,90,80,.12);color:#e05a50;font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">${Math.abs(gap).toFixed(1)}pp behind</span>`
+          : "";
+
+        const mismatchHtml = entry.risk_mismatch && entry.foudalens_risk_level
+          ? `<span style="font-size:8.5px;color:#d99a2b;background:rgba(217,154,43,.1);border-radius:3px;padding:1px 5px;margin-left:4px">⚠️ FL:${entry.foudalens_risk_level}</span>`
+          : "";
+
+        const disagreements: [string, any][] = Object.entries(entry.second_opinions ?? {})
+          .filter(([, check]: [string, any]) => check.agrees === false);
+        const disagreeHtml = disagreements.length > 0
+          ? `<div style="padding:3px 0 2px;display:flex;flex-wrap:wrap;gap:4px">
+              ${disagreements.map(([cat, check]: [string, any]) =>
+                `<span style="font-size:9px;color:#d99a2b;background:rgba(217,154,43,.08);border-radius:3px;padding:2px 6px">⚠️ ${cat}: ${check.note}</span>`
+              ).join("")}
+            </div>`
+          : "";
+
+        return `<div style="padding:6px 0;border-bottom:1px solid var(--edge)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font-weight:700;font-size:10.5px;min-width:52px">${entry.ticker}</span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:3px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div style="position:relative;height:6px;background:var(--edge);border-radius:3px;flex:1;overflow:hidden">
+                  <div style="position:absolute;left:0;top:0;height:100%;width:${barWidthEntry}%;background:${retColor};border-radius:3px;transition:width .3s"></div>
+                  ${holdingReturn !== null ? `<div style="position:absolute;left:0;top:0;height:100%;width:${barWidthHolding}%;background:rgba(61,174,110,.25);border-radius:3px;pointer-events:none"></div>` : ""}
+                </div>
+                <span style="font-size:10.5px;font-weight:700;min-width:42px;text-align:right;color:${retColor}">${ret >= 0 ? "+" : ""}${ret.toFixed(1)}%</span>
+                ${gapChip}
+              </div>
+            </div>
+            <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+              ${entry.computed_risk_tier ? riskPill(entry.computed_risk_tier) : ""}
+              ${mismatchHtml}
+            </div>
+          </div>
+          ${disagreeHtml}
+        </div>`;
+      }).join("");
+    }
+
+    return `<div style="margin-top:18px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)">${label}</span>
+        <div style="display:flex;gap:4px">${beatPill(group.you_beat_count, group.you_lose_count, group.incomplete_count)}</div>
+      </div>
+      ${rows}
+    </div>`;
+  }
+
+  function buildVerdictCardHtml(v: any): string {
+    const signalIcon = v.signal === "Strong" ? "✅" : v.signal === "Mixed" ? "⚡" : "⚠️";
+    const signalColor = v.signal === "Strong" ? "#3dae6e" : v.signal === "Mixed" ? "#d99a2b" : "#e05a50";
+    const signalBg   = v.signal === "Strong" ? "rgba(61,174,110,.1)" : v.signal === "Mixed" ? "rgba(217,154,43,.1)" : "rgba(224,90,80,.1)";
+    const signalBorder = v.signal === "Strong" ? "rgba(61,174,110,.25)" : v.signal === "Mixed" ? "rgba(217,154,43,.25)" : "rgba(224,90,80,.25)";
+
+    const periodLabel = (v.return_period as string).replace("return_", "").toUpperCase();
+    const returnPct: number | null = v.holding_return_percent;
+    const returnStr = returnPct !== null ? `${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(1)}%` : "—";
+    const returnColor = returnPct !== null && returnPct >= 0 ? "#3dae6e" : "#e05a50";
+
+    const posValue = v.holding_current_value_egp !== null
+      ? `${Number(v.holding_current_value_egp).toLocaleString()} EGP`
+      : null;
+
+    // overall beat summary across all groups
+    const totalBeat = (v.groups as any[]).reduce((s: number, g: any) => s + g.you_beat_count, 0);
+    const totalLose = (v.groups as any[]).reduce((s: number, g: any) => s + g.you_lose_count, 0);
+    const totalPending = (v.groups as any[]).reduce((s: number, g: any) => s + g.incomplete_count, 0);
+
+    const flagsHtml = (v.flags as string[]).length > 0
+      ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:10px">
+          ${(v.flags as string[]).map((f: string) =>
+            `<span style="background:var(--edge);border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;color:var(--dim)">${f}</span>`
+          ).join("")}
+        </div>`
+      : "";
+
+    const warningHtml = v.data_completeness_warning
+      ? `<div style="margin-top:14px;padding:8px 12px;background:rgba(217,154,43,.08);border:1px solid rgba(217,154,43,.25);border-radius:8px;font-size:10px;color:#d99a2b;display:flex;align-items:flex-start;gap:7px">
+          <span style="flex-shrink:0">⚠️</span>
+          <span>Over 30% of comparison entries have no data yet — verdict may be unreliable until the scraper has run more cycles.</span>
+        </div>`
+      : "";
+
+    return `<div class="card" style="padding:24px 26px;margin-bottom:var(--gap)">
+      <!-- Card header -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+        <div>
+          <div style="font-weight:800;font-size:15px;letter-spacing:-.01em">${v.holding_ticker} <span style="font-weight:400;color:var(--dim)">·</span> ${v.holding_name}</div>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px">
+            <span style="font-size:10px;color:var(--dim);background:var(--edge);border-radius:4px;padding:2px 7px">${periodLabel} return</span>
+            <span style="font-size:13px;font-weight:800;color:${returnColor}">${returnStr}</span>
+            ${riskPill(v.holding_risk_tier)}
+            ${posValue ? `<span style="font-size:10px;color:var(--dim)">${posValue} held</span>` : ""}
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="background:${signalBg};border:1px solid ${signalBorder};color:${signalColor};border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;white-space:nowrap">${signalIcon} ${v.signal}</div>
+          <div style="font-size:9.5px;color:var(--dim);margin-top:6px;text-align:right">
+            ${beatPill(totalBeat, totalLose, totalPending)}
+          </div>
+        </div>
+      </div>
+
+      ${flagsHtml}
+      ${warningHtml}
+
+      <!-- Divider -->
+      <div style="border-top:1px solid var(--edge);margin:18px 0 2px"></div>
+
+      <!-- Group breakdown -->
+      ${(v.groups as any[]).map((g: any) => buildGroupRows(g, returnPct)).join("")}
+    </div>`;
+  }
+
+  async function loadRotationVerdicts(): Promise<void> {
+    const section = el("rotation-verdict-section");
+    if (!section) return;
+
+    // Show skeleton while loading
+    section.innerHTML = `
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:14px">🔄 Rotation Verdict</div>
+      <div class="card" style="padding:24px 26px;display:flex;align-items:center;gap:12px;color:var(--dim);font-size:11px">
+        <div style="width:14px;height:14px;border:2px solid var(--teal);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+        Analysing holdings against watchlist…
+      </div>`;
+
+    try {
+      const resp = await fetch("/api/rotation-verdicts");
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
+        section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:#e05a50;display:flex;gap:8px;align-items:center">
+          <span>⚠️</span> Failed to load Rotation Verdict: ${(errBody as any).error ?? resp.statusText}
+        </div>`;
+        return;
+      }
+
+      const verdicts = (await resp.json()) as any[];
+
+      if (verdicts.length === 0) {
+        section.innerHTML = `<div class="card" style="padding:24px 26px">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:10px">🔄 Rotation Verdict</div>
+          <div style="color:var(--dim);font-size:11px">No holdings currently linked for comparison — map a <code>funds_table_key</code> in <code>comparison_watchlist</code> to start tracking.</div>
+        </div>`;
+        return;
+      }
+
+      section.innerHTML = `
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:14px">🔄 Rotation Verdict</div>
+        ${verdicts.map(buildVerdictCardHtml).join("")}
+      `;
+    } catch (err: any) {
+      section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:#e05a50;display:flex;gap:8px;align-items:center">
+        <span>⚠️</span> Network error: ${err?.message ?? "Unknown"}
+      </div>`;
+    }
+  }
+
+  void loadRotationVerdicts();
+
   return () => {
     clearInterval(timeInterval);
     document.removeEventListener("click", closeSortPopover);
