@@ -11,7 +11,7 @@ INSERT INTO "comparison_watchlist" ("ticker", "name", "entity_type", "source_cod
 ('CEX',  'CI Exporters Fund',                'fund', 'MUB-6199', 'Export & Industry',      'CI Capital', false),
 ('CTI',  'CI Telecoms & IT Fund',             'fund', 'MUB-6198', 'Telecom/Tech',           'CI Capital', false),
 ('CRE',  'CI Real Estate Fund',               'fund', 'MUB-6197', 'Real Estate',            'CI Capital', false),
-('CFF',  'CI Financial & Fintech Fund',       'fund', 'MUB-6201', 'Banks/Financial',        'CI Capital', true),
+('CFF',  'CI Financial & Fintech Fund',       'fund', 'MUB-6201', 'Banks/Financial',        'CI Capital', false),
 ('CCB',  'CI Consumer & Basic Needs Fund',    'fund', 'MUB-6200', 'Consumer & Basic Needs', 'CI Capital', false),
 ('CMS',  'Misr Sharia Equity Fund',           'fund', 'MUB-6144', 'Sharia-Compliant Equity','CI Capital', false),
 ('CIP',  'CI IPOs Fund',                      'fund', 'SNDUK-CIP','New Issuances/IPOs',     'CI Capital', false),
