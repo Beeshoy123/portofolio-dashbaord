@@ -35,6 +35,15 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+try {
+  new URL(process.env.DATABASE_URL);
+} catch (err) {
+  throw new Error(
+    "DATABASE_URL is not a valid URI. If your password contains special characters like @, #, or : then percent-encode them (for example %40 for @). " +
+      "Example: postgresql://user:pass%40word@host:5432/db",
+  );
+}
+
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 export const db = drizzle(pool, { schema });
 

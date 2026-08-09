@@ -13,6 +13,7 @@ import { getGoldPrices } from "../lib/goldPriceCache";
 import { getGlobalGoldPrice } from "../lib/globalGoldCache";
 import { getUsdEgpRate } from "../lib/usdEgpCache";
 import { getEurEgpRate } from "../lib/eurEgpCache";
+import { logger } from "../lib/logger";
 import {
   db,
   goldSettingsTable,
@@ -150,67 +151,76 @@ function toGrowthSnapshot(row: typeof growthSnapshotsTable.$inferSelect) {
 }
 
 router.get("/portfolio", async (_req, res) => {
-  const [
-    goldTxRows,
-    goldSettingsRows,
-    fundRows,
-    certRows,
-    txRows,
-    snapshotRows,
-    settingsRows,
-  ] = await Promise.all([
-    db
-      .select()
-      .from(goldTransactionsTable)
-      .orderBy(goldTransactionsTable.date),
-    db.select().from(goldSettingsTable).limit(1),
-    db.select().from(fundsTable),
-    db.select().from(certificatesTable),
-    db.select().from(transactionsTable).orderBy(transactionsTable.occurredAt),
-    db
-      .select()
-      .from(growthSnapshotsTable)
-      .orderBy(growthSnapshotsTable.snapshotDate),
-    db.select().from(portfolioSettingsTable).limit(1),
-  ]);
+  try {
+    const [
+      goldTxRows,
+      goldSettingsRows,
+      fundRows,
+      certRows,
+      txRows,
+      snapshotRows,
+      settingsRows,
+    ] = await Promise.all([
+      db
+        .select()
+        .from(goldTransactionsTable)
+        .orderBy(goldTransactionsTable.date),
+      db.select().from(goldSettingsTable).limit(1),
+      db.select().from(fundsTable),
+      db.select().from(certificatesTable),
+      db.select().from(transactionsTable).orderBy(transactionsTable.occurredAt),
+      db
+        .select()
+        .from(growthSnapshotsTable)
+        .orderBy(growthSnapshotsTable.snapshotDate),
+      db.select().from(portfolioSettingsTable).limit(1),
+    ]);
 
-  const goldSettings = goldSettingsRows[0];
-  const settings = settingsRows[0];
-  if (!goldSettings || !settings) {
-    res.status(404).json({
-      error: "NOT_SEEDED",
-      message: "No portfolio data found — please import your data.",
+    const goldSettings = goldSettingsRows[0];
+    const settings = settingsRows[0];
+    if (!goldSettings || !settings) {
+      logger.warn({ hasGoldSettings: Boolean(goldSettings), hasSettings: Boolean(settings) }, "Portfolio route missing seed data");
+      res.status(404).json({
+        error: "NOT_SEEDED",
+        message: "No portfolio data found — please import your data.",
+      });
+      return;
+    }
+
+    const data = GetPortfolioResponse.parse({
+      gold: buildGoldPosition(goldTxRows, goldSettings),
+      funds: fundRows.map(toFund),
+      certificates: certRows.map(toCertificate),
+      transactions: txRows
+        .map(toTransaction)
+        .sort(
+          (a, b) =>
+            new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
+        ),
+      snapshots: snapshotRows.map(toGrowthSnapshot),
+      settings: (() => {
+        // Prefer the live server-side rate; fall back to the DB value if
+        // the first fetch hasn't completed yet (cold start race window).
+        const liveUsd = getUsdEgpRate();
+        const liveEur = getEurEgpRate();
+        return {
+          emergencyFundTarget: Number(settings.emergencyFundTarget),
+          usdEgpRate: liveUsd?.rate ?? Number(settings.usdEgpRate),
+          usdEgpStatus: liveUsd?.status ?? null,
+          eurEgpRate: liveEur?.rate ?? null,
+          eurEgpStatus: liveEur?.status ?? null,
+        };
+      })(),
     });
-    return;
+
+    res.json(data);
+  } catch (err) {
+    logger.error({ err }, "Error fetching portfolio data");
+    res.status(500).json({
+      error: "INTERNAL_ERROR",
+      message: "Failed to load portfolio data.",
+    });
   }
-
-  const data = GetPortfolioResponse.parse({
-    gold: buildGoldPosition(goldTxRows, goldSettings),
-    funds: fundRows.map(toFund),
-    certificates: certRows.map(toCertificate),
-    transactions: txRows
-      .map(toTransaction)
-      .sort(
-        (a, b) =>
-          new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
-      ),
-    snapshots: snapshotRows.map(toGrowthSnapshot),
-    settings: (() => {
-      // Prefer the live server-side rate; fall back to the DB value if
-      // the first fetch hasn't completed yet (cold start race window).
-      const liveUsd = getUsdEgpRate();
-      const liveEur = getEurEgpRate();
-      return {
-        emergencyFundTarget: Number(settings.emergencyFundTarget),
-        usdEgpRate: liveUsd?.rate ?? Number(settings.usdEgpRate),
-        usdEgpStatus: liveUsd?.status ?? null,
-        eurEgpRate: liveEur?.rate ?? null,
-        eurEgpStatus: liveEur?.status ?? null,
-      };
-    })(),
-  });
-
-  res.json(data);
 });
 
 router.patch("/portfolio/gold/settings", async (req, res) => {

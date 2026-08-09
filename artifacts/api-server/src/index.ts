@@ -1,12 +1,34 @@
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { config } from "dotenv";
-import app from "./app";
-import { logger } from "./lib/logger";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-config({ path: path.resolve(__dirname, "../.env") });
+
+const dotenvPathCandidates = [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(__dirname, "../.env"),
+  path.resolve(__dirname, ".env"),
+];
+
+const dotenvPath = dotenvPathCandidates.find((candidate) => fs.existsSync(candidate));
+
+const { config } = await import("dotenv");
+config(
+  dotenvPath
+    ? {
+        path: dotenvPath,
+        override: process.env.NODE_ENV !== "production",
+      }
+    : undefined,
+);
+
+if (dotenvPath) {
+  console.info(`Loaded environment from ${dotenvPath}`);
+}
+
+const { default: app } = await import("./app");
+const { logger } = await import("./lib/logger");
 
 const rawPort = process.env["PORT"];
 
