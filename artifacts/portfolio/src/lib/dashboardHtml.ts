@@ -354,35 +354,93 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
   </div>`;
 }
 
-function buildUsdRealityCard(p: Portfolio, d: Derived): string {
-  const usdRate = d.settings.usdEgpRate;
-  const totalCostUsd = toUSD(d.total.cost, usdRate);
-  const totalValueUsd = toUSD(d.total.value, usdRate);
-  const nominalEgpReturn = d.total.cost > 0 ? (d.total.value - d.total.cost) / d.total.cost : 0;
-  const devaluationRate = 0; // no historical USD/EGP buy rate available in portfolio schema
-  const realUsdReturnPct = realUSDReturn(nominalEgpReturn, devaluationRate);
-  const requiredEgpReturnPct = requiredEGPReturn(0.10, devaluationRate);
-  const targetEgpForSp500Usd = Math.round(egpPriceForTargetUSD(totalCostUsd, 0.10, usdRate));
+function buildUsdRealityCard(p: Portfolio, d: Derived, usdReality: any): string {
+  if (!usdReality) {
+    const usdRate = d.settings.usdEgpRate;
+    const totalCostUsd = toUSD(d.total.cost, usdRate);
+    const totalValueUsd = toUSD(d.total.value, usdRate);
+    const nominalEgpReturn = d.total.cost > 0 ? (d.total.value - d.total.cost) / d.total.cost : 0;
+    const devaluationRate = 0;
+    const realUsdReturnPct = realUSDReturn(nominalEgpReturn, devaluationRate);
+    const requiredEgpReturnPct = requiredEGPReturn(0.10, devaluationRate);
+    const targetEgpForSp500Usd = Math.round(egpPriceForTargetUSD(totalCostUsd, 0.10, usdRate));
+
+    return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="usd-reality">
+      <div class="card">
+        <div class="card-lbl">💱 USD Reality Check</div>
+        <div style="font-size:10px;color:var(--dim);margin-bottom:12px">Computed from your current portfolio totals and live USD/EGP rate.</div>
+        <div style="display:grid;gap:10px;font-size:11px;line-height:1.5">
+          <div><b>USD/EGP rate</b>: ${fmt2(usdRate)}</div>
+          <div><b>Total wallet cost</b>: ${fmt2(d.total.cost)} EGP → ${fmt2(totalCostUsd)} USD</div>
+          <div><b>Total wallet value</b>: ${fmt2(d.total.value)} EGP → ${fmt2(totalValueUsd)} USD</div>
+          <div><b>Nominal EGP return</b>: ${fmt1(nominalEgpReturn * 100)}%</div>
+          <div><b>Real USD return</b>: ${fmt1(realUsdReturnPct * 100)}% <span style="color:var(--dim)">(assuming current USD/EGP rate only)</span></div>
+          <div><b>Required EGP return to beat 10% USD</b>: ${fmt1(requiredEgpReturnPct * 100)}%</div>
+          <div><b>EGP target value for 10% USD gain</b>: ${fmt2(targetEgpForSp500Usd)} EGP</div>
+        </div>
+        <div style="font-size:10px;color:var(--dim);margin-top:14px">Historical USD/EGP buy rates are not available in the current portfolio schema, so this card uses current exchange-rate conversion on actual financial totals.</div>
+      </div>
+    </div>`;
+  }
+
+  const assetRows = usdReality.assets.map((asset: any) => `
+    <div style="padding:8px 10px;border:1px solid var(--edge);border-radius:10px;background:var(--bg);display:grid;grid-template-columns:1.2fr .8fr .8fr .8fr;gap:8px;font-size:10.5px;align-items:center">
+      <div><strong>${asset.name}</strong></div>
+      <div>Real USD: <span style="color:${asset.realUSDReturn >= 0 ? 'var(--pnl-up)' : 'var(--pnl-down)'}">${fmt1(asset.realUSDReturn)}%</span></div>
+      <div>Years: ${fmt2(asset.yearsHeld)}</div>
+      <div>Verdict: <span style="color:${asset.verdict === 'green' ? 'var(--pnl-up)' : asset.verdict === 'yellow' ? 'var(--pnl-down-soft)' : 'var(--pnl-down)'}">${asset.verdictLabel}</span></div>
+    </div>
+  `).join('');
+
+  const thresholdRows = usdReality.thresholdTable.map((row: any) => `
+    <tr>
+      <td>${fmt1(row.devaluationRate)}%</td>
+      <td>${fmt1(row.minEGPReturn)}%</td>
+    </tr>
+  `).join('');
 
   return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="usd-reality">
     <div class="card">
       <div class="card-lbl">💱 USD Reality Check</div>
-      <div style="font-size:10px;color:var(--dim);margin-bottom:12px">Computed from your current portfolio totals and live USD/EGP rate.</div>
-      <div style="display:grid;gap:10px;font-size:11px;line-height:1.5">
-        <div><b>USD/EGP rate</b>: ${fmt2(usdRate)}</div>
-        <div><b>Total wallet cost</b>: ${fmt2(d.total.cost)} EGP → ${fmt2(totalCostUsd)} USD</div>
-        <div><b>Total wallet value</b>: ${fmt2(d.total.value)} EGP → ${fmt2(totalValueUsd)} USD</div>
-        <div><b>Nominal EGP return</b>: ${fmt1(nominalEgpReturn * 100)}%</div>
-        <div><b>Real USD return</b>: ${fmt1(realUsdReturnPct * 100)}% <span style="color:var(--dim)">(assuming current USD/EGP rate only)</span></div>
-        <div><b>Required EGP return to beat 10% USD</b>: ${fmt1(requiredEgpReturnPct * 100)}%</div>
-        <div><b>EGP target value for 10% USD gain</b>: ${fmt2(targetEgpForSp500Usd)} EGP</div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:12px">Full engine output using actual portfolio totals and per-asset holding dates.</div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:12px;font-size:11px;line-height:1.5">
+        <div style="padding:10px;border:1px solid var(--edge);border-radius:10px;background:var(--bg)">
+          <div><b>Portfolio real return</b>: ${fmt1(usdReality.portfolioRealReturn)}%</div>
+          <div><b>S&amp;P500 blended return</b>: ${fmt1(usdReality.sp500BlendedReturn)}%</div>
+          <div><b>Portfolio score</b>: ${fmt1(usdReality.portfolioScore)} pts</div>
+          <div><b>Weighted years held</b>: ${fmt2(usdReality.portfolioWeightedYearsHeld)} yrs</div>
+        </div>
+        <div style="padding:10px;border:1px solid var(--edge);border-radius:10px;background:var(--bg)">
+          <div><b>Original USD</b>: ${fmt2(usdReality.totalOriginalUSD)} USD</div>
+          <div><b>Current USD</b>: ${fmt2(usdReality.totalCurrentUSD)} USD</div>
+          <div><b>Gold real return</b>: ${fmt1(usdReality.goldSection.realUSDReturn)}%</div>
+          <div><b>Cert real yield</b>: ${fmt1(usdReality.certsSection.realUSDYield)}%</div>
+        </div>
       </div>
-      <div style="font-size:10px;color:var(--dim);margin-top:14px">Historical USD/EGP buy rates are not available in the current portfolio schema, so this card uses current exchange-rate conversion on actual financial totals.</div>
+
+      <div style="margin-bottom:12px;display:grid;gap:8px">${assetRows}</div>
+
+      <div style="overflow-x:auto;margin-top:12px">
+        <table class="ah-table" style="min-width:280px;font-size:10px">
+          <thead>
+            <tr>
+              <th>Devaluation</th>
+              <th>Required EGP Return</th>
+            </tr>
+          </thead>
+          <tbody>${thresholdRows}</tbody>
+        </table>
+      </div>
+
+      <div style="font-size:10px;color:var(--dim);margin-top:12px">
+        <div><b>Gold</b>: ${fmt1(usdReality.goldSection.realUSDReturn)}% real USD return · ${usdReality.goldSection.beatSP500 ? 'beats S&amp;P500' : 'lags S&amp;P500'}</div>
+        <div><b>Certificates</b>: ${fmt1(usdReality.certsSection.realUSDYield)}% real USD yield · ${usdReality.certsSection.growingUSDWealth ? 'growing USD wealth' : 'not growing USD wealth'}</div>
+      </div>
     </div>
   </div>`;
 }
 
-export function buildDashboardHtml(p: Portfolio, d: Derived): string {
+export function buildDashboardHtml(p: Portfolio, d: Derived, usdReality?: any): string {
   const goldSubCost = fmt(d.gold.avgCostPerGram);
   const goldSubMkt = d.gold.livePricePerGram !== null
     ? `${fmt(d.gold.livePricePerGram)} EGP/g`
@@ -599,7 +657,7 @@ ${buildGoldCohortAnalysis(p, d)}
 ${buildCohortAnalysis(p, d)}
 
 <!-- USD REALITY CHECK — total view only -->
-${buildUsdRealityCard(p, d)}
+${buildUsdRealityCard(p, d, usdReality)}
 
   <!-- ② HOLDINGS HEATMAP — primary card -->
   <div class="card s-4" data-view-card="heatmap">
@@ -815,23 +873,6 @@ ${buildUsdRealityCard(p, d)}
     </div>
     <div class="math-section" id="alloc-detail" style="margin-top:auto">
       <div id="alloc-detail-text" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">${allocInsight(d)}</div>
-    </div>
-  </div>
-
-  <!-- ⑤ EMERGENCY FUND PROGRESS -->
-  <div class="card s-2" data-view-card="progress">
-    <div class="card-lbl"><span data-i18n="card.ef">Emergency Fund · Bareeq Target</span> <span class="info-icon" onclick="toggleMath('abr-detail')" title="Show pace details">ℹ</span></div>
-    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px">
-      <div style="font-family:'Sora',sans-serif;font-size:22px;font-weight:800" id="abr-prog-val">${fmt(d.abr.costBasisTotal)} EGP</div>
-      <div style="font-size:10px;color:var(--dim);font-weight:600" id="abr-prog-pct-label">${d.health.emergencyFundPct.toFixed(1)}% of ${fmt(d.settings.emergencyFundTarget / 1000)}k</div>
-    </div>
-    <div class="prog-track"><div class="prog-fill" id="abr-prog-bar" style="width:0%" data-target="${Math.min(100, d.health.emergencyFundPct).toFixed(1)}"></div></div>
-    <div class="prog-labels">
-      <span id="abr-prog-pct">${d.health.emergencyFundPct.toFixed(1)}%</span>
-      <span id="abr-prog-left-label" style="color:var(--dim)">${fmt(Math.max(0, d.settings.emergencyFundTarget - d.abr.costBasisTotal))} <span data-i18n="ef.togo">EGP to go</span></span>
-    </div>
-    <div class="math-section" id="abr-detail" style="margin-top:10px">
-      <div id="abr-note" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">📈 <span data-i18n="ef.note.prefix">Yield only: ~</span>${d.abr.monthlyYield > 0 ? Math.ceil(Math.max(0, d.settings.emergencyFundTarget - d.abr.costBasisTotal) / d.abr.monthlyYield) : "—"} <span data-i18n="ef.note.suffix">months · add monthly deposits to go faster</span></div>
     </div>
   </div>
 

@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Check heliu m port 5432",
+			"type": "shell",
+			"command": "node ${workspaceFolder}/scripts/check-helium.js",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "Check helium port 5432",
+			"type": "shell",
+			"command": "node scripts/check-helium.js",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [],
+			"group": "test"
+		}
+	]
+}

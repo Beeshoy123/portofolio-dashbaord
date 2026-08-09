@@ -13,6 +13,7 @@ import './portfolio.css';
 import { computeDerived } from './lib/portfolioMath';
 import { buildDashboardHtml } from './lib/dashboardHtml';
 import { initDashboardBehavior } from './lib/dashboardBehavior';
+import { runUSDRealityCheck } from './lib/usdRealityEngine';
 
 // Shown only in place of real data when the database has no rows yet, so the
 // full widget/card/heatmap layout can still be previewed with its real CSS —
@@ -44,6 +45,62 @@ const EMPTY_PORTFOLIO: Portfolio = {
   },
 };
 
+function getEarliestTransactionDate(
+  transactions: Portfolio['transactions'],
+  assetType: Portfolio['transactions'][number]['assetType'],
+  name?: string,
+): string {
+  const matching = transactions.filter((tx) => {
+    if (tx.assetType !== assetType) return false;
+    if (!name) return true;
+    return tx.name === name || tx.meta === name;
+  });
+
+  const dates = matching
+    .map((tx) => new Date(tx.occurredAt).getTime())
+    .filter((value) => Number.isFinite(value));
+
+  if (dates.length === 0) {
+    return new Date(Date.now() - 1000 * 60 * 60 * 24 * 365).toISOString().slice(0, 10);
+  }
+
+  return new Date(Math.min(...dates)).toISOString().slice(0, 10);
+}
+
+function buildUsdReality(portfolio: Portfolio) {
+  const assets = portfolio.funds.map((fund) => ({
+    name: fund.name,
+    costEGP: fund.costBasisTotal,
+    currentValueEGP: fund.nav * fund.unitsHeld,
+    buyRateUSD: 1,
+    currentRateUSD: portfolio.settings.usdEgpRate || 1,
+    buyDate: getEarliestTransactionDate(portfolio.transactions, fund.key === 'abr' ? 'abr' : 're', fund.key),
+  }));
+
+  const goldBuyDate = getEarliestTransactionDate(portfolio.transactions, 'gold');
+  const certBuyDate = getEarliestTransactionDate(portfolio.transactions, 'azs');
+
+  return runUSDRealityCheck(
+    assets,
+    {
+      grams: portfolio.gold.gramsHeld,
+      buyPrice: portfolio.gold.avgCostPerGram,
+      currentPrice: portfolio.gold.livePricePerGram ?? portfolio.gold.avgCostPerGram,
+      buyRate: 1,
+      currentRate: portfolio.settings.usdEgpRate || 1,
+      buyDate: goldBuyDate,
+    },
+    {
+      principal: portfolio.certificates.reduce((sum, cert) => sum + cert.value, 0),
+      monthlyIncome: portfolio.certificates.reduce((sum, cert) => sum + (cert.value * cert.ratePercent) / 100 / 12, 0),
+      buyRate: 1,
+      currentRate: portfolio.settings.usdEgpRate || 1,
+      buyDate: certBuyDate,
+    },
+    0.10,
+  );
+}
+
 export default function App() {
   const { data: portfolio, isLoading, isError, error } = useGetPortfolio();
   const queryClient = useQueryClient();
@@ -62,11 +119,13 @@ export default function App() {
   // real styling instead of being replaced by a blank state.
   const dataToRender = portfolio ?? (notSeeded ? EMPTY_PORTFOLIO : undefined);
 
+  const usdReality = dataToRender ? buildUsdReality(dataToRender) : null;
+
   useEffect(() => {
     if (!dataToRender || !containerRef.current) return;
 
     const derived = computeDerived(dataToRender);
-    containerRef.current.innerHTML = buildDashboardHtml(dataToRender, derived);
+    containerRef.current.innerHTML = buildDashboardHtml(dataToRender, derived, usdReality);
 
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: getGetPortfolioQueryKey() });
