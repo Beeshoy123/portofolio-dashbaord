@@ -1074,7 +1074,33 @@ export function initDashboardBehavior(
       const runResp = await fetch("/api/scraper/run", { method: "POST" });
       if (!runResp.ok) {
         const err = await runResp.json().catch(() => ({ error: "Unknown error" }));
-        if (statusEl) statusEl.textContent = `❌ Run failed: ${(err as any).error ?? runResp.statusText}`;
+        if (runResp.status !== 409) {
+          if (statusEl) statusEl.textContent = `❌ Run failed: ${(err as any).error ?? runResp.statusText}`;
+          return;
+        }
+        if (statusEl) statusEl.textContent = "⏳ A price refresh is already running — waiting for it to finish…";
+      }
+
+      // The scraper runs in the API background because the full watchlist can
+      // exceed the preview proxy's request timeout. Poll until it completes.
+      const startedAt = Date.now();
+      let runStatus: { running: boolean; lastRunAt: string | null; lastRunSummary: string | null };
+      do {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const statusResp = await fetch("/api/scraper/status");
+        if (!statusResp.ok) throw new Error("Could not check scraper status.");
+        runStatus = (await statusResp.json()) as typeof runStatus;
+        if (statusEl && runStatus.running) {
+          const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000);
+          statusEl.textContent = `⏳ Fetching prices from FoudaLens… ${elapsedMinutes} min elapsed`;
+        }
+        if (Date.now() - startedAt > 10 * 60 * 1000) {
+          throw new Error("Scraper status polling timed out. Check again shortly.");
+        }
+      } while (runStatus.running);
+
+      if (runStatus.lastRunSummary !== "OK") {
+        if (statusEl) statusEl.textContent = `❌ Run failed: ${runStatus.lastRunSummary ?? "Unknown error"}`;
         return;
       }
 

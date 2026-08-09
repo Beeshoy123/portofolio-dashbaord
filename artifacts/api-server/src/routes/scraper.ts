@@ -12,8 +12,9 @@ let scraperRunning = false;
 let lastRunAt: string | null = null;
 let lastRunSummary: string | null = null;
 
-// POST /api/scraper/run — triggers the scraper. Runs synchronously and
-// returns when done (expect ~1–2 minutes).
+// POST /api/scraper/run — starts the scraper in the background.
+// The scraper can take longer than the preview proxy request timeout, so
+// callers must poll GET /api/scraper/status for completion.
 router.post("/scraper/run", async (req, res) => {
   if (scraperRunning) {
     res.status(409).json({ error: "Scraper already running. Please wait." });
@@ -21,17 +22,22 @@ router.post("/scraper/run", async (req, res) => {
   }
 
   scraperRunning = true;
-  try {
-    await runScraper();
-    lastRunAt = new Date().toISOString();
-    lastRunSummary = "OK";
-    res.json({ ok: true, lastRunAt });
-  } catch (err: any) {
-    lastRunSummary = err?.message ?? "Unknown error";
-    res.status(500).json({ error: lastRunSummary });
-  } finally {
-    scraperRunning = false;
-  }
+  lastRunSummary = "RUNNING";
+
+  void runScraper()
+    .then(() => {
+      lastRunAt = new Date().toISOString();
+      lastRunSummary = "OK";
+    })
+    .catch((err: any) => {
+      lastRunSummary = err?.message ?? "Unknown error";
+      console.error("[/api/scraper/run]", err);
+    })
+    .finally(() => {
+      scraperRunning = false;
+    });
+
+  res.status(202).json({ ok: true, running: true });
 });
 
 // GET /api/scraper/status — returns whether a run is in progress + last result
