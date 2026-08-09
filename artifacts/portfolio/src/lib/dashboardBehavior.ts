@@ -37,6 +37,7 @@ export function initDashboardBehavior(
   let currentSortKey: string | null = null;
   let sortDesc = false;
   let currentLang: Lang = getSavedLang();
+  let segmentRowOpen = false;
 
   const el = (id: string) => document.getElementById(id);
   const win = window as unknown as WindowFns;
@@ -63,7 +64,7 @@ export function initDashboardBehavior(
     total: {
       label: "All assets · full portfolio",
       labelAr: "جميع الأصول · المحفظة الكاملة",
-      cards: ["hero", "perf", "health", "segments", "progress", "heatmap"],
+      cards: ["hero", "perf", "health", "segments", "progress", "heatmap", "usd-reality"],
       assetGroup: null,
     },
     gold: {
@@ -73,8 +74,8 @@ export function initDashboardBehavior(
       assetGroup: "gold",
     },
     liquid: {
-      label: "Liquid assets · Bareeq & funds",
-      labelAr: "الأصول السائلة · بريق والصناديق",
+      label: "EG Stock assets · Bareeq & funds",
+      labelAr: "أسهم مصرية · بريقة والصناديق",
       cards: ["hero", "cohort", "perf", "progress"],
       assetGroup: "liquid",
     },
@@ -159,8 +160,8 @@ export function initDashboardBehavior(
     }
   > = {
     total: {
-      title: "Total Portfolio Value",    titleAr: "إجمالي قيمة المحفظة",
-      sub: "Total Cost Basis · EGP",     subAr: "إجمالي تكلفة الشراء · ج.م",
+      title: "Overall Portfolio Value",    titleAr: "إجمالي قيمة المحفظة",
+      sub: "Overall Cost Basis · EGP",     subAr: "إجمالي تكلفة الشراء · ج.م",
       val: `${fmt(derived.total.cost)} EGP`,
       chg:   `Market Value: ${fmt(derived.total.value)} EGP (net PnL ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} EGP, ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
       chgAr: `القيمة السوقية: ${fmt(derived.total.value)} ج.م (ر/خ صافي ${derived.total.pnl >= 0 ? "+" : ""}${fmt(derived.total.pnl)} ج.م، ${derived.total.pnlPct >= 0 ? "+" : ""}${derived.total.pnlPct.toFixed(1)}%)`,
@@ -189,7 +190,7 @@ export function initDashboardBehavior(
           : "down",
     },
     liquid: {
-      title: "Liquid Assets · Funds",    titleAr: "الأصول السائلة · صناديق",
+      title: "EG Stock · Funds",    titleAr: "سهم مصري · صناديق",
       sub: "Cost Basis · EGP",           subAr: "تكلفة الشراء · ج.م",
       val: `${fmt(derived.liquid.cost)} EGP`,
       chg:   `Market Value: ${fmt(derived.liquid.value)} EGP (net PnL ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
@@ -214,9 +215,9 @@ export function initDashboardBehavior(
     neutral: "↑",
   };
   const SENTIMENT_COLOR: Record<"up" | "down" | "neutral", string> = {
-    up: "var(--teal)",
-    down: "var(--coral)",
-    neutral: "var(--teal)",
+    up: "var(--pnl-up)",
+    down: "var(--pnl-down)",
+    neutral: "var(--pnl-up)",
   };
 
   win.setView = (view: string) => {
@@ -232,6 +233,10 @@ export function initDashboardBehavior(
       el(`view-btn-${v}`)?.classList.toggle("active", v === view);
     });
 
+    if (["gold", "liquid", "certs"].includes(view)) {
+      refreshSegmentPills();
+    }
+
     document.querySelectorAll("[data-view-card]").forEach((card) => {
       const tags = (card.getAttribute("data-view-card") || "")
         .split(",")
@@ -243,15 +248,48 @@ export function initDashboardBehavior(
     const cp = el("certs-placeholder");
     if (cp) cp.style.display = view === "certs" ? "block" : "none";
 
+    const rv = el("rotation-verdict-section");
+    if (rv) rv.style.display = view === "ai" ? "" : "none";
+
     const ghs = el("gold-hero-stats");
     if (ghs) ghs.style.display = view === "gold" ? "flex" : "none";
 
-    const btns = ["total", "gold", "liquid", "certs", "ai"];
-    const idx = btns.indexOf(view);
+    if (view === "gold") {
+      const goldTable = document.getElementById("gold-cohort-table");
+      if (goldTable) {
+        const rows = goldTable.querySelectorAll<HTMLTableRowElement>("tr.cohort-batch-row");
+        rows.forEach((row) => row.classList.add("cohort-batch-hidden"));
+        goldTable.setAttribute("data-cohort-expanded", "false");
+        const btn = document.getElementById("gold-cohort-toggle");
+        if (btn) {
+          btn.setAttribute("aria-expanded", "false");
+          btn.textContent = "▸";
+        }
+      }
+    }
+
+    if (view === "liquid") {
+      ["abr-cohort-table", "re-cohort-table"].forEach((tableId) => {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const rows = table.querySelectorAll<HTMLTableRowElement>("tr.cohort-batch-row");
+        rows.forEach((row) => row.classList.add("cohort-batch-hidden"));
+        table.setAttribute("data-cohort-expanded", "false");
+        const btn = document.getElementById(`${tableId.replace("-table", "")}-toggle`);
+        if (btn) {
+          btn.setAttribute("aria-expanded", "false");
+          btn.textContent = "▸";
+        }
+      });
+    }
+
+    const btns = ["total", "ai"];
+    const sliderView = ["gold", "liquid", "certs"].includes(view) ? "total" : view;
+    const idx = btns.indexOf(sliderView);
     const bar = el("view-toggle-bar");
     const slider = el("view-toggle-slider");
     if (bar && slider) {
-      const btnWidth = bar.offsetWidth / 5;
+      const btnWidth = bar.offsetWidth / 2;
       const offset = 3 + idx * btnWidth + "px";
       if (currentLang === 'ar') {
         slider.style.right = offset;
@@ -283,6 +321,49 @@ export function initDashboardBehavior(
     updatePerfPnlForView(view);
     updatePerfTabsForView(view);
   };
+
+  win.toggleSegmentRow = () => {
+    segmentRowOpen = !segmentRowOpen;
+    el("segment-row")?.classList.toggle("open", segmentRowOpen);
+    el("segment-chevron")?.classList.toggle("open", segmentRowOpen);
+    if (segmentRowOpen) refreshSegmentPills();
+  };
+
+  win.toggleCohortTable = (tableId: string) => {
+    const table = document.getElementById(tableId) as HTMLTableElement | null;
+    if (!table) return;
+    const isExpanded = table.getAttribute("data-cohort-expanded") !== "false";
+    const batchRows = table.querySelectorAll<HTMLTableRowElement>("tr.cohort-batch-row");
+    batchRows.forEach((row) => row.classList.toggle("cohort-batch-hidden", isExpanded));
+    table.setAttribute("data-cohort-expanded", String(!isExpanded));
+    const button = document.getElementById(`${tableId.replace("-table", "")}-toggle`);
+    if (button) {
+      button.setAttribute("aria-expanded", String(!isExpanded));
+      button.textContent = isExpanded ? "▸" : "▾";
+    }
+  };
+
+  function refreshSegmentPills() {
+    const goldPct = derived.gold.pnlAvailable ? derived.gold.pnlPct : null;
+    const liquidPct = derived.liquid.pnlPct;
+    const certsPct = derived.certTotals.weightedAvgRate;
+
+    const setPill = (id: string, val: number | null, suffix = "%") => {
+      const node = el(id);
+      if (!node) return;
+      if (val === null) { node.textContent = "—"; return; }
+      node.textContent = `${val >= 0 ? "+" : ""}${val.toFixed(1)}${suffix}`;
+      node.classList.toggle("pos", val >= 0);
+      node.classList.toggle("neg", val < 0);
+    };
+    setPill("segment-pill-gold-pct", goldPct);
+    setPill("segment-pill-liquid-pct", liquidPct);
+    setPill("segment-pill-certs-pct", certsPct);
+
+    ["gold", "liquid", "certs"].forEach((v) => {
+      el(`segment-pill-${v}`)?.classList.toggle("active", v === currentView);
+    });
+  }
 
   // Panel ID tuples — one entry per pill in [pnl, yield, growth] order.
   // Both Total and standard views share the single perf-growth panel;
@@ -346,7 +427,7 @@ export function initDashboardBehavior(
           ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} ${t('perf.egp.net')}`
           : t('perf.pnl.unavail.short'),
         headlineColor: () => derived.gold.pnlAvailable
-          ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
+          ? derived.gold.netPnl! >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"
           : "var(--dim)",
         sub: () => derived.gold.pnlAvailable
           ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% ${t('perf.pnl.raw')} · ${fmt2(derived.gold.cashbackPerGram)} EGP/g ${t('perf.pnl.cb.on.sell')}`
@@ -366,7 +447,7 @@ export function initDashboardBehavior(
       pnlUpdate: {
         icon: "💧",
         headline: () => `${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} ${t('perf.egp.net')} · ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%`,
-        headlineColor: () => derived.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)",
+        headlineColor: () => derived.liquid.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)",
         sub: () => ``,
         rowFilter: "liquid",
         showAvgVsSell: false,
@@ -388,7 +469,7 @@ export function initDashboardBehavior(
           ? `${derived.gold.netPnl! >= 0 ? "+" : ""}${fmt(derived.gold.netPnl!)} ${t('perf.egp.net')}`
           : t('perf.pnl.unavail.short'),
         headlineColor: () => derived.gold.pnlAvailable
-          ? derived.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"
+          ? derived.gold.netPnl! >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"
           : "var(--dim)",
         sub: () => derived.gold.pnlAvailable
           ? `${derived.gold.pnlPct! >= 0 ? "+" : ""}${derived.gold.pnlPct!.toFixed(1)}% ${t('perf.pnl.raw')} · ${fmt2(derived.gold.cashbackPerGram)} EGP/g ${t('perf.pnl.cb.on.sell')}`
@@ -478,7 +559,7 @@ export function initDashboardBehavior(
           ? `${t('perf.my.avg')} ${fmt2(derived.gold.avgCostPerGram)} EGP/g ${t('perf.vs.sell.cb')} ${fmt2(effectiveSell)} EGP/g`
           : `${t('perf.my.avg')} ${fmt2(derived.gold.avgCostPerGram)} EGP/g ${t('perf.vs.sell.cb')} ${t('attr.price.pending')}`;
         (avgVsSell as HTMLElement).style.color = effectiveSell !== null
-          ? effectiveSell >= derived.gold.avgCostPerGram ? "var(--teal)" : "var(--coral)"
+          ? effectiveSell >= derived.gold.avgCostPerGram ? "var(--pnl-up)" : "var(--pnl-down)"
           : "var(--dim)";
       }
     }
@@ -582,11 +663,13 @@ export function initDashboardBehavior(
 
     // Update nav buttons
     const NAV_LABELS: Record<string, [string, string]> = {
-      'view-btn-total':  ['📊 Total',        '📊 الإجمالي'],
-      'view-btn-gold':   ['🥇 Gold',          '🥇 ذهب'],
-      'view-btn-liquid': ['💧 Liquid',        '💧 سيولة'],
-      'view-btn-certs':  ['🏦 Certificates',  '🏦 شهادات'],
+      'view-btn-total':  ['📊 Overall',       '📊 الإجمالي'],
       'view-btn-ai':     ['🤖 AI Insights',   '🤖 رؤى الذكاء الاصطناعي'],
+    };
+    const SEGMENT_PILL_LABELS: Record<string, [string, string]> = {
+      'segment-pill-gold':   ['🥇 Gold',      '🥇 ذهب'],
+      'segment-pill-liquid': ['💧 EG Stock',  '💧 سهم مصري'],
+      'segment-pill-certs':  ['🏦 Certs',     '🏦 شهادات'],
     };
     Object.entries(NAV_LABELS).forEach(([id, [en, ar]]) => {
       const btn = el(id);
@@ -606,8 +689,6 @@ export function initDashboardBehavior(
 
     const insightsBody = el("insights-body");
     if (insightsBody) insightsBody.innerHTML = buildInsights(derived, lang);
-    const aiInsightsBody = el("ai-insights-body");
-    if (aiInsightsBody) aiInsightsBody.innerHTML = buildInsights(derived, lang);
 
     const whGrade = el("wh-grade");
     if (whGrade) whGrade.textContent = healthGrade(derived.health.overallScore, lang);
@@ -1016,15 +1097,15 @@ export function initDashboardBehavior(
 
         const fmtPct = (v: any) => v != null ? `${Number(v) >= 0 ? "+" : ""}${Number(v).toFixed(2)}%` : "—";
         const fmtNum = (v: any) => v != null ? Number(v).toFixed(2) : "—";
-        const heldTag = (s: any) => s.is_held ? ' <span style="background:var(--teal);color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px">HELD</span>' : "";
+        const heldTag = (s: any) => s.is_held ? ' <span style="background:var(--pnl-up);color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px">HELD</span>' : "";
 
         const tableRow = (s: any) => `
           <tr style="border-bottom:1px solid var(--edge)">
             <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}${heldTag(s)}</td>
             <td style="padding:6px 8px;color:var(--dim);font-size:10px">${s.name}</td>
             <td style="padding:6px 8px;text-align:right">${fmtNum(s.nav_or_price)}</td>
-            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_30d_percent) >= 0 ? "var(--teal)" : "var(--coral)"}">${fmtPct(s.return_30d_percent)}</td>
-            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_ytd_percent) >= 0 ? "var(--teal)" : "var(--coral)"}">${fmtPct(s.return_ytd_percent)}</td>
+            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_30d_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_30d_percent)}</td>
+            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_ytd_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_ytd_percent)}</td>
             <td style="padding:6px 8px;text-align:right">${s.total_score != null ? Number(s.total_score).toFixed(0) + "/100" : "—"}</td>
           </tr>`;
 
@@ -1354,14 +1435,14 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       const mat = new Date(c.maturity);
       const daysLeft = Math.ceil((mat.getTime() - today.getTime()) / 86400000);
       const badge = daysLeft < 90
-        ? `<span style="background:var(--coral-soft);color:var(--coral);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">${t('cert.badge.soon')}</span>`
+        ? `<span style="background:var(--pnl-down-soft);color:var(--pnl-down);font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px">${t('cert.badge.soon')}</span>`
         : "";
       return `<tr data-maturity="${c.maturity}" data-rate="${c.rate}">
         <td><div class="ah-asset-name">${c.name}</div></td>
         <td style="font-weight:700">${fmt(c.value)} EGP</td>
-        <td style="color:var(--teal);font-weight:700">${c.rate}%</td>
+        <td style="color:var(--pnl-up);font-weight:700">${c.rate}%</td>
         <td>${mat.toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: "short", day: "numeric", year: "numeric" })} ${badge}</td>
-        <td style="color:var(--teal);font-weight:700">${fmt(c.monthly)} EGP</td>
+        <td style="color:var(--pnl-up);font-weight:700">${fmt(c.monthly)} EGP</td>
       </tr>`;
     }).join("");
   }
@@ -1408,10 +1489,10 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
             );
             const color =
               daysLeft < 90
-                ? "var(--coral)"
+                ? "var(--pnl-down)"
                 : daysLeft < 180
-                  ? "#d99a2b"
-                  : "var(--teal)";
+                  ? "var(--warning-border)"
+                  : "var(--pnl-up)";
             return `<div class="cert-timeline-item">
           <div class="cert-timeline-dot" style="background:${color}"></div>
           <div><div class="cert-timeline-name">${c.name}</div><div class="cert-timeline-date">${mat.toLocaleDateString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: "short", day: "numeric", year: "numeric" })} · ${daysLeft}${t('cert.days.left')}</div><div class="cert-timeline-amount">${fmt(c.value)} EGP @ ${c.rate}%</div></div>
@@ -1435,7 +1516,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
           ([rate, info]) => `
         <div class="cert-rate-row">
           <div><div style="font-size:12px;font-weight:700;color:var(--ink)">${rate}% APY</div><div style="font-size:10px;color:var(--dim)">${info.count} ${info.count > 1 ? t('cert.count.plural') : t('cert.count.single')}</div></div>
-          <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--teal)">${fmt(info.total)} EGP</div><div style="font-size:10px;color:var(--dim)">${fmt(Math.round((info.total * +rate) / 100 / 12))}/mo</div></div>
+          <div style="text-align:right"><div style="font-size:12px;font-weight:700;color:var(--pnl-up)">${fmt(info.total)} EGP</div><div style="font-size:10px;color:var(--dim)">${fmt(Math.round((info.total * +rate) / 100 / 12))}/mo</div></div>
         </div>`,
         )
         .join("");
@@ -1521,7 +1602,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       yield: "wh-yield-bar",
       liq: "wh-liq-bar",
     };
-    const colors = { div: "#d99a2b", ef: "#e05a50", yield: "#d99a2b", liq: "#e05a50" };
+    const colors = { div: "var(--accent)", ef: "var(--pnl-down)", yield: "var(--pnl-up)", liq: "var(--pnl-down)" };
     setTimeout(() => {
       (Object.keys(scores) as (keyof typeof scores)[]).forEach((key) => {
         const score = scores[key];
@@ -1556,6 +1637,8 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   const timeInterval = setInterval(updateTime, 1000);
   animateRings();
   animateProgress();
+  // Default app theme is dark mode.
+  document.body.classList.add("dark");
   // Apply saved language before initial setView so labels render correctly
   applyLang(currentLang);
   (win.setView as (view: string) => void)("total");
@@ -1614,15 +1697,15 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
   function riskPill(tier: string | null): string {
     if (!tier) return `<span style="color:var(--dim);font-size:9px">risk unknown</span>`;
-    const bg = tier === "Low" ? "rgba(61,174,110,.15)" : tier === "Medium" ? "rgba(217,154,43,.15)" : "rgba(224,90,80,.15)";
-    const fg = tier === "Low" ? "#3dae6e" : tier === "Medium" ? "#d99a2b" : "#e05a50";
+    const bg = tier === "Low" ? "var(--pnl-up-soft)" : tier === "Medium" ? "var(--warning-bg)" : "var(--pnl-down-soft)";
+    const fg = tier === "Low" ? "var(--pnl-up)" : tier === "Medium" ? "var(--warning-border)" : "var(--pnl-down)";
     return `<span style="background:${bg};color:${fg};border-radius:4px;padding:2px 7px;font-size:9px;font-weight:700">${tier} risk</span>`;
   }
 
   function beatPill(beat: number, lose: number, incomplete: number): string {
     const parts: string[] = [];
-    if (beat > 0) parts.push(`<span style="background:rgba(61,174,110,.12);color:#3dae6e;border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700">+${beat} ahead</span>`);
-    if (lose > 0) parts.push(`<span style="background:rgba(224,90,80,.12);color:#e05a50;border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700">${lose} behind</span>`);
+    if (beat > 0) parts.push(`<span style="background:var(--pnl-up-soft);color:var(--pnl-up);border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700">+${beat} ahead</span>`);
+    if (lose > 0) parts.push(`<span style="background:var(--pnl-down-soft);color:var(--pnl-down);border-radius:4px;padding:1px 7px;font-size:9px;font-weight:700">${lose} behind</span>`);
     if (incomplete > 0) parts.push(`<span style="background:var(--edge);color:var(--dim);border-radius:4px;padding:1px 7px;font-size:9px;font-weight:500">${incomplete} pending</span>`);
     if (parts.length === 0) return `<span style="color:var(--dim);font-size:9px">no data</span>`;
     return parts.join(" ");
@@ -1665,16 +1748,16 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         const barWidthHolding = maxReturn > 0 && holdingReturn !== null
           ? Math.max(2, Math.round((Math.abs(holdingReturn) / maxReturn) * 100))
           : 0;
-        const retColor = ret >= 0 ? "var(--teal)" : "#e05a50";
+        const retColor = ret >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
 
         const gapChip = gap !== null
           ? gap >= 0
-            ? `<span style="background:rgba(61,174,110,.12);color:#3dae6e;font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">+${gap.toFixed(1)}pp ahead</span>`
-            : `<span style="background:rgba(224,90,80,.12);color:#e05a50;font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">${Math.abs(gap).toFixed(1)}pp behind</span>`
+            ? `<span style="background:var(--pnl-up-soft);color:var(--pnl-up);font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">+${gap.toFixed(1)}pp ahead</span>`
+            : `<span style="background:var(--pnl-down-soft);color:var(--pnl-down);font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">${Math.abs(gap).toFixed(1)}pp behind</span>`
           : "";
 
         const mismatchHtml = entry.risk_mismatch && entry.foudalens_risk_level
-          ? `<span style="font-size:8.5px;color:#d99a2b;background:rgba(217,154,43,.1);border-radius:3px;padding:1px 5px;margin-left:4px">⚠️ FL:${entry.foudalens_risk_level}</span>`
+          ? `<span style="font-size:8.5px;color:var(--warning-border);background:var(--warning-bg);border-radius:3px;padding:1px 5px;margin-left:4px">⚠️ FL:${entry.foudalens_risk_level}</span>`
           : "";
 
         const disagreements: [string, any][] = Object.entries(entry.second_opinions ?? {})
@@ -1682,7 +1765,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         const disagreeHtml = disagreements.length > 0
           ? `<div style="padding:3px 0 2px;display:flex;flex-wrap:wrap;gap:4px">
               ${disagreements.map(([cat, check]: [string, any]) =>
-                `<span style="font-size:9px;color:#d99a2b;background:rgba(217,154,43,.08);border-radius:3px;padding:2px 6px">⚠️ ${cat}: ${check.note}</span>`
+                `<span style="font-size:9px;color:var(--warning-border);background:var(--warning-bg);border-radius:3px;padding:2px 6px">⚠️ ${cat}: ${check.note}</span>`
               ).join("")}
             </div>`
           : "";
@@ -1694,7 +1777,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
               <div style="display:flex;align-items:center;gap:6px">
                 <div style="position:relative;height:6px;background:var(--edge);border-radius:3px;flex:1;overflow:hidden">
                   <div style="position:absolute;left:0;top:0;height:100%;width:${barWidthEntry}%;background:${retColor};border-radius:3px;transition:width .3s"></div>
-                  ${holdingReturn !== null ? `<div style="position:absolute;left:0;top:0;height:100%;width:${barWidthHolding}%;background:rgba(61,174,110,.25);border-radius:3px;pointer-events:none"></div>` : ""}
+                  ${holdingReturn !== null ? `<div style="position:absolute;left:0;top:0;height:100%;width:${barWidthHolding}%;background:var(--pnl-up-soft);border-radius:3px;pointer-events:none"></div>` : ""}
                 </div>
                 <span style="font-size:10.5px;font-weight:700;min-width:42px;text-align:right;color:${retColor}">${ret >= 0 ? "+" : ""}${ret.toFixed(1)}%</span>
                 ${gapChip}
@@ -1721,14 +1804,14 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
   function buildVerdictCardHtml(v: any): string {
     const signalIcon = v.signal === "Strong" ? "✅" : v.signal === "Mixed" ? "⚡" : "⚠️";
-    const signalColor = v.signal === "Strong" ? "#3dae6e" : v.signal === "Mixed" ? "#d99a2b" : "#e05a50";
-    const signalBg   = v.signal === "Strong" ? "rgba(61,174,110,.1)" : v.signal === "Mixed" ? "rgba(217,154,43,.1)" : "rgba(224,90,80,.1)";
-    const signalBorder = v.signal === "Strong" ? "rgba(61,174,110,.25)" : v.signal === "Mixed" ? "rgba(217,154,43,.25)" : "rgba(224,90,80,.25)";
+    const signalColor = v.signal === "Strong" ? "var(--pnl-up)" : v.signal === "Mixed" ? "var(--warning-border)" : "var(--pnl-down)";
+    const signalBg   = v.signal === "Strong" ? "var(--pnl-up-soft)" : v.signal === "Mixed" ? "var(--warning-bg)" : "var(--pnl-down-soft)";
+    const signalBorder = v.signal === "Strong" ? "var(--pnl-up-soft)" : v.signal === "Mixed" ? "var(--warning-border)" : "var(--pnl-down-soft)";
 
     const periodLabel = (v.return_period as string).replace("return_", "").toUpperCase();
     const returnPct: number | null = v.holding_return_percent;
     const returnStr = returnPct !== null ? `${returnPct >= 0 ? "+" : ""}${returnPct.toFixed(1)}%` : "—";
-    const returnColor = returnPct !== null && returnPct >= 0 ? "#3dae6e" : "#e05a50";
+    const returnColor = returnPct !== null && returnPct >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
 
     const posValue = v.holding_current_value_egp !== null
       ? `${Number(v.holding_current_value_egp).toLocaleString()} EGP`
@@ -1748,7 +1831,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       : "";
 
     const warningHtml = v.data_completeness_warning
-      ? `<div style="margin-top:14px;padding:8px 12px;background:rgba(217,154,43,.08);border:1px solid rgba(217,154,43,.25);border-radius:8px;font-size:10px;color:#d99a2b;display:flex;align-items:flex-start;gap:7px">
+      ? `<div style="margin-top:14px;padding:8px 12px;background:var(--warning-bg);border:1px solid var(--warning-border);border-radius:8px;font-size:10px;color:var(--warning-border);display:flex;align-items:flex-start;gap:7px">
           <span style="flex-shrink:0">⚠️</span>
           <span>Over 30% of comparison entries have no data yet — verdict may be unreliable until the scraper has run more cycles.</span>
         </div>`
@@ -1793,15 +1876,14 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     section.innerHTML = `
       <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:14px">🔄 Rotation Verdict</div>
       <div class="card" style="padding:24px 26px;display:flex;align-items:center;gap:12px;color:var(--dim);font-size:11px">
-        <div style="width:14px;height:14px;border:2px solid var(--teal);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
-        Analysing holdings against watchlist…
+        <div style="width:14px;height:14px;border:2px solid var(--pnl-up);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
       </div>`;
 
     try {
       const resp = await fetch("/api/rotation-verdicts");
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
-        section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:#e05a50;display:flex;gap:8px;align-items:center">
+        section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:var(--pnl-down);display:flex;gap:8px;align-items:center">
           <span>⚠️</span> Failed to load Rotation Verdict: ${(errBody as any).error ?? resp.statusText}
         </div>`;
         return;
@@ -1822,7 +1904,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         ${verdicts.map(buildVerdictCardHtml).join("")}
       `;
     } catch (err: any) {
-      section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:#e05a50;display:flex;gap:8px;align-items:center">
+      section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:var(--pnl-down);display:flex;gap:8px;align-items:center">
         <span>⚠️</span> Network error: ${err?.message ?? "Unknown"}
       </div>`;
     }

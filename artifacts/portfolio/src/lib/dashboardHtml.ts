@@ -10,6 +10,13 @@ import type { Portfolio } from "@workspace/api-client-react";
 import type { Derived } from "./portfolioMath";
 import { fmt, fmt1, fmt2 } from "./portfolioMath";
 import type { Lang } from "./i18n";
+import {
+  realUSDReturn,
+  requiredEGPReturn,
+  egpDevaluationRate,
+  toUSD,
+  egpPriceForTargetUSD,
+} from "./usdRealityEngine";
 
 function pctStr(n: number, digits = 1): string {
   const sign = n >= 0 ? "+" : "";
@@ -17,10 +24,10 @@ function pctStr(n: number, digits = 1): string {
 }
 
 function heatColor(pct: number): string {
-  if (pct >= 5) return "#1a6b5a";
-  if (pct >= 0) return "#2a8a70";
-  if (pct >= -5) return "#e07060";
-  return "#c94035";
+  if (pct >= 5) return "var(--pnl-up)";
+  if (pct >= 0) return "var(--pnl-up-soft)";
+  if (pct >= -5) return "var(--pnl-down-soft)";
+  return "var(--pnl-down)";
 }
 
 /** Horizontal attribution bar row used in the Total-view Capital and Income panels. */
@@ -49,10 +56,10 @@ function attribBar(
 function buildDonutRing(d: Derived): string {
   const r = 28;
   const c = 2 * Math.PI * r;
+  const liquidPct = d.allocation.pctAbr + d.allocation.pctRe;
   const segments = [
     { pct: d.allocation.pctGold, color: "#b8893f" },
-    { pct: d.allocation.pctAbr, color: "#0f6a5e" },
-    { pct: d.allocation.pctRe, color: "#e05a50" },
+    { pct: liquidPct, color: "#0f6a5e" },
     { pct: d.allocation.pctCert, color: "#8b6fb0" },
   ];
   let offset = 0;
@@ -110,7 +117,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
       ? (profitNet! / tx.totalPaid) * 100
       : null;
     const profitColor = profitNet !== null
-      ? profitNet >= 0 ? "var(--teal)" : "var(--coral)"
+      ? profitNet >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"
       : "var(--dim)";
 
     const dateStr = new Date(tx.date).toLocaleDateString("en-US", {
@@ -132,7 +139,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
       ? `<td style="font-weight:800;color:${profitColor}">${returnPct! >= 0 ? "+" : ""}${returnPct!.toFixed(2)}%</td>`
       : `<td style="color:var(--dim)">—</td>`;
 
-    return `<tr>
+    return `<tr class="cohort-batch-row cohort-batch-hidden">
       <td><span style="font-size:10px;font-weight:800;background:var(--bg);border:1px solid var(--edge);border-radius:6px;padding:2px 7px;color:var(--gold,#b8893f)">B${i + 1}</span></td>
       <td style="color:var(--dim);font-size:11px">${dateStr}</td>
       <td style="font-weight:600">${fmt2(tx.totalPaid)}</td>
@@ -145,7 +152,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
 
   const totalAvgCost = totalGrams > 0 ? totalPaid / totalGrams : 0;
   const totalReturnPct = priceAvail && totalPaid > 0 ? (totalProfit / totalPaid) * 100 : null;
-  const totalProfitColor = totalProfit >= 0 ? "var(--teal)" : "var(--coral)";
+  const totalProfitColor = totalProfit >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
 
   const totalValueCell = priceAvail
     ? `<td style="font-weight:800">${fmt2(totalCurrentValue)}</td>`
@@ -165,10 +172,11 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
         <div class="card-lbl" data-i18n="card.cohort.gold">📊 Cohort Analysis · Gold Purchases</div>
+        <button class="cohort-collapse-btn" id="gold-cohort-toggle" onclick="toggleCohortTable('gold-cohort-table')" aria-expanded="false" title="Expand/collapse batches">▸</button>
       </div>
-      <div style="font-size:10px;color:${priceAvail ? "var(--teal)" : "var(--dim)"};margin-bottom:16px">${priceNote}</div>
+      <div style="font-size:10px;color:${priceAvail ? "var(--pnl-up)" : "var(--dim)"};margin-bottom:16px">${priceNote}</div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-        <table class="ah-table" style="min-width:640px">
+        <table class="ah-table" id="gold-cohort-table" data-cohort-expanded="false" style="min-width:640px">
           <thead><tr>
             <th><span data-i18n="cohort.th.cohort">Cohort</span></th>
             <th><span data-i18n="cohort.th.date">Date</span></th>
@@ -262,7 +270,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
         const profit = currentValue - invested;
         const returnPct = invested > 0 ? (profit / invested) * 100 : 0;
         const profitColor =
-          profit >= 0 ? "var(--teal)" : "var(--coral)";
+          profit >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
         const date = new Date(tx.occurredAt);
         const dateStr = date.toLocaleDateString("en-US", {
           day: "numeric",
@@ -272,7 +280,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
         totalInvested += invested;
         totalUnits += units;
         totalCurrentValue += currentValue;
-        return `<tr>
+        return `<tr class="cohort-batch-row cohort-batch-hidden">
           <td><span style="font-size:10px;font-weight:800;background:var(--bg);border:1px solid var(--edge);border-radius:6px;padding:2px 7px;color:${accentColor}">B${i + 1}</span></td>
           <td style="color:var(--dim);font-size:11px">${dateStr}</td>
           <td style="font-weight:600">${fmt2(invested)}</td>
@@ -289,7 +297,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     const totalReturn =
       totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
     const totalProfitColor =
-      totalProfit >= 0 ? "var(--teal)" : "var(--coral)";
+      totalProfit >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
     const totalAvgCost =
       totalUnits > 0 ? totalInvested / totalUnits : 0;
 
@@ -306,11 +314,14 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     return `<div style="margin-bottom:24px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
         <div style="font-size:12px;font-weight:800;color:var(--fg)">${label}</div>
-        <div style="font-size:9.5px;color:${accentColor};background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid ${accentColor};opacity:.8"><span data-i18n="${fundTypeNoteKey}">${fundTypeNote}</span></div>
-        <div style="font-size:9.5px;color:var(--dim);margin-left:auto">NAV: <b style="color:var(--fg)">${fmt2(currentNav)}</b> EGP</div>
+        <div style="font-size:9.5px;color:${accentColor};background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid ${accentColor};opacity:.8;display:none" aria-hidden="true"><span data-i18n="${fundTypeNoteKey}">${fundTypeNote}</span></div>
+        <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+          <div style="font-size:9.5px;color:var(--dim)">NAV: <b style="color:var(--fg)">${fmt2(currentNav)}</b> EGP</div>
+          <button class="cohort-collapse-btn" id="${assetKey}-cohort-toggle" onclick="toggleCohortTable('${assetKey}-cohort-table')" aria-expanded="false" title="Expand/collapse batches">▸</button>
+        </div>
       </div>
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-        <table class="ah-table" style="min-width:580px">
+        <table class="ah-table" id="${assetKey}-cohort-table" data-cohort-expanded="false" style="min-width:580px">
           <thead><tr>
             <th><span data-i18n="cohort.th.cohort">Cohort</span></th>
             <th><span data-i18n="cohort.th.date">Date</span></th>
@@ -336,9 +347,37 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
         <div class="card-lbl" data-i18n="card.cohort.batches">📊 Cohort Analysis · Buy Batches</div>
         <div style="font-size:9.5px;color:var(--dim)" data-i18n="cohort.fund.profit.formula">Profit = (Units × Current NAV) − Invested</div>
       </div>
-      ${buildFundTable("abr", d.abr.nav, "🏦 Bareeq Fund (ABR)", "Fixed Income · Accrual — NAV grows daily, no yield harvest", "var(--teal)")}
+      ${buildFundTable("abr", d.abr.nav, "🏦 Bareeq", "Fixed Income · Accrual — NAV grows daily, no yield harvest", "var(--accent)")}
       <div style="height:1px;background:var(--edge);margin-bottom:20px"></div>
-      ${buildFundTable("re", d.re.nav, "🏢 Beltone Real Estate (BRE)", "Equity Fund · NAV Volatility — avg cost basis", "var(--coral)")}
+      ${buildFundTable("re", d.re.nav, "🏢 Beltone Real Estate", "Equity Fund · NAV Volatility — avg cost basis", "var(--pnl-down)")}
+    </div>
+  </div>`;
+}
+
+function buildUsdRealityCard(p: Portfolio, d: Derived): string {
+  const usdRate = d.settings.usdEgpRate;
+  const totalCostUsd = toUSD(d.total.cost, usdRate);
+  const totalValueUsd = toUSD(d.total.value, usdRate);
+  const nominalEgpReturn = d.total.cost > 0 ? (d.total.value - d.total.cost) / d.total.cost : 0;
+  const devaluationRate = 0; // no historical USD/EGP buy rate available in portfolio schema
+  const realUsdReturnPct = realUSDReturn(nominalEgpReturn, devaluationRate);
+  const requiredEgpReturnPct = requiredEGPReturn(0.10, devaluationRate);
+  const targetEgpForSp500Usd = Math.round(egpPriceForTargetUSD(totalCostUsd, 0.10, usdRate));
+
+  return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="usd-reality">
+    <div class="card">
+      <div class="card-lbl">💱 USD Reality Check</div>
+      <div style="font-size:10px;color:var(--dim);margin-bottom:12px">Computed from your current portfolio totals and live USD/EGP rate.</div>
+      <div style="display:grid;gap:10px;font-size:11px;line-height:1.5">
+        <div><b>USD/EGP rate</b>: ${fmt2(usdRate)}</div>
+        <div><b>Total wallet cost</b>: ${fmt2(d.total.cost)} EGP → ${fmt2(totalCostUsd)} USD</div>
+        <div><b>Total wallet value</b>: ${fmt2(d.total.value)} EGP → ${fmt2(totalValueUsd)} USD</div>
+        <div><b>Nominal EGP return</b>: ${fmt1(nominalEgpReturn * 100)}%</div>
+        <div><b>Real USD return</b>: ${fmt1(realUsdReturnPct * 100)}% <span style="color:var(--dim)">(assuming current USD/EGP rate only)</span></div>
+        <div><b>Required EGP return to beat 10% USD</b>: ${fmt1(requiredEgpReturnPct * 100)}%</div>
+        <div><b>EGP target value for 10% USD gain</b>: ${fmt2(targetEgpForSp500Usd)} EGP</div>
+      </div>
+      <div style="font-size:10px;color:var(--dim);margin-top:14px">Historical USD/EGP buy rates are not available in the current portfolio schema, so this card uses current exchange-rate conversion on actual financial totals.</div>
     </div>
   </div>`;
 }
@@ -398,8 +437,8 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
     : GOLD_PNL_UNAVAILABLE;
   const goldPnlColor = d.gold.pnlAvailable
     ? d.gold.netPnl! >= 0
-      ? "var(--teal)"
-      : "var(--coral)"
+      ? "var(--pnl-up)"
+      : "var(--pnl-down)"
     : "var(--dim)";
   const goldPnlSubLabel = d.gold.pnlAvailable
     ? `${pctStr(d.gold.pnlPct!)} raw · ${fmt2(d.gold.cashbackPerGram)} EGP/g cashback on sell`
@@ -412,8 +451,8 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   const goldAvgVsSellColor =
     goldEffectiveSellPerGram !== null
       ? goldEffectiveSellPerGram >= d.gold.avgCostPerGram
-        ? "var(--teal)"
-        : "var(--coral)"
+        ? "var(--pnl-up)"
+        : "var(--pnl-down)"
       : "var(--dim)";
   const goldAvgVsSellLabel =
     goldEffectiveSellPerGram !== null
@@ -421,20 +460,20 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
       : `<span data-i18n="perf.my.avg">My Avg:</span> ${fmt2(d.gold.avgCostPerGram)} EGP/g <span data-i18n="perf.vs.sell.cb">vs Sell+Cashback:</span> <span data-i18n="attr.price.pending">live price pending</span>`;
   // Gold row in the P&L breakdown list.
   const goldPnlRowRight = d.gold.pnlAvailable
-    ? `<div class="pnl-row-val" style="color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"}">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</div><div id="gold-pnl-row-meta" style="font-size:9.5px;color:${d.gold.netPnl! >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.gold.pnlPct!)} <span data-i18n="pnl.gold.sell.cb">(sell + cashback)</span></div>`
+    ? `<div class="pnl-row-val" style="color:${d.gold.netPnl! >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${d.gold.netPnl! >= 0 ? "+" : ""}${fmt(d.gold.netPnl!)} EGP</div><div id="gold-pnl-row-meta" style="font-size:9.5px;color:${d.gold.netPnl! >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"};font-weight:600">${pctStr(d.gold.pnlPct!)} <span data-i18n="pnl.gold.sell.cb">(sell + cashback)</span></div>`
     : `<div class="pnl-row-val" style="color:var(--dim)">N/A</div><div id="gold-pnl-row-meta" style="font-size:9.5px;color:var(--dim);font-weight:600" data-i18n="pnl.gold.pending">live price pending</div>`;
   // ── Total-view performance panel helpers ─────────────────────────────────
-  const totCapColor = d.total.capitalPnl >= 0 ? "var(--teal)" : "var(--coral)";
+  const totCapColor = d.total.capitalPnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
   const totCapLabel = `${d.total.capitalPnl >= 0 ? "+" : ""}${fmt(d.total.capitalPnl)} EGP <span data-i18n="perf.net.word">net</span>`;
   const totCapPctStr = pctStr(d.total.cost > 0 ? (d.total.capitalPnl / d.total.cost) * 100 : 0);
   const goldCapLabel = d.gold.pnlAvailable
     ? `${(d.gold.netPnl ?? 0) >= 0 ? "+" : ""}${fmt(d.gold.netPnl ?? 0)} EGP`
     : `<span data-i18n="attr.price.pending">live price pending</span>`;
   const goldCapColor = d.gold.pnlAvailable
-    ? (d.gold.netPnl ?? 0) >= 0 ? "var(--teal)" : "var(--coral)"
+    ? (d.gold.netPnl ?? 0) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"
     : "var(--dim)";
   const liquidCapLabel = `${d.liquid.pnl >= 0 ? "+" : ""}${fmt(d.liquid.pnl)} EGP`;
-  const liquidCapColor = d.liquid.pnl >= 0 ? "var(--teal)" : "var(--coral)";
+  const liquidCapColor = d.liquid.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
   const abrAnnualIncEgp = fmt(Math.round(d.abr.monthlyYield * 12));
   const certAnnualIncEgp = fmt(Math.round(d.certTotals.annualYield));
   const totIncomeMonthly = `${d.yield.totalMonthly >= 0 ? "+" : ""}${fmt(Math.round(d.yield.totalMonthly))}`;
@@ -481,12 +520,26 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
 
 <div class="view-toggle-bar" id="view-toggle-bar">
   <span class="view-toggle-slider" id="view-toggle-slider"></span>
-  <button class="view-btn active" id="view-btn-total" onclick="setView('total')">📊 Total</button>
-  <button class="view-btn gold-view" id="view-btn-gold" onclick="setView('gold')">🥇 Gold</button>
-  <button class="view-btn liquid-view" id="view-btn-liquid" onclick="setView('liquid')">💧 Liquid</button>
-  <button class="view-btn cert-view" id="view-btn-certs" onclick="setView('certs')">🏦 Certificates</button>
+  <button class="view-btn active" id="view-btn-total" onclick="setView('total')">📊 Overall</button>
+  <button class="segment-toggle" id="segment-chevron" onclick="toggleSegmentRow()" title="Show segments" aria-label="Show segments">▾</button>
   <button class="view-btn ai-view" id="view-btn-ai" onclick="setView('ai')">🤖 AI Insights</button>
 </div>
+
+<div class="segment-row" id="segment-row">
+  <button class="segment-pill" id="segment-pill-gold" onclick="setView('gold')">
+    <span>🥇 Gold</span>
+    <span class="segment-pill-pct" id="segment-pill-gold-pct"></span>
+  </button>
+  <button class="segment-pill" id="segment-pill-liquid" onclick="setView('liquid')">
+    <span>💧 EG Stock</span>
+    <span class="segment-pill-pct" id="segment-pill-liquid-pct"></span>
+  </button>
+  <button class="segment-pill" id="segment-pill-certs" onclick="setView('certs')">
+    <span>🏦 Certs</span>
+    <span class="segment-pill-pct" id="segment-pill-certs-pct"></span>
+  </button>
+</div>
+
 <div class="view-label" id="view-label">All assets · full portfolio</div>
 
 <div class="api-warning" id="api-warning" style="display:flex">
@@ -514,10 +567,10 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
   <div class="card dark s-6" style="padding:26px 28px" data-view-card="hero">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
       <div style="flex:1">
-        <div class="card-lbl"><span id="hero-title">Total Portfolio Value</span> <span class="info-icon" onclick="toggleMath('math-total')" title="Show calculation">ℹ</span></div>
-        <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px" id="hero-sublabel">Total Cost Basis · EGP</div>
+        <div class="card-lbl"><span id="hero-title">Overall Portfolio Value</span> <span class="info-icon" onclick="toggleMath('math-total')" title="Show calculation">ℹ</span></div>
+        <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#5a7a74;margin-top:10px;margin-bottom:4px" id="hero-sublabel">Overall Cost Basis · EGP</div>
         <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em" id="s-total">${fmt(d.total.cost)} EGP</div>
-        <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--teal)" : "var(--coral)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} <span data-i18n="hero.market.value">Market Value:</span> ${fmt(d.total.value)} EGP (<span data-i18n="hero.net.pnl">net PnL</span> ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
+        <div style="font-size:12px;font-weight:600;margin-top:10px;color:${d.total.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}" id="s-total-chg" class="${d.total.pnl >= 0 ? "pos" : "neg"}">${d.total.pnl >= 0 ? "▲" : "▼"} <span data-i18n="hero.market.value">Market Value:</span> ${fmt(d.total.value)} EGP (<span data-i18n="hero.net.pnl">net PnL</span> ${d.total.pnl >= 0 ? "+" : ""}${fmt(d.total.pnl)} EGP, ${pctStr(d.total.pnlPct)})</div>
         <!-- GOLD STAT ROW — visible only in gold view, shown/hidden by setView() -->
         <div id="gold-hero-stats" style="display:none;flex-wrap:wrap;gap:20px;margin-top:16px">
           <div>
@@ -530,7 +583,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived): string {
           </div>
           <div>
             <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a7a74" data-i18n="gold.stat.live">Live Price</div>
-            <div style="font-size:16px;font-weight:800;color:${d.gold.pnlAvailable ? "var(--teal)" : "#5a7a74"}" id="gold-stat-live">${d.gold.pnlAvailable ? `${fmt(d.gold.livePricePerGram!)} <span style="font-size:11px;font-weight:600;color:#5a7a74">EGP/g</span>` : `<span style="font-size:11px;font-weight:600" data-i18n="attr.price.pending">live price pending</span>`}</div>
+            <div style="font-size:16px;font-weight:800;color:${d.gold.pnlAvailable ? "var(--pnl-up)" : "#5a7a74"}" id="gold-stat-live">${d.gold.pnlAvailable ? `${fmt(d.gold.livePricePerGram!)} <span style="font-size:11px;font-weight:600;color:#5a7a74">EGP/g</span>` : `<span style="font-size:11px;font-weight:600" data-i18n="attr.price.pending">live price pending</span>`}</div>
           </div>
         </div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>
@@ -545,6 +598,9 @@ ${buildGoldCohortAnalysis(p, d)}
 <!-- COHORT ANALYSIS — liquid view only -->
 ${buildCohortAnalysis(p, d)}
 
+<!-- USD REALITY CHECK — total view only -->
+${buildUsdRealityCard(p, d)}
+
   <!-- ② HOLDINGS HEATMAP — primary card -->
   <div class="card s-4" data-view-card="heatmap">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -554,8 +610,7 @@ ${buildCohortAnalysis(p, d)}
     <div id="heatmap-container" style="width:100%;aspect-ratio:16/7;position:relative;border-radius:12px;overflow:hidden">
       <div class="hm-cell" id="hm-cert-cell" style="left:3px;top:3px;width:43%;height:94%;background:${heatColor(d.certTotals.weightedAvgRate)};animation-delay:0ms"><div class="hm-name" style="font-size:15px">Certificates</div><div class="hm-pct" style="font-size:13px" id="hm-cert-pct">${pctStr(d.certTotals.weightedAvgRate)}</div></div>
       <div class="hm-cell" style="left:47%;top:3px;width:50%;height:55%;background:${heatColor(goldHeatPct)};animation-delay:80ms"><div class="hm-name" style="font-size:15px">Gold 24K</div><div class="hm-pct" style="font-size:13px">${goldPnlPctDisplay1}</div></div>
-      <div class="hm-cell" style="left:47%;top:60%;width:37%;height:37%;background:${heatColor(d.abr.pnlPct)};animation-delay:160ms"><div class="hm-name" style="font-size:13px">Bareeq</div><div class="hm-pct" style="font-size:11px">${pctStr(d.abr.pnlPct)}</div></div>
-      <div class="hm-cell" style="left:86%;top:60%;width:11%;height:37%;background:${heatColor(d.re.pnlPct)};animation-delay:240ms"><div class="hm-name" style="font-size:9px">RE</div><div class="hm-pct" style="font-size:9px">${pctStr(d.re.pnlPct)}</div></div>
+      <div class="hm-cell" style="left:47%;top:60%;width:50%;height:37%;background:${heatColor(d.liquid.pnlPct)};animation-delay:160ms"><div class="hm-name" style="font-size:13px">EG Stock</div><div class="hm-pct" style="font-size:11px">${pctStr(d.liquid.pnlPct)}</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
       <span style="font-size:10px;color:var(--dim)" data-i18n="heatmap.loss">Loss</span>
@@ -596,9 +651,9 @@ ${buildCohortAnalysis(p, d)}
       </div>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px" id="pnl-rows">
         <div class="pnl-row" data-perf-group="gold"><div><div class="pnl-row-name">🥇 Gold 24K</div><div class="pnl-row-sub" id="pnl-row-sub-gold">${fmt(d.gold.gramsHeld)}g <span data-i18n="pnl.sub.physical">physical</span></div></div><div style="text-align:right">${goldPnlRowRight}</div></div>
-        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub" id="pnl-row-sub-abr"><span data-i18n="pnl.sub.fixed.income">Fixed Income</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.abr.nav)} EGP · ${fmt(d.abr.apyPercent)}% <span data-i18n="pnl.sub.apy">APY</span></div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--teal)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--teal);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
-        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏢 Real Est.</div><div class="pnl-row-sub" id="pnl-row-sub-re"><span data-i18n="pnl.sub.equity">Equity Fund</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.re.nav)} EGP</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"}">${signedFmt(d.re.pnl)} EGP</div><div style="font-size:9.5px;color:${d.re.pnl >= 0 ? "var(--teal)" : "var(--coral)"};font-weight:600">${pctStr(d.re.pnlPct)}</div></div></div>
-        <div class="pnl-row" data-perf-group="certs"><div><div class="pnl-row-name">📜 Certificates</div><div class="pnl-row-sub" id="pnl-row-sub-certs" data-i18n="pnl.sub.nbe.income">NBE · interest income</div></div><div style="text-align:right"><div class="pnl-row-val" id="cert-pnl-val" style="color:var(--teal)">${signedFmt(d.certTotals.annualYield)} EGP/yr</div><div style="font-size:9.5px;color:var(--teal);font-weight:600" id="cert-pnl-pct">${pctStr(d.certTotals.weightedAvgRate)} APY</div></div></div>
+        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub" id="pnl-row-sub-abr"><span data-i18n="pnl.sub.fixed.income">Fixed Income</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.abr.nav)} EGP · ${fmt(d.abr.apyPercent)}% <span data-i18n="pnl.sub.apy">APY</span></div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--pnl-up)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--pnl-up);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
+        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏢 Real Est.</div><div class="pnl-row-sub" id="pnl-row-sub-re"><span data-i18n="pnl.sub.equity">Equity Fund</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.re.nav)} EGP</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:${d.re.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${signedFmt(d.re.pnl)} EGP</div><div style="font-size:9.5px;color:${d.re.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"};font-weight:600">${pctStr(d.re.pnlPct)}</div></div></div>
+        <div class="pnl-row" data-perf-group="certs"><div><div class="pnl-row-name">📜 Certificates</div><div class="pnl-row-sub" id="pnl-row-sub-certs" data-i18n="pnl.sub.nbe.income">NBE · interest income</div></div><div style="text-align:right"><div class="pnl-row-val" id="cert-pnl-val" style="color:var(--pnl-up)">${signedFmt(d.certTotals.annualYield)} EGP/yr</div><div style="font-size:9.5px;color:var(--pnl-up);font-weight:600" id="cert-pnl-pct">${pctStr(d.certTotals.weightedAvgRate)} APY</div></div></div>
       </div>
       <div class="math-section" id="math-gold">
         ${mathGoldRows}
@@ -634,7 +689,7 @@ ${buildCohortAnalysis(p, d)}
       <div style="margin-bottom:10px">
         <div id="growth-view-label" style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)" data-i18n="growth.label">Savings Growth · Month over Month</div>
         <div style="font-family:'Sora',sans-serif;font-size:26px;font-weight:800;margin-top:4px" id="growth-latest" class="pos">${fmt(d.abr.value)} EGP</div>
-        <div style="font-size:10.5px;color:var(--teal);margin-top:2px" id="growth-delta"></div>
+        <div style="font-size:10.5px;color:var(--pnl-up);margin-top:2px" id="growth-delta"></div>
       </div>
       <div style="position:relative;width:100%">
         <svg id="sparkline-svg" width="100%" height="90" viewBox="0 0 300 90" preserveAspectRatio="none" style="overflow:visible;display:block">
@@ -647,7 +702,7 @@ ${buildCohortAnalysis(p, d)}
       </div>
       <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:9.5px;color:var(--dim)" id="growth-snapcount">${p.snapshots.length} snapshots</div>
-        <button onclick="saveGrowthSnapshot()" style="border:none;background:var(--teal-soft);color:var(--teal);border-radius:8px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer" data-i18n="growth.save">+ Save Snapshot</button>
+        <button onclick="saveGrowthSnapshot()" style="border:none;background:var(--pnl-up-soft);color:var(--pnl-up);border-radius:8px;padding:4px 10px;font-size:10.5px;font-weight:700;cursor:pointer" data-i18n="growth.save">+ Save Snapshot</button>
       </div>
     </div>
 
@@ -658,26 +713,26 @@ ${buildCohortAnalysis(p, d)}
       <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">${totCapPctStr} · <span data-i18n="perf.vs">vs</span> ${fmt(d.total.cost)} EGP <span data-i18n="perf.deployed">deployed</span></div>
       <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px" data-i18n="perf.return.attr">Return Attribution</div>
       ${attribBar("🥇", "Gold", d.gold.pnlAvailable ? `${fmt(d.gold.gramsHeld)}g physical` : "live price pending", d.total.contributions.goldCapitalPct, goldCapLabel, goldCapColor, "attr.gold", d.gold.pnlAvailable ? undefined : "attr.price.pending")}
-      ${attribBar("💧", "Liquid", "Bareeq + Real Est.", d.total.contributions.liquidCapitalPct, liquidCapLabel, liquidCapColor, "attr.liquid", "attr.liquid.sub")}
+      ${attribBar("💧", "EG Stock", "Bareeq + Real Est.", d.total.contributions.liquidCapitalPct, liquidCapLabel, liquidCapColor, "attr.liquid", "attr.liquid.sub")}
       <div style="font-size:9.5px;color:var(--dim);margin-top:4px;padding:6px 0 0;border-top:1px solid var(--edge)" data-i18n="perf.certs.note">📜 Certificates · held at face value — interest income is in the Income tab</div>
       <div class="math-section" id="math-total-capital">
         ${d.gold.pnlAvailable
           ? `<div class="math-line"><span class="math-label" data-i18n="ml.gold.pnl">Gold PnL:</span><span class="math-calc" data-i18n="mc.val.cb.minus.cost">(value + cashback) − cost</span><span class="math-result" style="color:${goldCapColor}">${goldCapLabel}</span></div>`
           : `<div class="math-line"><span class="math-label" data-i18n="ml.gold.pnl">Gold PnL:</span><span class="math-calc" data-i18n="attr.price.pending">live price pending</span><span class="math-result" style="color:var(--dim)">N/A</span></div>`}
-        <div class="math-line"><span class="math-label" data-i18n="ml.liquid.pnl">Liquid PnL:</span><span class="math-calc" data-i18n="mc.bareeq.re.combined">Bareeq + Real Est. combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.liquid.pnl">EG Stock PnL:</span><span class="math-calc" data-i18n="mc.bareeq.re.combined">Bareeq + Real Est. combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total${d.total.capitalPnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.total.cap.pnl">Total Capital PnL:</span><span class="math-calc" data-i18n="mc.gold.plus.liquid">gold + liquid</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
+        <div class="math-line math-total${d.total.capitalPnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.total.cap.pnl">Total Capital PnL:</span><span class="math-calc" data-i18n="mc.gold.plus.liquid">gold + EG Stock</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
       </div>
     </div>
 
     <!-- TOTAL: INCOME VIEW — yield breakdown across all income-bearing assets -->
     <div id="perf-total-income" style="display:none">
       <div style="font-size:22px;margin-bottom:6px">💹</div>
-      <div style="font-family:'Sora',sans-serif;font-size:28px;font-weight:800;color:var(--teal)">${totIncomeMonthly} EGP/mo</div>
+      <div style="font-family:'Sora',sans-serif;font-size:28px;font-weight:800;color:var(--pnl-up)">${totIncomeMonthly} EGP/mo</div>
       <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">ABR ${fmt(d.abr.apyPercent)}% + NBE ${d.certTotals.weightedAvgRate.toFixed(1)}% (<span data-i18n="perf.weighted.avg">weighted avg</span>)</div>
-      <div style="font-size:10.5px;font-weight:700;margin-top:4px;color:var(--teal)">${d.total.blendedYieldPct.toFixed(1)}% <span data-i18n="perf.blended.on.total">blended annual yield on total wallet</span></div>
+      <div style="font-size:10.5px;font-weight:700;margin-top:4px;color:var(--pnl-up)">${d.total.blendedYieldPct.toFixed(1)}% <span data-i18n="perf.blended.on.total">blended annual yield on total wallet</span></div>
       <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px" data-i18n="perf.income.breakdown">Income Breakdown</div>
-      ${attribBar("🏦", "Bareeq", `${fmt(d.abr.apyPercent)}% APY`, d.total.contributions.abrIncomePct, `${abrAnnualIncEgp} EGP/yr`, "var(--teal)", "attr.bareeq")}
+      ${attribBar("🏦", "Bareeq", `${fmt(d.abr.apyPercent)}% APY`, d.total.contributions.abrIncomePct, `${abrAnnualIncEgp} EGP/yr`, "var(--pnl-up)", "attr.bareeq")}
       ${attribBar("📜", "Certs", `${d.certTotals.weightedAvgRate.toFixed(1)}% avg APY`, d.total.contributions.certIncomePct, `${certAnnualIncEgp} EGP/yr`, "#8b6fb0", "attr.certs")}
       <div class="math-section" id="math-total-income">
         <div class="math-line"><span class="math-label" data-i18n="ml.bareeq">Bareeq:</span><span class="math-calc">${fmt(d.abr.value)} × ${fmt(d.abr.apyPercent)}% ÷ 12</span><span class="math-result">= ${fmt2(d.abr.monthlyYield)} EGP/mo</span></div>
@@ -704,10 +759,10 @@ ${buildCohortAnalysis(p, d)}
       </div>
       <svg width="130" height="130" viewBox="0 0 130 130" style="flex-shrink:0">
         <defs>
-          <linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#e05a50"></stop><stop offset="100%" stop-color="#d99a2b"></stop></linearGradient>
-          <linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#d99a2b"></stop><stop offset="100%" stop-color="#f0c040"></stop></linearGradient>
-          <linearGradient id="rg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#3dae6e"></stop><stop offset="100%" stop-color="#5bbfaf"></stop></linearGradient>
-          <linearGradient id="rg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#d99a2b"></stop><stop offset="100%" stop-color="#e8b84a"></stop></linearGradient>
+          <linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="var(--pnl-down)"></stop><stop offset="100%" stop-color="var(--warning-border)"></stop></linearGradient>
+          <linearGradient id="rg2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="var(--warning-border)"></stop><stop offset="100%" stop-color="var(--accent)"></stop></linearGradient>
+          <linearGradient id="rg3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="var(--pnl-up)"></stop><stop offset="100%" stop-color="var(--pnl-up-soft)"></stop></linearGradient>
+          <linearGradient id="rg4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="var(--warning-border)"></stop><stop offset="100%" stop-color="var(--warning-bg)"></stop></linearGradient>
         </defs>
         <circle cx="65" cy="65" r="55" fill="none" stroke="#1e2e2e" stroke-width="11" stroke-dasharray="259.2 86.4" transform="rotate(-210 65 65)"></circle>
         <circle cx="65" cy="65" r="43" fill="none" stroke="#1e2e2e" stroke-width="11" stroke-dasharray="202.6 67.6" transform="rotate(-210 65 65)"></circle>
@@ -720,10 +775,10 @@ ${buildCohortAnalysis(p, d)}
       </svg>
     </div>
     <div class="wh-metrics">
-      <div class="wh-metric"><span class="wh-dot" style="background:#e05a50"></span><span class="wh-mname" data-i18n="health.diversity">Diversity</span><div class="wh-track"><div class="wh-fill" id="wh-div" style="width:0%"></div></div><span class="wh-mval" id="wh-div-v">${Math.round(d.health.diversityScore)}</span></div>
-      <div class="wh-metric"><span class="wh-dot" style="background:#d99a2b"></span><span class="wh-mname" data-i18n="health.ef">Emergency fund</span><div class="wh-track"><div class="wh-fill" id="wh-ef" style="width:0%"></div></div><span class="wh-mval" id="wh-ef-v">${Math.round(d.health.emergencyFundScore)}</span></div>
-      <div class="wh-metric"><span class="wh-dot" style="background:#3dae6e"></span><span class="wh-mname" data-i18n="health.yield">Yield rate</span><div class="wh-track"><div class="wh-fill" id="wh-yield-bar" style="width:0%"></div></div><span class="wh-mval" id="wh-yield-v">${Math.round(d.health.yieldScore)}</span></div>
-      <div class="wh-metric"><span class="wh-dot" style="background:#d99a2b"></span><span class="wh-mname" data-i18n="health.liquidity">Liquidity</span><div class="wh-track"><div class="wh-fill" id="wh-liq-bar" style="width:0%"></div></div><span class="wh-mval" id="wh-liq-v">${Math.round(d.health.liquidityScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--pnl-down)"></span><span class="wh-mname" data-i18n="health.diversity">Diversity</span><div class="wh-track"><div class="wh-fill" id="wh-div" style="width:0%"></div></div><span class="wh-mval" id="wh-div-v">${Math.round(d.health.diversityScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--warning-border)"></span><span class="wh-mname" data-i18n="health.ef">Emergency fund</span><div class="wh-track"><div class="wh-fill" id="wh-ef" style="width:0%"></div></div><span class="wh-mval" id="wh-ef-v">${Math.round(d.health.emergencyFundScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--pnl-up)"></span><span class="wh-mname" data-i18n="health.yield">Yield rate</span><div class="wh-track"><div class="wh-fill" id="wh-yield-bar" style="width:0%"></div></div><span class="wh-mval" id="wh-yield-v">${Math.round(d.health.yieldScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--warning-border)"></span><span class="wh-mname" data-i18n="health.liquidity">Liquidity</span><div class="wh-track"><div class="wh-fill" id="wh-liq-bar" style="width:0%"></div></div><span class="wh-mval" id="wh-liq-v">${Math.round(d.health.liquidityScore)}</span></div>
     </div>
     <div class="math-section" id="math-health">
       <div class="math-line"><span class="math-label" data-i18n="ml.diversity">Diversity:</span><span class="math-calc">100 - ${d.health.goldConcentrationPct.toFixed(1)}% <span data-i18n="mc.gold.conc">gold conc.</span></span><span class="math-result">= ${Math.round(d.health.diversityScore)}</span></div>
@@ -739,7 +794,7 @@ ${buildCohortAnalysis(p, d)}
   <div class="card s-2" style="display:flex;flex-direction:column;gap:10px" data-view-card="segments">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="card-lbl"><span data-i18n="card.segments">Wallet Segments</span> <span class="info-icon" onclick="toggleMath('alloc-detail')" title="Show concentration">ℹ</span></div>
-      <div style="font-size:9.5px;color:var(--dim)" id="seg-count">4 <span data-i18n="seg.assets">assets</span></div>
+      <div style="font-size:9.5px;color:var(--dim)" id="seg-count">3 <span data-i18n="seg.assets">assets</span></div>
     </div>
     <div style="display:flex;align-items:center;gap:14px">
       <div class="donut-ring" id="donut">
@@ -749,16 +804,14 @@ ${buildCohortAnalysis(p, d)}
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex:1">
         <div class="dl-row"><span class="dl-dot" style="background:#b8893f"></span><span class="dl-name" data-i18n="seg.gold">Gold 24K</span><span class="dl-pct" id="pct-gold">${d.allocation.pctGold.toFixed(1)}%</span></div>
-        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name" data-i18n="seg.bareeq">Bareeq</span><span class="dl-pct" id="pct-abr">${d.allocation.pctAbr.toFixed(1)}%</span></div>
-        <div class="dl-row"><span class="dl-dot" style="background:#e05a50"></span><span class="dl-name" data-i18n="seg.re">Real Estate</span><span class="dl-pct" id="pct-re">${d.allocation.pctRe.toFixed(1)}%</span></div>
+        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name">EG Stock</span><span class="dl-pct" id="pct-liquid">${(d.allocation.pctAbr + d.allocation.pctRe).toFixed(1)}%</span></div>
         <div class="dl-row" id="row-cert" style="display:flex"><span class="dl-dot" style="background:#8b6fb0"></span><span class="dl-name" data-i18n="seg.certs">Certificates</span><span class="dl-pct" id="pct-cert">${d.allocation.pctCert.toFixed(1)}%</span></div>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0">
-      <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name"><span data-i18n="seg.gold">Gold 24K</span> · ${fmt(d.gold.gramsHeld)}g</div><div class="seg-meta" id="gold-sub"><span data-i18n="seg.avg.cost">Avg cost</span> ${goldSubCost} EGP/g · <span data-i18n="seg.mkt">Mkt</span> ${goldSubMkt}</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--teal)' : 'var(--coral)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' <span data-i18n="seg.vs.cost">vs cost</span>' : ''}</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--teal-soft)">🏦</div><div class="seg-body"><div class="seg-name" data-i18n="seg.bareeq.fund">Bareeq Fund</div><div class="seg-meta" id="abr-sub">${fmt(d.abr.apyPercent)}% APY · ${fmt(d.abr.unitsHeld)} <span data-i18n="seg.certs.at">certs @</span> <span id="abr-nav-lbl">${fmt2(d.abr.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-abr-val">${fmt(d.abr.costBasisTotal)}</div><div class="seg-pct pos">${pctStr(d.abr.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--coral-soft)">🏢</div><div class="seg-body"><div class="seg-name" data-i18n="seg.beltone.re">Beltone Real Estate</div><div class="seg-meta">${fmt(d.re.unitsHeld)} <span data-i18n="seg.certs.at">certs @</span> <span id="re-nav-lbl">${fmt2(d.re.nav)}</span></div></div><div class="seg-right"><div class="seg-val" id="seg-re-val">${fmt(d.re.costBasisTotal)}</div><div class="seg-pct" style="color:${d.re.pnlPct >= 0 ? "var(--teal)" : "var(--coral)"}">${pctStr(d.re.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
-      <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name" data-i18n="seg.nbe.certs">NBE Certificates</div><div class="seg-meta" id="cert-sub">${p.certificates.length} <span data-i18n="seg.nbe.certs.avg">NBE certs · avg</span> ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--teal)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name"><span data-i18n="seg.gold">Gold 24K</span> · ${fmt(d.gold.gramsHeld)}g</div><div class="seg-meta" id="gold-sub"><span data-i18n="seg.avg.cost">Avg cost</span> ${goldSubCost} EGP/g · <span data-i18n="seg.mkt">Mkt</span> ${goldSubMkt}</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--pnl-up)' : 'var(--pnl-down)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' <span data-i18n="seg.vs.cost">vs cost</span>' : ''}</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">💧</div><div class="seg-body"><div class="seg-name">EG Stock</div><div class="seg-meta" id="liquid-sub">Bareeq + Beltone combined</div></div><div class="seg-right"><div class="seg-val" id="seg-liquid-val">${fmt(d.liquid.value)}</div><div class="seg-pct" style="color:${d.liquid.pnlPct >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${pctStr(d.liquid.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
+      <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name" data-i18n="seg.nbe.certs">NBE Certificates</div><div class="seg-meta" id="cert-sub">${p.certificates.length} <span data-i18n="seg.nbe.certs.avg">NBE certs · avg</span> ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--pnl-up)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
     </div>
     <div class="math-section" id="alloc-detail" style="margin-top:auto">
       <div id="alloc-detail-text" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">${allocInsight(d)}</div>
@@ -847,7 +900,7 @@ ${buildCohortAnalysis(p, d)}
         <button
           id="scraper-run-btn"
           onclick="runPriceChecker()"
-          style="display:flex;align-items:center;gap:6px;background:var(--teal);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
+          style="display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
           🔄 <span id="scraper-btn-label">Refresh prices</span>
         </button>
       </div>
@@ -857,7 +910,9 @@ ${buildCohortAnalysis(p, d)}
 
       <!-- Portfolio health insights (always visible) -->
       <div id="ai-insights-body">
-        ${buildInsights(d)}
+        <div style="font-size:13px;color:var(--dim);line-height:1.6">
+          AI insights are generated from the market data and dashboard state. Use the refresh button to load the latest analysis.
+        </div>
       </div>
 
       <!-- Price comparison table — shown after a successful scraper run -->
@@ -883,17 +938,17 @@ ${buildCohortAnalysis(p, d)}
         <div style="font-family:'Sora',sans-serif;font-size:50px;font-weight:800;line-height:1;letter-spacing:-.02em;color:var(--ink)">${fmt(d.certTotals.totalPrincipal)} <span style="font-size:22px;color:var(--dim)">EGP</span></div>
         <div style="display:flex;gap:20px;margin-top:16px;flex-wrap:wrap">
           <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.count">Certificates</div><div style="font-size:16px;font-weight:800;color:var(--ink)">${p.certificates.length}</div></div>
-          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.apy">Avg APY</div><div class="cert-yield-val" style="font-size:16px;font-weight:800;color:#3dae6e">+${d.certTotals.weightedAvgRate.toFixed(1)}%</div></div>
-          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.annual">Annual Yield</div><div class="cert-yield-val" style="font-size:16px;font-weight:800;color:#3dae6e" id="cert-annual-yield">${fmt(d.certTotals.annualYield)} EGP</div></div>
-          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.monthly">Monthly Yield</div><div class="cert-yield-val" style="font-size:16px;font-weight:800;color:#3dae6e" id="cert-monthly-yield">${fmt(d.certTotals.totalMonthly)} EGP</div></div>
-          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.soon">Maturing in 90d</div><div style="font-size:16px;font-weight:800;color:#d99a2b" id="cert-maturing-soon">${d.certTotals.maturingSoon} certs</div></div>
+          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.apy">Avg APY</div><div class="cert-yield-val" style="font-size:16px;font-weight:800;color:var(--pnl-up)">+${d.certTotals.weightedAvgRate.toFixed(1)}%</div></div>
+          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.annual">Annual Yield</div><div class="cert-yield-val" style="font-size:16px;font-weight:800;color:var(--pnl-up)" id="cert-annual-yield">${fmt(d.certTotals.annualYield)} EGP</div></div>
+          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.monthly">Monthly Yield</div><div class="cert-yield-val" style="font-size:16px;font-weight:800;color:var(--pnl-up)" id="cert-monthly-yield">${fmt(d.certTotals.totalMonthly)} EGP</div></div>
+          <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em" data-i18n="certs.stat.soon">Maturing in 90d</div><div style="font-size:16px;font-weight:800;color:var(--warning-border)" id="cert-maturing-soon">${d.certTotals.maturingSoon} certs</div></div>
         </div>
         <div class="math-section" id="math-certs-hero" style="margin-top:14px">
           <div class="math-line"><span class="math-label" data-i18n="ml.total.principal">Total Principal:</span><span class="math-calc">${p.certificates.length} <span data-i18n="mc.certificates">certificates</span></span><span class="math-result">${fmt(d.certTotals.totalPrincipal)} EGP</span></div>
-          <div class="math-line"><span class="math-label" data-i18n="ml.avg.apy">Avg APY:</span><span class="math-calc" id="math-cert-avg-calc">Σ(value × rate) ÷ ${fmt(d.certTotals.totalPrincipal)}</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-avg-result">${d.certTotals.weightedAvgRate.toFixed(1)}%</span></div>
-          <div class="math-line"><span class="math-label" data-i18n="ml.annual.yield">Annual Yield:</span><span class="math-calc" id="math-cert-annual-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% = ${fmt(d.certTotals.annualYield)} EGP</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-annual-result">${fmt(d.certTotals.annualYield)} EGP/yr</span></div>
+          <div class="math-line"><span class="math-label" data-i18n="ml.avg.apy">Avg APY:</span><span class="math-calc" id="math-cert-avg-calc">Σ(value × rate) ÷ ${fmt(d.certTotals.totalPrincipal)}</span><span class="math-result cert-yield-val" style="color:var(--pnl-up)" id="math-cert-avg-result">${d.certTotals.weightedAvgRate.toFixed(1)}%</span></div>
+          <div class="math-line"><span class="math-label" data-i18n="ml.annual.yield">Annual Yield:</span><span class="math-calc" id="math-cert-annual-calc">${fmt(d.certTotals.totalPrincipal)} × ${d.certTotals.weightedAvgRate.toFixed(1)}% = ${fmt(d.certTotals.annualYield)} EGP</span><span class="math-result cert-yield-val" style="color:var(--pnl-up)" id="math-cert-annual-result">${fmt(d.certTotals.annualYield)} EGP/yr</span></div>
           <div class="math-divider"></div>
-          <div class="math-line"><span class="math-label cert-yield-val" style="color:#3dae6e" data-i18n="ml.monthly.yield">Monthly yield:</span><span class="math-calc" data-i18n="mc.annual.div.12">annual ÷ 12</span><span class="math-result cert-yield-val" style="color:#3dae6e" id="math-cert-monthly-result">${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
+          <div class="math-line"><span class="math-label cert-yield-val" style="color:var(--pnl-up)" data-i18n="ml.monthly.yield">Monthly yield:</span><span class="math-calc" data-i18n="mc.annual.div.12">annual ÷ 12</span><span class="math-result cert-yield-val" style="color:var(--pnl-up)" id="math-cert-monthly-result">${fmt(d.certTotals.totalMonthly)} EGP/mo</span></div>
         </div>
       </div>
     </div>
@@ -905,7 +960,7 @@ ${buildCohortAnalysis(p, d)}
   <div class="card" style="margin-top:var(--gap)">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
       <div class="card-lbl" data-i18n="certs.all.label">All Certificates · NBE</div>
-      <div style="font-size:9.5px;color:var(--teal);font-weight:700" id="cert-avg-rate">Avg ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div>
+      <div style="font-size:9.5px;color:var(--pnl-up);font-weight:700" id="cert-avg-rate">Avg ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
       <button class="chip active" id="cert-chip-all" onclick="filterCerts('all')"><span data-i18n="certs.chip.all">All</span> ${p.certificates.length}</button>
@@ -931,7 +986,7 @@ ${buildCohortAnalysis(p, d)}
     <h2><span data-i18n="scan.title">📸 AI Scanner</span> <button onclick="closeScan()" data-i18n="scan.close">Close</button></h2>
     <p class="scan-sub" data-i18n="scan.sub">Upload a screenshot and AI will read it and update your dashboard automatically.</p>
     <div class="scan-modes" id="scan-modes">
-      <button class="scan-mode-btn" onclick="selectScanMode('order')" id="mode-order"><div class="scan-mode-icon" style="background:var(--teal-soft)">🧾</div><div class="scan-mode-body"><div class="scan-mode-title" data-i18n="scan.mode.order.title">Thndr Order Confirmation</div><div class="scan-mode-desc" data-i18n="scan.mode.order.desc">After buying/selling ABR or BRE — reads fund, certs, NAV, amount and updates positions.</div></div></button>
+      <button class="scan-mode-btn" onclick="selectScanMode('order')" id="mode-order"><div class="scan-mode-icon" style="background:var(--accent-soft)">🧾</div><div class="scan-mode-body"><div class="scan-mode-title" data-i18n="scan.mode.order.title">Thndr Order Confirmation</div><div class="scan-mode-desc" data-i18n="scan.mode.order.desc">After buying/selling ABR or BRE — reads fund, certs, NAV, amount and updates positions.</div></div></button>
       <button class="scan-mode-btn" onclick="selectScanMode('nav')" id="mode-nav"><div class="scan-mode-icon" style="background:var(--gold-soft)">📊</div><div class="scan-mode-body"><div class="scan-mode-title" data-i18n="scan.mode.nav.title">Fund NAV Screenshot</div><div class="scan-mode-desc" data-i18n="scan.mode.nav.desc">Any fund price page — reads current NAV and updates that fund's price.</div></div></button>
     </div>
     <div class="scan-upload-area" id="scan-upload-area" onclick="document.getElementById('scan-file-input').click()">
@@ -980,7 +1035,7 @@ ${buildCohortAnalysis(p, d)}
     <p data-i18n="modal.add.desc">How would you like to update your dashboard?</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
       <button class="add-pick-btn" onclick="closeAdd();openScan()">
-        <span class="add-pick-icon" style="background:var(--teal-soft)">📸</span>
+        <span class="add-pick-icon" style="background:var(--accent-soft)">📸</span>
         <span class="add-pick-body">
           <span class="add-pick-title" data-i18n="modal.add.scan.title">From a screenshot</span>
           <span class="add-pick-desc" data-i18n="modal.add.scan.desc">AI reads your Thndr order or fund NAV image and updates automatically.</span>
