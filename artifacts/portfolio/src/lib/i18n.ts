@@ -30,6 +30,7 @@ export const T: Record<Lang, Record<string, string>> = {
     // API warning
     'warning.text'    : 'USD exchange rate & Gold price unavailable — using fallback estimates. Prices may be inaccurate.',
     'warning.retry'   : 'Retry',
+    'settings.logout' : 'Log out',
     // Heatmap card
     'card.heatmap'    : 'Holdings Heatmap',
     'heatmap.legend'  : 'size = value · color = return',
@@ -124,6 +125,8 @@ export const T: Record<Lang, Record<string, string>> = {
     'scan.mode.order.desc' : 'After buying/selling ABR or BRE — reads fund, certs, NAV, amount and updates positions.',
     'scan.mode.nav.title'  : 'Fund NAV Screenshot',
     'scan.mode.nav.desc'   : 'Any fund price page — reads current NAV and updates that fund\'s price.',
+    'scan.mode.orderslist.title': 'Orders List',
+    'scan.mode.orderslist.desc' : 'Screenshots containing multiple executed orders — extracts a table of rows for review and import.',
     'scan.upload'     : '📁 Tap to choose screenshot',
     'scan.result.title': 'Extracted Data',
     'scan.apply'      : 'Apply to Dashboard',
@@ -328,6 +331,7 @@ export const T: Record<Lang, Record<string, string>> = {
     'scan.err.no.key'     : 'Please set your Gemini API key first (⚙️ Set API Key below).',
     'scan.err.no.mode'    : 'Please select a scan mode (Order Confirmation or Fund NAV) first.',
     'scan.err.no.fund'    : 'Could not identify the fund (ABR or RE). Try uploading a clearer screenshot.',
+    'scan.err.no.rows'    : 'No order rows were detected in the screenshot. Try a clearer image or a different crop.',
     'scan.err.failed'     : 'Scan failed. Please try again.',
     'scan.err.save.fail'  : 'Failed to save:',
     'scan.result.fund'    : 'Fund',
@@ -347,6 +351,7 @@ export const T: Record<Lang, Record<string, string>> = {
     // API warning
     'warning.text'    : 'سعر صرف الدولار وسعر الذهب غير متاحَين — يتم استخدام تقديرات احتياطية. قد تكون الأسعار غير دقيقة.',
     'warning.retry'   : 'إعادة المحاولة',
+    'settings.logout' : 'تسجيل الخروج',
     // Heatmap card
     'card.heatmap'    : 'خريطة الحيازات',
     'heatmap.legend'  : 'الحجم = القيمة · اللون = العائد',
@@ -645,6 +650,9 @@ export const T: Record<Lang, Record<string, string>> = {
     'scan.err.no.key'     : 'يرجى تعيين مفتاح Gemini API أولاً (⚙️ تعيين مفتاح API أدناه).',
     'scan.err.no.mode'    : 'يرجى اختيار وضع المسح (تأكيد الطلب أو NAV الصندوق) أولاً.',
     'scan.err.no.fund'    : 'تعذّر التعرف على الصندوق (ABR أو RE). جرّب رفع لقطة شاشة أوضح.',
+    'scan.mode.orderslist.title': 'قائمة الصفقات',
+    'scan.mode.orderslist.desc' : 'لقطات تحتوي على صفقات متعددة — يستخرج صفوف جدول للمراجعة والاستيراد.',
+    'scan.err.no.rows'    : 'لم تُكتشف أي صفوف صفقات في لقطة الشاشة. جرّب صورة أو قصًّا أوضح.',
     'scan.err.failed'     : 'فشل المسح. حاول مجدداً.',
     'scan.err.save.fail'  : 'فشل الحفظ:',
     'scan.result.fund'    : 'الصندوق',

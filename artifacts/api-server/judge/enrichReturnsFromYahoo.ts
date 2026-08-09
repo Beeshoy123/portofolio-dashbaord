@@ -18,7 +18,13 @@
 import yahooFinance from "yahoo-finance2";
 import { Pool } from "pg";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Export a reusable function so other modules (e.g. scraper) can invoke
+// the same enrichment logic without closing the application's shared
+// pool. If no pool is provided, the function will create its own and
+// close it at the end (CLI usage).
+async function enrichReturnsFromYahoo(providedPool?: Pool) {
+  const ownPool = providedPool ? null : new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = providedPool ?? (ownPool as Pool);
 
 interface Bar {
   date: Date;
@@ -34,7 +40,6 @@ function closestClose(bars: Bar[], target: Date): number | null {
   return best?.close ?? null;
 }
 
-async function main() {
   const { rows } = await pool.query(
     `SELECT id, ticker, yahoo_ticker FROM comparison_watchlist
      WHERE entity_type IN ('stock','index') AND yahoo_ticker IS NOT NULL
@@ -120,10 +125,21 @@ async function main() {
   }
 
   console.log(`\nDone. ${successCount} succeeded, ${failCount} failed out of ${rows.length}.`);
-  await pool.end();
+  if (ownPool) await ownPool.end();
 }
 
-main().catch((err) => {
-  console.error("Fatal error in enrichReturnsFromYahoo:", err);
-  process.exit(1);
-});
+export { enrichReturnsFromYahoo };
+
+// CLI entrypoint: if run directly with tsx/node, call it using a new pool
+const isCliEntryPoint =
+  typeof module !== "undefined" &&
+  typeof require === "function" &&
+  require.main === module;
+
+if (isCliEntryPoint) {
+  enrichReturnsFromYahoo()
+    .catch((err) => {
+      console.error("Fatal error in enrichReturnsFromYahoo:", err);
+      process.exit(1);
+    });
+}

@@ -101,6 +101,8 @@ async function buildAll() {
       "puppeteer",
       "puppeteer-core",
       "electron",
+      "yahoo-finance2",
+      "dotenv/config",
     ],
     sourcemap: "linked",
     plugins: [

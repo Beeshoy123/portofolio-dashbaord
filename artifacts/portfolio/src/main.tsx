@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import App from './App';
+import AuthGate from './AuthGate';
 import { ApiError } from '@workspace/api-client-react';
 
 import './index.css';
@@ -21,6 +22,8 @@ const queryClient = new QueryClient({
 
 createRoot(document.getElementById('root')!).render(
   <QueryClientProvider client={queryClient}>
-    <App />
+    <AuthGate>
+      <App />
+    </AuthGate>
   </QueryClientProvider>,
 );

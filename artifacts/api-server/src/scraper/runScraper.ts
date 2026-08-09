@@ -17,6 +17,8 @@ import { parseFundPage } from "./parseFund";
 import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
+import { enrichReturnsFromYahoo } from "../../judge/enrichReturnsFromYahoo";
+import { judgeAllHoldings } from "../../judge/comparisonJudge";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL, // Replit sets this automatically
@@ -122,6 +124,29 @@ export async function main() {
     console.log(
       `Some entities failed — check logs above for which ones. This is expected on first run, especially for stock pages (see parseStock.ts comments) — inspect and adjust selectors before relying on this data.`
     );
+  }
+
+  // After the FoudaLens scraper populates comparison_snapshots rows with
+  // price and FoudaLens score, enrich those rows with historical returns
+  // from Yahoo Finance for entities that have a mapped `yahoo_ticker`.
+  try {
+    console.log("Running Yahoo enrichment for 30d/YTD/1y returns...");
+    await enrichReturnsFromYahoo(pool);
+    console.log("Yahoo enrichment complete.");
+  } catch (err) {
+    console.error("Yahoo enrichment failed:", err);
+  }
+
+  // After enrichment, run the comparison judge to compute rotation verdicts
+  // so the system has fresh decisions available immediately after a price
+  // check completes. This mirrors what the UI's "Rotation Verdict" fetch
+  // would compute, but runs it proactively here and logs the summary.
+  try {
+    console.log("Running Comparison Judge for held positions...");
+    const verdicts = await judgeAllHoldings("return_1y");
+    console.log(`Comparison Judge produced ${verdicts.length} verdicts.`);
+  } catch (err) {
+    console.error("Comparison Judge failed:", err);
   }
 
   // BUG FIX: removed `await pool.end();` from here. This file was written

@@ -1246,10 +1246,18 @@ export function initDashboardBehavior(
   // ── AI Scanner state ──────────────────────────────────────────────────────
   let currentScanMode = "";
   let pendingScanResult: {
-    fund: "abr" | "re";
+    fund: "abr" | "re" | "azs";
     nav?: number;
     unitsHeld?: number;
   } | null = null;
+  let pendingOrdersList: Array<{
+    assetType: "abr" | "re" | "azs";
+    side: "buy" | "sell";
+    pricePerUnit: number;
+    amountEgp: number;
+    occurredAt?: string;
+    selected?: boolean;
+  }> = [];
 
   function showScanError(msg: string) {
     const errorEl = el("scan-error");
@@ -1309,25 +1317,49 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         body: JSON.stringify({ image: base64, mimeType, mode: currentScanMode, apiKey }),
       });
 
-      const data = (await response.json()) as {
-        fund?: unknown;
-        nav?: unknown;
-        unitsHeld?: unknown;
-        error?: string;
-      };
+      const data = await response.json();
 
       if (!response.ok) {
         throw new Error(data.error ?? `Scan error ${response.status}`);
       }
 
-      if (!data.fund || !["abr", "re"].includes(data.fund as string)) {
+      // Orders-list returns { rows: [...] }
+      if (currentScanMode === "orders-list") {
+        const rows = Array.isArray(data.rows) ? data.rows : [];
+        if (rows.length === 0) throw new Error(t('scan.err.no.rows') ?? 'No rows');
+        pendingOrdersList = rows
+          .map((r: any) => ({
+            assetType: r.assetType || r.asset || r.fund,
+            side: r.side,
+            pricePerUnit: Number(r.pricePerUnit),
+            amountEgp: Number(r.amountEgp),
+            occurredAt: r.occurredAt,
+            selected: true,
+          }))
+          .filter((r: any) => r.assetType && r.side && Number.isFinite(r.pricePerUnit) && Number.isFinite(r.amountEgp));
+
+        if (pendingOrdersList.length === 0) throw new Error(t('scan.err.no.rows') ?? 'No valid rows');
+
+        if (processingEl) (processingEl as HTMLElement).style.display = "none";
+        if (resultEl) {
+          (resultEl as HTMLElement).style.display = "block";
+          renderOrdersListReview();
+        }
+        if (actionsEl) (actionsEl as HTMLElement).style.display = "block";
+        return;
+      }
+
+      // Single-object modes (order/nav)
+      const obj = data as { fund?: unknown; nav?: unknown; unitsHeld?: unknown };
+
+      if (!obj.fund || !["abr", "re", "azs"].includes(String(obj.fund))) {
         throw new Error(t('scan.err.no.fund'));
       }
 
       pendingScanResult = {
-        fund: data.fund as "abr" | "re",
-        nav: data.nav != null ? Number(data.nav) : undefined,
-        unitsHeld: data.unitsHeld != null ? Number(data.unitsHeld) : undefined,
+        fund: obj.fund as "abr" | "re" | "azs",
+        nav: obj.nav != null ? Number(obj.nav) : undefined,
+        unitsHeld: obj.unitsHeld != null ? Number(obj.unitsHeld) : undefined,
       };
 
       // Show result panel
@@ -1337,7 +1369,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         const body = el("scan-result-body");
         if (body) {
           const fundName =
-            pendingScanResult.fund === "abr" ? "Bareeq (ABR)" : "Real Estate (BRE)";
+            pendingScanResult.fund === "abr" ? "Bareeq (ABR)" : pendingScanResult.fund === "re" ? "Real Estate (BRE)" : "Azimut (AZS)";
           body.innerHTML = [
             `<div class="scan-result-row"><span>${t('scan.result.fund')}</span><span>${fundName}</span></div>`,
             pendingScanResult.nav != null
@@ -1362,7 +1394,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
   win.selectScanMode = (mode: string) => {
     currentScanMode = mode;
-    ["order", "nav", "stock"].forEach((m) =>
+    ["order", "nav", "stock", "orders-list"].forEach((m) =>
       el(`mode-${m}`)?.classList.toggle("selected", m === mode),
     );
   };
@@ -1390,10 +1422,33 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   };
 
   win.applyScanResult = async () => {
-    if (!pendingScanResult) return;
     const btn = el("scan-apply-btn") as HTMLButtonElement | null;
     if (btn) { btn.disabled = true; btn.textContent = t('scan.btn.applying'); }
     try {
+      if (currentScanMode === "orders-list") {
+        const rowsToSend = pendingOrdersList.filter((r) => r.selected).map((r) => ({
+          assetType: r.assetType,
+          side: r.side,
+          pricePerUnit: r.pricePerUnit,
+          amountEgp: r.amountEgp,
+          occurredAt: r.occurredAt,
+        }));
+        if (rowsToSend.length === 0) throw new Error(t('scan.err.no.rows') ?? 'No rows selected');
+        const resp = await fetch('/api/portfolio/fund-transactions', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: rowsToSend }),
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error ?? 'Failed to apply orders');
+        }
+        // success: clear pending and close
+        pendingOrdersList = [];
+        el("scan-overlay")?.classList.remove("open");
+        return;
+      }
+
+      if (!pendingScanResult) return;
       const { fund, nav, unitsHeld } = pendingScanResult;
       const body: { nav?: number; unitsHeld?: number } = {};
       if (nav != null) body.nav = nav;
@@ -1409,6 +1464,29 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = t('scan.btn.apply.dash'); }
     }
+  };
+
+  function renderOrdersListReview() {
+    const body = el("scan-result-body");
+    if (!body) return;
+    body.innerHTML = pendingOrdersList
+      .map((r, i) => `
+        <div class="scan-result-row" style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="order-row-${i}" ${r.selected ? 'checked' : ''} onchange="(function(){ const el = document.getElementById('order-row-${i}') as HTMLInputElement; window.toggleOrderRow && window.toggleOrderRow(${i}, el.checked); })()" />
+          <div style="flex:1">
+            <div><strong>${r.assetType.toUpperCase()}</strong> ${r.side.toUpperCase()} · ${r.amountEgp.toFixed(2)} EGP @ ${r.pricePerUnit.toFixed(4)}</div>
+            <div style="font-size:11px;color:var(--dim)">${r.occurredAt ?? ''}</div>
+          </div>
+        </div>
+      `)
+      .join('');
+  }
+
+  // Exposed to the inline onclick above
+  win.toggleOrderRow = (index: number, checked: boolean) => {
+    if (!pendingOrdersList[index]) return;
+    pendingOrdersList[index].selected = Boolean(checked);
+    renderOrdersListReview();
   };
 
   // ── Cert table sort state ───────────────────────────────────────────

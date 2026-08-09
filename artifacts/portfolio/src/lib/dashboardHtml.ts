@@ -572,6 +572,11 @@ export function buildDashboardHtml(p: Portfolio, d: Derived, usdReality?: any): 
         <span class="settings-item-icon" id="lang-icon" style="font-family:'Cairo',sans-serif;font-weight:700">ع</span>
         <span id="lang-label">العربية</span>
       </button>
+      <div class="settings-divider"></div>
+      <button class="settings-item" onclick="window.logoutFromPortfolio && window.logoutFromPortfolio();closeSettings()">
+        <span class="settings-item-icon">🚪</span>
+        <span data-i18n="settings.logout">Log out</span>
+      </button>
     </div>
   </div>
 </div>
@@ -1029,6 +1034,7 @@ ${buildUsdRealityCard(p, d, usdReality)}
     <div class="scan-modes" id="scan-modes">
       <button class="scan-mode-btn" onclick="selectScanMode('order')" id="mode-order"><div class="scan-mode-icon" style="background:var(--accent-soft)">🧾</div><div class="scan-mode-body"><div class="scan-mode-title" data-i18n="scan.mode.order.title">Thndr Order Confirmation</div><div class="scan-mode-desc" data-i18n="scan.mode.order.desc">After buying/selling ABR or BRE — reads fund, certs, NAV, amount and updates positions.</div></div></button>
       <button class="scan-mode-btn" onclick="selectScanMode('nav')" id="mode-nav"><div class="scan-mode-icon" style="background:var(--gold-soft)">📊</div><div class="scan-mode-body"><div class="scan-mode-title" data-i18n="scan.mode.nav.title">Fund NAV Screenshot</div><div class="scan-mode-desc" data-i18n="scan.mode.nav.desc">Any fund price page — reads current NAV and updates that fund's price.</div></div></button>
+      <button class="scan-mode-btn" onclick="selectScanMode('orders-list')" id="mode-orders-list"><div class="scan-mode-icon" style="background:var(--accent-soft)">🧾🧾</div><div class="scan-mode-body"><div class="scan-mode-title" data-i18n="scan.mode.orderslist.title">Orders List</div><div class="scan-mode-desc" data-i18n="scan.mode.orderslist.desc">Screenshots of multiple executed orders — extracts a table of rows for review and import.</div></div></button>
     </div>
     <div class="scan-upload-area" id="scan-upload-area" onclick="document.getElementById('scan-file-input').click()">
       <img class="scan-preview" id="scan-preview" src="" alt="" style="display:none">

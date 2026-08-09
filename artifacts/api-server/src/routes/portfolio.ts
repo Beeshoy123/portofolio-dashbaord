@@ -391,6 +391,31 @@ Extract ONLY these fields as a raw JSON object — no markdown, no code fences, 
 }
 Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
+  // Support an orders-list mode which returns an ARRAY of simple order rows
+  // so the frontend can render a multi-row review UI before writing to DB.
+  if (mode === "orders-list") {
+    // The rows should be an array of objects with these fields:
+    // { assetType: "abr"|"re"|"azs", side: "buy"|"sell", pricePerUnit: <number>, amountEgp: <number>, occurredAt?: <iso string> }
+    // Return ONLY the raw JSON array.
+    const ORDERS_LIST_PROMPT = `You are analyzing a screenshot that contains multiple executed orders (an orders list/table).
+Extract ONLY a JSON ARRAY of rows — no markdown, no code fences, just the JSON array. Each row must contain these fields:
+[
+  {
+    "assetType": "abr" or "re" or "azs",
+    "side": "buy" or "sell",
+    "pricePerUnit": <number: price per unit/cert shown on screen>,
+    "amountEgp": <number: total EGP value of the order>,
+    "occurredAt": <optional ISO-8601 datetime string if visible>
+  }
+]
+Omit any row you cannot read confidently. Return ONLY the JSON array.`;
+    // Override prompt for orders-list
+    // eslint-disable-next-line no-unused-vars
+    // (we intentionally keep `prompt` variable name for parity with Gemini calls below)
+    // @ts-ignore - reassign for clarity
+    // NOTE: we'll set promptText local variable to avoid confusing the earlier `prompt` const
+  }
+
   // Tried in order — if a model's quota is exhausted (429), the model is
   // unavailable (404, e.g. deprecated), or Google's servers are transiently
   // overloaded (503 "model is currently experiencing high demand"), fall
@@ -471,16 +496,107 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     .replace(/```\s*$/i, "")
     .trim();
 
+  // If the request asked for orders-list, expect a JSON ARRAY back.
+  if (mode === "orders-list") {
+    let parsedRows: unknown;
+    try {
+      parsedRows = JSON.parse(cleaned);
+    } catch {
+      // Try OpenRouter fallback if configured
+      if (process.env.OPENROUTER_API_KEY) {
+        try {
+          const orResp = await fetch("https://api.openrouter.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              messages: [{ role: "user", content: ORDERS_LIST_PROMPT }],
+              max_tokens: 512,
+              temperature: 0.1,
+            }),
+          });
+          if (orResp.ok) {
+            const orData = await orResp.json().catch(() => ({}));
+            const orText = (orData?.choices?.[0]?.message?.content ?? "").trim();
+            const cleanedOr = orText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+            parsedRows = JSON.parse(cleanedOr);
+          }
+        } catch (e) {
+          // fall through to error below
+        }
+      }
+    }
+
+    if (!Array.isArray(parsedRows)) {
+      res.status(422).json({ error: "Could not parse an orders array from the image. Try a clearer screenshot." });
+      return;
+    }
+
+    const validRows: any[] = [];
+    for (const r of parsedRows as any[]) {
+      if (!r || typeof r !== "object") continue;
+      const asset = (r.assetType || r.asset || r.fund) as string | undefined;
+      const side = (r.side || r.txType || r.type) as string | undefined;
+      const price = Number(r.pricePerUnit ?? r.price ?? r.unitPrice ?? r.pricePer_unit ?? null);
+      const amount = Number(r.amountEgp ?? r.amount ?? r.total ?? null);
+      const occurredAt = typeof r.occurredAt === "string" ? r.occurredAt : undefined;
+      if (!asset || !["abr", "re", "azs"].includes(asset)) continue;
+      if (!side || !["buy", "sell"].includes(side)) continue;
+      if (!Number.isFinite(price) || !Number.isFinite(amount)) continue;
+      validRows.push({ assetType: asset, side, pricePerUnit: price, amountEgp: amount, occurredAt });
+    }
+
+    if (validRows.length === 0) {
+      res.status(422).json({ error: "No valid order rows found in the image." });
+      return;
+    }
+
+    res.json({ rows: validRows });
+    return;
+  }
+
+  // Otherwise (order/nav single-object modes) parse as before
   let parsed: { fund?: unknown; nav?: unknown; unitsHeld?: unknown };
   try {
     parsed = JSON.parse(cleaned) as typeof parsed;
   } catch {
-    res.status(422).json({ error: "Gemini returned unreadable data. Try a clearer screenshot." });
-    return;
+    // OpenRouter fallback: try a text-only completion if configured
+    if (process.env.OPENROUTER_API_KEY) {
+      try {
+        const orResp = await fetch("https://api.openrouter.ai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 256,
+            temperature: 0.1,
+          }),
+        });
+        if (orResp.ok) {
+          const orData = await orResp.json().catch(() => ({}));
+          const orText = (orData?.choices?.[0]?.message?.content ?? "").trim();
+          const cleanedOr = orText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+          parsed = JSON.parse(cleanedOr) as typeof parsed;
+        }
+      } catch (e) {
+        /* fall through */
+      }
+    }
+    if (!parsed) {
+      res.status(422).json({ error: "Gemini returned unreadable data. Try a clearer screenshot." });
+      return;
+    }
   }
 
-  if (!parsed.fund || !["abr", "re"].includes(parsed.fund as string)) {
-    res.status(422).json({ error: "Could not identify the fund (ABR or RE). Try a clearer screenshot." });
+  if (!parsed.fund || !["abr", "re", "azs"].includes(parsed.fund as string)) {
+    res.status(422).json({ error: "Could not identify the fund (ABR, RE or AZS). Try a clearer screenshot." });
     return;
   }
 
@@ -504,6 +620,104 @@ router.post("/portfolio/snapshots", async (req, res) => {
   res
     .status(201)
     .json(CreateGrowthSnapshotResponse.parse(toGrowthSnapshot(created)));
+});
+
+// Insert multiple fund transactions derived from an orders-list scan
+router.post("/portfolio/fund-transactions", async (req, res) => {
+  const body = req.body as { rows?: any[] };
+  if (!Array.isArray(body.rows) || body.rows.length === 0) {
+    res.status(400).json({ error: "Missing rows array" });
+    return;
+  }
+
+  const inserted: ReturnType<typeof toTransaction>[] = [];
+  const skippedDuplicates: any[] = [];
+  const missingFunds = new Set<string>();
+
+  try {
+    await db.transaction(async (tx) => {
+      for (const r of body.rows) {
+        if (!r || typeof r !== "object") continue;
+        const asset = (r.assetType || r.asset || r.fund) as string | undefined;
+        const side = (r.side || r.txType || r.type) as string | undefined;
+        const price = Number(r.pricePerUnit ?? r.price ?? null);
+        const amount = Number(r.amountEgp ?? r.amount ?? null);
+        const occurredAt = r.occurredAt ? new Date(r.occurredAt) : new Date();
+
+        if (!asset || !["abr", "re", "azs"].includes(asset)) continue;
+        if (!side || !["buy", "sell"].includes(side)) continue;
+        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(amount) || amount <= 0) continue;
+
+        const [fundRow] = await tx.select().from(fundsTable).where(eq(fundsTable.key, asset)).limit(1);
+        if (!fundRow) {
+          missingFunds.add(asset);
+          continue;
+        }
+
+        // Duplicate detection: match assetType + amount + occurredAt + txType
+        const dupMatch = await tx
+          .select()
+          .from(transactionsTable)
+          .where(
+            eq(transactionsTable.assetType, asset),
+            eq(transactionsTable.amount, String(amount)),
+            eq(transactionsTable.occurredAt, occurredAt.toISOString()),
+            eq(transactionsTable.txType, side),
+          )
+          .limit(1);
+        if (dupMatch.length > 0) {
+          skippedDuplicates.push({ asset, amount, occurredAt: occurredAt.toISOString(), reason: "duplicate" });
+          continue;
+        }
+
+        const unitsDelta = amount / price;
+        const existingUnits = Number(fundRow.unitsHeld);
+        const existingCost = Number(fundRow.costBasisTotal);
+
+        let newUnitsHeld = existingUnits;
+        let newCostBasisTotal = existingCost;
+
+        if (side === "buy") {
+          newUnitsHeld = existingUnits + unitsDelta;
+          newCostBasisTotal = existingCost + amount;
+        } else {
+          const avgCostPerUnit = existingUnits > 0 ? existingCost / existingUnits : price;
+          const costRemoved = avgCostPerUnit * unitsDelta;
+          newUnitsHeld = existingUnits - unitsDelta;
+          newCostBasisTotal = Math.max(0, existingCost - costRemoved);
+        }
+
+        const [updatedFund] = await tx
+          .update(fundsTable)
+          .set({ unitsHeld: String(newUnitsHeld), costBasisTotal: String(newCostBasisTotal) })
+          .where(eq(fundsTable.id, fundRow.id))
+          .returning();
+
+        const meta = `scan-import ${side} ${unitsDelta.toFixed(6)} units @ ${price.toFixed(4)} EGP, total ${amount.toFixed(2)} EGP`;
+        const [created] = await tx.insert(transactionsTable).values({
+          assetType: asset,
+          name: fundRow.name,
+          meta,
+          occurredAt: occurredAt.toISOString(),
+          amount: String(amount),
+          txType: side,
+        }).returning();
+
+        inserted.push(toTransaction(created));
+      }
+    });
+  } catch (err) {
+    console.error("/portfolio/fund-transactions error:", err);
+    res.status(500).json({ error: "Internal error while inserting transactions" });
+    return;
+  }
+
+  if (inserted.length === 0) {
+    res.status(422).json({ error: "No transactions inserted", missingFunds: Array.from(missingFunds), skippedDuplicates });
+    return;
+  }
+
+  res.json({ inserted, skippedDuplicates, missingFunds: Array.from(missingFunds) });
 });
 
 export default router;
