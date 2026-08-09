@@ -1,0 +1,20 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cmd /c \"cd /d g:\\\\tp\\\\ai\\\\portofolio-dashbaord\\\\artifacts\\\\api-server && pnpm\\.cmd run start\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cmd /c \"cd /d g:\\\\tp\\\\ai\\\\portofolio-dashbaord\\\\artifacts\\\\portfolio && del /f \\.temp-supabase-login-check\\.mjs\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cmd /c \"cd /d g:\\\\tp\\\\ai\\\\portofolio-dashbaord\\\\artifacts\\\\portfolio && pnpm\\.cmd --filter @workspace/portfolio dev\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cmd /c \"netstat -ano \\| findstr :3000 \\|\\| echo NO_PORT_3000\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

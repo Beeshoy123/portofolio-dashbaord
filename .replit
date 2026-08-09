@@ -1,3 +1,5 @@
+# Replit automation should not alter, auto-merge, or auto-fix this repository without explicit developer approval.
+# This repo contains local environment and deployment settings that must be managed manually.
 modules = ["nodejs-20", "web", "bash", "postgresql-16", "python-base-3.13"]
 
 [deployment]
