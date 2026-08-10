@@ -150,6 +150,27 @@ function toGrowthSnapshot(row: typeof growthSnapshotsTable.$inferSelect) {
   };
 }
 
+function isMissingPortfolioRelationError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+
+  const candidate = err as {
+    code?: string;
+    message?: string;
+    detail?: string;
+  };
+
+  const code = candidate.code;
+  const message = `${candidate.message ?? ""} ${candidate.detail ?? ""}`;
+
+  return (
+    code === "42P01" ||
+    code === "undefined_table" ||
+    /relation \".*\" does not exist/i.test(message) ||
+    /table .* does not exist/i.test(message) ||
+    /missing relation/i.test(message)
+  );
+}
+
 router.get("/portfolio", async (_req, res) => {
   try {
     const [
@@ -216,6 +237,20 @@ router.get("/portfolio", async (_req, res) => {
     res.json(data);
   } catch (err) {
     logger.error({ err }, "Error fetching portfolio data");
+
+    if (isMissingPortfolioRelationError(err)) {
+      logger.warn(
+        { err },
+        "Portfolio route hit a missing Postgres relation; returning NOT_SEEDED",
+      );
+
+      res.status(404).json({
+        error: "NOT_SEEDED",
+        message: "No portfolio data found — please import your data.",
+      });
+      return;
+    }
+
     res.status(500).json({
       error: "INTERNAL_ERROR",
       message: "Failed to load portfolio data.",

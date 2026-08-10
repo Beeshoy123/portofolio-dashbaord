@@ -116,6 +116,30 @@
         "/^cmd /c \"cd /d g:\\\\tp\\\\ai\\\\portofolio-dashbaord\\\\lib\\\\db && set DATABASE_URL=postgresql://postgres:Bosha%%40061196@db\\.gcyuahzdvaodrqijjqba\\.supabase\\.co:5432/postgres && pnpm\\.cmd exec node \\./tmp-print-env\\.mjs\"$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^Set-Location 'g:\\\\tp\\\\ai\\\\portofolio-dashbaord\\\\artifacts\\\\api-server'; node --input-type=module -e \"import pg from 'pg'; const \\{ Pool \\} = pg; const DATABASE_URL = 'postgresql://postgres:Bosha%40061196@db\\.gcyuahzdvaodrqijjqba\\.supabase\\.co:5432/postgres'; const pool = new Pool\\(\\{ connectionString: DATABASE_URL \\}\\); const client = await pool\\.connect\\(\\); try \\{ const res = await client\\.query\\(`select table_schema, table_name from information_schema\\.tables where table_schema = 'public' and table_name in \\('gold_settings','gold_transactions','funds','certificates','transactions','growth_snapshots','portfolio_settings'\\) order by table_name;`\\); console\\.log\\(JSON\\.stringify\\(res\\.rows\\)\\); \\} finally \\{ client\\.release\\(\\); await pool\\.end\\(\\); \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --input-type=module -e \"import pg from 'pg'; const \\{ Pool \\} = pg; const uri = 'postgresql://postgres:Bosha%40061196@gcyuahzdvaodrqijjqba\\.supabase\\.co:5432/postgres\\?sslmode=require'; const pool = new Pool\\(\\{ connectionString: uri, ssl: \\{ rejectUnauthorized: false \\} \\}\\); pool\\.on\\('error', \\(e\\) => \\{ console\\.log\\('pool-error', e\\.message\\); \\}\\); try \\{ const client = await pool\\.connect\\(\\); try \\{ const res = await client\\.query\\('select current_database\\(\\) as db, \\$1::int as one', \\[1\\]\\); console\\.log\\('connect-ok', JSON\\.stringify\\(res\\.rows\\)\\); \\} catch \\(e\\) \\{ console\\.log\\('query-error', e; e\\.message, e ; e\\.code, e ; e\\.stack\\); \\} finally \\{ client\\.release\\(\\); \\} \\} catch \\(e\\) \\{ console\\.log\\('connect-error', e; e\\.message, e ; e\\.code, e ; e\\.stack\\); \\} finally \\{ await pool\\.end\\(\\); \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node -e \"const dns=require\\('node:dns'\\); const host='aws-0-eu-central-1\\.pooler\\.supabase\\.com'; dns\\.lookup\\(host,\\(e,a,f\\)=>console\\.log\\(e\\?e\\.code:e\\.message,a,f\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^nslookup db\\.gcyuahzdvaodrqijjqba\\.supabase\\.co$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^powershell -NoProfile -Command \"Get-NetTCPConnection -LocalPort 3000 \\| Select-Object -ExpandProperty OwningProcess \\| ForEach-Object \\{ Stop-Process -Id \\$_ -Force \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^powershell -NoProfile -Command \"\\$p = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if \\(\\$p\\) \\{ \\$p \\| ForEach-Object \\{ Stop-Process -Id \\$_\\.OwningProcess -Force \\} \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

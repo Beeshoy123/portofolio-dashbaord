@@ -35,8 +35,10 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
+let parsedDbUrl: URL;
+
 try {
-  new URL(process.env.DATABASE_URL);
+  parsedDbUrl = new URL(process.env.DATABASE_URL);
 } catch (err) {
   throw new Error(
     "DATABASE_URL is not a valid URI. If your password contains special characters like @, #, or : then percent-encode them (for example %40 for @). " +
@@ -44,7 +46,20 @@ try {
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const sslConfig = parsedDbUrl.hostname
+  ? {
+      rejectUnauthorized: false,
+      servername: parsedDbUrl.hostname,
+    }
+  : {
+      rejectUnauthorized: false,
+    };
+
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: sslConfig,
+});
+
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
