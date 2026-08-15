@@ -35,10 +35,32 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-let parsedDbUrl: URL;
+let chosenDatabaseUrl = process.env.DATABASE_URL ?? "";
+const poolerEnv = process.env.DATABASE_URL_POOLER ?? process.env.POOLER_DATABASE_URL ?? "";
 
+// Allow overriding which connection to use at runtime. Useful when running
+// locally (direct connection) vs. in IPv4-only environments like Replit
+// (shared pooler). Set USE_POOLER=1 to force the pooler URL.
+if (process.env.USE_POOLER === "1" && poolerEnv) {
+  chosenDatabaseUrl = poolerEnv;
+}
+
+if (!chosenDatabaseUrl && poolerEnv) {
+  // If no primary DATABASE_URL was provided, fall back to pooler if available.
+  chosenDatabaseUrl = poolerEnv;
+}
+
+if (!chosenDatabaseUrl) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database? " +
+      "This app never falls back to hardcoded/placeholder financial data — " +
+      "wait for the real database to be attached rather than adding sample values here.",
+  );
+}
+
+let parsedDbUrl: URL;
 try {
-  parsedDbUrl = new URL(process.env.DATABASE_URL);
+  parsedDbUrl = new URL(chosenDatabaseUrl);
 } catch (err) {
   throw new Error(
     "DATABASE_URL is not a valid URI. If your password contains special characters like @, #, or : then percent-encode them (for example %40 for @). " +
@@ -55,8 +77,10 @@ const sslConfig = parsedDbUrl.hostname
       rejectUnauthorized: false,
     };
 
+console.info({ chosenDatabaseUrl: parsedDbUrl.hostname }, "Using database host");
+
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: chosenDatabaseUrl,
   ssl: sslConfig,
 });
 

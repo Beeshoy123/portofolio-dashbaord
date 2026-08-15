@@ -52,30 +52,44 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (!session) {
     return (
-      <div className="portfolio-loading-screen">
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 10, width: 260 }}>
-          <h2 style={{ marginBottom: 8 }}>Portfolio · Beeshoy</h2>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="username"
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-          {loginError && <div style={{ color: '#e5533d', fontSize: 12.5 }}>{loginError}</div>}
-          <button type="submit" disabled={submitting} className="btn btn-primary">
-            {submitting ? 'Signing in…' : 'Log in'}
-          </button>
-        </form>
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="auth-badge">Portfolio access</div>
+          <h1>Portfolio · Beeshoy</h1>
+          <p className="auth-subtitle">Sign in to continue</p>
+
+          <form onSubmit={handleLogin} className="auth-form">
+            <label className="auth-field">
+              <span>Email</span>
+              <input
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="username"
+                required
+              />
+            </label>
+
+            <label className="auth-field">
+              <span>Password</span>
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </label>
+
+            {loginError && <div className="auth-error">{loginError}</div>}
+
+            <button type="submit" disabled={submitting} className="auth-button">
+              {submitting ? 'Signing in…' : 'Log in'}
+            </button>
+          </form>
+        </div>
       </div>
     );
   }
