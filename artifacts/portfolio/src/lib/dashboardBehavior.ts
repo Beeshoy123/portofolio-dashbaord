@@ -3,6 +3,7 @@ import type { Derived, DerivedCertificate } from "./portfolioMath";
 import { fmt, fmt2 } from "./portfolioMath";
 import { T, type Lang, getSavedLang, saveLang } from "./i18n";
 import { allocInsight, buildInsights, healthGrade } from "./dashboardHtml";
+import { supabase } from "./supabaseClient";
 import {
   MFG_FEE_5G_24K_PER_GRAM,
   MFG_FEE_10G_24K_PER_GRAM,
@@ -41,6 +42,20 @@ export function initDashboardBehavior(
 
   const el = (id: string) => document.getElementById(id);
   const win = window as unknown as WindowFns;
+
+  // The generated API client receives the Supabase bearer token through
+  // setAuthTokenGetter in AuthGate. These dashboard actions use raw fetches,
+  // so they must attach the same current session token explicitly.
+  const authenticatedFetch = async (
+    input: RequestInfo | URL,
+    init: RequestInit = {},
+  ): Promise<Response> => {
+    const { data } = await supabase.auth.getSession();
+    const headers = new Headers(init.headers);
+    const token = data.session?.access_token;
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return fetch(input, { ...init, headers });
+  };
 
   const CERTS_DATA: DerivedCertificate[] = derived.certs;
 
@@ -770,7 +785,7 @@ export function initDashboardBehavior(
     //    browser fetches to that domain).
     let usdLive = false;
     try {
-      const usdResp = await fetch("/api/portfolio/usd-rate", {
+      const usdResp = await authenticatedFetch("/api/portfolio/usd-rate", {
         signal: AbortSignal.timeout(8_000),
       });
       if (usdResp.ok) {
@@ -795,7 +810,7 @@ export function initDashboardBehavior(
     }
 
     try {
-      const eurResp = await fetch("/api/portfolio/eur-rate", {
+      const eurResp = await authenticatedFetch("/api/portfolio/eur-rate", {
         signal: AbortSignal.timeout(8_000),
       });
       if (eurResp.ok) {
@@ -823,7 +838,7 @@ export function initDashboardBehavior(
     //    server-side; this endpoint just returns the in-memory cache.
     let goldLive = false;
     try {
-      const goldResp = await fetch("/api/portfolio/gold-prices", {
+      const goldResp = await authenticatedFetch("/api/portfolio/gold-prices", {
         signal: AbortSignal.timeout(10_000),
       });
       if (goldResp.ok) {
@@ -1071,7 +1086,7 @@ export function initDashboardBehavior(
     if (statusEl) { statusEl.style.display = "block"; statusEl.textContent = "⏳ Fetching prices from FoudaLens — this takes 1–2 minutes…"; }
 
     try {
-      const runResp = await fetch("/api/scraper/run", { method: "POST" });
+      const runResp = await authenticatedFetch("/api/scraper/run", { method: "POST" });
       if (!runResp.ok) {
         const err = await runResp.json().catch(() => ({ error: "Unknown error" }));
         if (runResp.status !== 409) {
@@ -1087,7 +1102,7 @@ export function initDashboardBehavior(
       let runStatus: { running: boolean; lastRunAt: string | null; lastRunSummary: string | null };
       do {
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        const statusResp = await fetch("/api/scraper/status");
+        const statusResp = await authenticatedFetch("/api/scraper/status");
         if (!statusResp.ok) throw new Error("Could not check scraper status.");
         runStatus = (await statusResp.json()) as typeof runStatus;
         if (statusEl && runStatus.running) {
@@ -1105,7 +1120,7 @@ export function initDashboardBehavior(
       }
 
       // Fetch the snapshots now that the run succeeded
-      const snapResp = await fetch("/api/scraper/snapshots");
+      const snapResp = await authenticatedFetch("/api/scraper/snapshots");
       if (!snapResp.ok) { if (statusEl) statusEl.textContent = "❌ Could not load snapshots after run."; return; }
       const { snapshots, lastRunAt } = (await snapResp.json()) as { snapshots: any[]; lastRunAt: string | null };
 
@@ -1311,7 +1326,7 @@ Extract ONLY these fields as a raw JSON object — no markdown, no code fences, 
 Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
     try {
-      const response = await fetch("/api/portfolio/scan", {
+      const response = await authenticatedFetch("/api/portfolio/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: base64, mimeType, mode: currentScanMode, apiKey }),
@@ -1434,7 +1449,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
           occurredAt: r.occurredAt,
         }));
         if (rowsToSend.length === 0) throw new Error(t('scan.err.no.rows') ?? 'No rows selected');
-        const resp = await fetch('/api/portfolio/fund-transactions', {
+      const resp = await authenticatedFetch('/api/portfolio/fund-transactions', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ rows: rowsToSend }),
         });
@@ -1984,7 +1999,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       </div>`;
 
     try {
-      const resp = await fetch("/api/rotation-verdicts");
+      const resp = await authenticatedFetch("/api/rotation-verdicts");
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
         section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:var(--pnl-down);display:flex;gap:8px;align-items:center">
