@@ -47,3 +47,38 @@ SELECT ticker, yahoo_ticker FROM comparison_watchlist WHERE yahoo_ticker IS NOT 
 - **Backend:** `artifacts/api-server/src/judge/enrichReturnsFromYahoo.ts` (newly created)
 - **Scraper:** `artifacts/api-server/src/scraper/runScraper.ts`
 - **Database:** Make sure `comparison_watchlist.yahoo_ticker` is populated
+
+---
+
+## 🔧 Manual Entry UX Enhancement
+
+### Goal
+Make manual data entry match all portfolio holdings dynamically instead of being hardcoded to fund NAVs only.
+
+### Desired behaviour
+- First field is a dropdown for the entity type
+- After selecting an entity, the form shows only the relevant fields for that holding
+- The same repeated field block can be used for multiple rows/entries
+- Supported holdings should include:
+  - Gold
+  - Fund
+  - Certificate
+  - any additional entity type that maps to the current portfolio schema
+- The field labels should follow the real database/schema column names where possible
+- When one asset is selected, the form should show the matching header/data structure and not the unrelated ones
+
+### Acceptance criteria
+- User can choose entity type from dropdown first
+- Input fields update dynamically based on entity type
+- Repeated row pattern works for multiple entries
+- Values map cleanly to the portfolio database model
+- Gold, fund, and certificate entries are all supported through the same UI flow
+
+### Files likely involved
+- `artifacts/portfolio/src/lib/dashboardHtml.ts`
+- `artifacts/portfolio/src/lib/dashboardBehavior.ts`
+- `artifacts/portfolio/src/App.tsx`
+- backend portfolio routes and schema for updates/inserts
+
+### Notes
+This is the last request that should be preserved for future work if the current API credit cycle runs out.

@@ -1,24 +1,285 @@
 # Portfolio Dashboard - Development Instructions
 
-## 🚀 TL;DR Quick Start
+## 📚 IMPORTANT: CHECK MEMORY FILES FIRST
+
+**Before starting development, check if there are active notes about this project:**
+
+### Memory Files to Check (if they exist)
+1. **`/memories/session/frontend-startup-progress.md`** 
+   - Session-specific notes about current setup/issues
+   - Contains troubleshooting steps from this conversation
+   
+2. **`/memories/repo/yahoo-finance-issue.md`**
+   - Repository-scoped notes about Yahoo Finance integration
+   - Documents missing implementations and compatibility issues
+   
+3. **`/memories/` (root memory folder)**
+   - User preferences and general project patterns
+   - Persistent notes across all conversations
+
+**How to Access Them:**
+- Session memory notes are stored locally in VS Code workspace
+- Check the debug logs folder: `c:\Users\HP\AppData\Roaming\Code\User\workspaceStorage\26c1860b74c214b7d620eb50dd285d02\GitHub.copilot-chat\debug-logs\`
+- Or ask Copilot to read memory files directly using the `memory` tool
+
+**If Memory Files Exist:** Read them first! They contain:
+- Previously discovered issues and solutions
+- Environment setup quirks
+- Dependencies that have already been debugged
+- API/Backend issues already documented
+
+---
+
+## � AI MODEL STARTUP CHECKLIST (DO THIS FIRST)
+
+**Every AI session should start with these steps:**
+
+- [ ] **1. Read memory files** - Check `/memories/session/`, `/memories/repo/`, `/memories/`
+- [ ] **2. Read this file** - Especially [Environment Requirements](#environment-requirements-must-have) & [MOST COMMON ISSUES](#most-common-issues)
+- [ ] **3. Check Node version** - Run: `node --version` (must be v22+)
+- [ ] **4. Check pnpm version** - Run: `pnpm --version` (must be v11.17.0+)
+- [ ] **5. Check Git Bash** - Ensure using Git Bash, NOT PowerShell
+- [ ] **6. Identify the actual issue** - Use [🆘 MOST COMMON ISSUES](#most-common-issues) table to find matching error
+
+**If the issue isn't in the table:**
+1. Document it in memory files
+2. Research the root cause
+3. **ADD THE SOLUTION TO THIS FILE** before ending the session
+4. Update the [🆘 MOST COMMON ISSUES](#most-common-issues) table
+
+---
+
+### Update Instructions.md While Working
+**If you discover NEW issues or solutions while working, ADD THEM TO THIS FILE immediately:**
+
+1. **Found a new bug/issue?** → Add to the [🆘 MOST COMMON ISSUES](#most-common-issues) table
+2. **Discovered a better fix?** → Update the relevant solution section
+3. **Encountered a Windows-specific error?** → Add to [Windows-Specific Issues](#windows-specific-issues-encountered) table
+4. **Fixed a dependency problem?** → Document it in [Troubleshooting](#troubleshooting) section
+
+**Examples of things to document:**
+- "Version X of pnpm doesn't work with this setup" → Add to requirements
+- "This flag solved the EPERM error" → Add to troubleshooting
+- "This environment variable must be set" → Add to environment section
+- "This Node.js version causes issues" → Update version requirements
+
+### Why This Matters
+- The instructions.md file is the **single source of truth** for this project
+- It saves future developers hours of debugging
+- It prevents the same issues being solved repeatedly
+- Future AI sessions read this file to understand past solutions
+
+### Update Format
+```markdown
+### Issue: "[Problem description]" (NEW - YYYY-MM-DD)
+**Root Cause**: [Why it happens]
+**Symptoms**: [What you see when this happens]
+**Solution**:
+[Step-by-step fix]
+**Status**: [Fixed/Workaround/Investigating]
+```
+
+### Memory File Coordination
+- Keep **instructions.md** for permanent solutions and setup guide
+- Use **memory files** (`/memories/`) for session-specific notes and investigation progress
+- When investigation concludes, move the solution TO this instructions.md
+
+### How to Edit This File (For AI Models)
+**When adding new content to this file:**
+
+1. **For new issues:** Add to the [🆘 MOST COMMON ISSUES](#most-common-issues) table
+   - Format: `| Issue Name | Root Cause | Fix |`
+   - Keep it concise and scannable
+
+2. **For new solutions:** Create a new subsection in [Troubleshooting](#troubleshooting)
+   - Use format: `### Issue: "[Problem]" (NEW - DATE)`
+   - Always include Root Cause, Symptoms, Solution, Status
+
+3. **For environment changes:** Update [Environment Requirements](#environment-requirements-must-have)
+   - Keep checklist format with ✅ and ❌
+   - Add version numbers with dates
+
+4. **For complex fixes:** Create new section with header
+   - Use clear hierarchy (### for issues, #### for substeps)
+   - Include code blocks with ```bash for commands
+   - Include comments explaining WHY it works
+
+5. **For quick notes:** Use session memory files first
+   - Move to instructions.md when solution is verified
+
+**Tools to use:**
+- Use `replace_string_in_file` tool to update specific sections
+- Use `multi_replace_string_in_file` for multiple edits at once
+- ALWAYS include 3-5 lines of context before/after your edits
+
+---
+
+## ⚡ QUICKEST START (60 seconds)
+
+### Windows Users - COPY THIS (Use Git Bash, NOT PowerShell):
+Open Git Bash and run:
+```bash
+cd '/g/tp/ai/portofolio-dashbaord'
+pnpm install --ignore-scripts --shamefully-hoist --no-frozen-lockfile --prefer-offline
+```
+
+**Terminal 1** (Backend on 8080):
+```bash
+cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && PORT=8080 pnpm run start
+```
+
+**Terminal 2** (Frontend on 3000):
+```bash
+cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio' && PORT=3000 pnpm run dev
+```
+
+**App URL:** http://localhost:3000/
+
+⚠️ **IMPORTANT**: Use **Git Bash** (`C:\Program Files\Git\bin\bash.exe`), NOT PowerShell!
+- PowerShell has execution policy blocking npm/pnpm commands
+- Git Bash has `sh` support for the preinstall script
+
+---
+
+## 🆘 MOST COMMON ISSUES
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| "Cannot find native binding" | Native modules not compiled | `pnpm install --shamefully-hoist --force` |
+| "Cannot find package esbuild" | pnpm using nested modules | Add `--shamefully-hoist` flag |
+| "Unsupported URL Type catalog:" | Using npm instead of pnpm | Use `pnpm.cmd` or `pnpm` |
+| PowerShell execution error | Windows security policy | **Use Git Bash instead** (`C:\Program Files\Git\bin\bash.exe`) |
+| "sh is not recognized" | Preinstall script uses `sh` | Use `pnpm install --ignore-scripts` or Git Bash |
+| Port already in use | Another app on same port | `PORT=4000 pnpm run dev` |
+| EPERM: operation not permitted (esbuild) | Antivirus/Windows blocking file ops | Close other terminals; try `pnpm install --prefer-offline` |
+
+---
+
+## 🚀 TL;DR Quick Start (Detailed)
 
 **Backend API Server (WORKING):**
 ```bash
-# Terminal 1 - Backend on port 8080
-& "C:\Program Files\Git\bin\bash.exe" -c "cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && PORT=8080 pnpm run start"
+cd g:\tp\ai\portofolio-dashbaord\artifacts\api-server
+PORT=8080 pnpm run start
 ```
 
-**Frontend (HAS ISSUES - See status below):**
+**Frontend (FIXED WITH pnpm --shamefully-hoist):**
 ```bash
-# Terminal 2 - Frontend on port 3000
-& "C:\Program Files\Git\bin\bash.exe" -c "cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio' && PORT=3000 pnpm run dev"
+cd g:\tp\ai\portofolio-dashbaord\artifacts\portfolio
+PORT=3000 pnpm run dev
 ```
 
 **App URL:** http://localhost:3000/
 
 ---
 
-## 📋 Smart Advisor Integration Progress
+## � LESSONS LEARNED & NOTES FOR NEXT TIME
+
+### Why This Setup is Complicated
+This is a **monorepo** (multiple packages in one repo) managed by **pnpm** with these constraints:
+1. **Native modules**: Tailwind CSS uses Rust-compiled bindings (@tailwindcss/oxide, esbuild, Rollup)
+   - Must compile for Windows x64 specifically
+   - Antivirus/Windows file locks can prevent installation
+2. **pnpm catalog system**: Uses custom `catalog:` URLs for version syncing
+   - npm doesn't understand this (only pnpm does)
+   - Must use `pnpm` or `pnpm.cmd`, never `npm`
+3. **Nested node_modules by default**: pnpm uses strict dependency isolation
+   - Build tools can't find each other's dependencies
+   - Need `--shamefully-hoist` flag to flatten the tree
+
+### Installation Order (CRITICAL)
+```bash
+# ✅ CORRECT ORDER:
+1. cd g:\tp\ai\portofolio-dashbaord
+2. pnpm install --shamefully-hoist
+3. cd artifacts/portfolio
+4. pnpm run dev
+
+# ❌ WRONG (will fail):
+1. cd g:\tp\ai\portofolio-dashbaord\artifacts\portfolio
+2. npm install       # ← Will fail with "Unsupported URL Type catalog:"
+3. pnpm run dev
+```
+
+### Windows-Specific Issues Encountered
+| Issue | Why | Solution |
+|-------|-----|----------|
+| EPERM on esbuild rename | File locks / antivirus blocking file operations | Use `--prefer-offline` flag or close other terminals |
+| PowerShell "execution policy" error | Windows security policy blocks npm scripts | Use `cmd.exe`, `pnpm.cmd`, or Git Bash |
+| "Cannot find package" errors | Missing `--shamefully-hoist` flag | Always add this flag when installing |
+
+### Performance Tips
+- First install takes 5-10 minutes (downloading/compiling native modules)
+- Subsequent installs are much faster (~30 seconds)
+- Use `--prefer-offline` if network is slow or flaky
+- On slow machines, `pnpm install --prefer-offline --shamefully-hoist` works best
+
+### Environment Requirements (MUST HAVE)
+✅ Node.js v22+ (or v24.18.0 as installed)
+✅ pnpm v11.17.0+
+✅ Windows x64 (required for native module compilation)
+❌ npm will NOT work (use pnpm only)
+❌ Older Node versions <v22 incompatible with yahoo-finance2
+
+### Files to Know
+- `pnpm-workspace.yaml` - Monorepo configuration, catalog versions, supply-chain settings
+- `package.json` (root) - Workspace scripts, root dependencies
+- `artifacts/portfolio/package.json` - Frontend dependencies (using catalog: URLs)
+- `artifacts/portfolio/vite.config.ts` - Vite build config with React, Tailwind, plugins
+- `tsconfig.base.json` - Shared TypeScript config for entire monorepo
+
+---
+## 🤖 AI MODEL EXPECTATIONS & RESPONSIBILITIES
+
+**When an AI model (like Copilot) works on this project, they MUST:**
+
+### BEFORE Starting Work
+1. ✅ **Read this instructions.md file** - Understand project constraints and setup
+2. ✅ **Check memory files** - Look for session/repo notes about known issues
+3. ✅ **Verify environment** - Confirm Node v22+, pnpm v11.17.0+
+4. ✅ **Document discoveries** - Add findings to this file or memory files
+
+### WHILE Working on This Project
+1. ✅ **Update instructions.md immediately** when discovering:
+   - New errors or issues not in this file
+   - Better solutions to existing problems
+   - New environment quirks or incompatibilities
+   - Version conflicts or dependency issues
+   
+2. ✅ **Create/update memory files** for:
+   - Session-specific investigation progress (`/memories/session/`)
+   - Repository-scoped findings (`/memories/repo/`)
+   - User preferences (`/memories/`)
+
+3. ✅ **Test on Windows** - This is a Windows-first project:
+   - Use Git Bash, not PowerShell
+   - Consider antivirus/file lock issues
+   - Test with proper environment variable handling
+
+4. ✅ **Communicate clearly** - Document:
+   - Why a solution works (not just HOW to do it)
+   - Environment constraints and requirements
+   - Known incompatibilities
+   - Future developers' gotchas
+
+### WHEN Encountering NEW Issues
+1. **Don't guess** - Search/verify the root cause
+2. **Document it** - Add to instructions.md or memory files
+3. **Test the fix** - Verify solution works before moving on
+4. **Update this file** - Leave traces for next developer
+
+### Quality Standards for Documentation
+- ❌ DON'T: "Fixed error by running command X"
+- ✅ DO: "Error was caused by [root cause]. Fixed with [command]. Works because [explanation]"
+
+- ❌ DON'T: "Use pnpm instead of npm"
+- ✅ DO: "Use pnpm (not npm) because pnpm-workspace.yaml uses custom `catalog:` URLs that npm doesn't understand"
+
+- ❌ DON'T: "Run with --shamefully-hoist flag"
+- ✅ DO: "Run with --shamefully-hoist because pnpm's strict dependency isolation prevents build tools from finding each other. This flag flattens the node_modules tree."
+
+---
+## �📋 Smart Advisor Integration Progress
 
 ### ✅ Step 1: Database Tables (COMPLETED)
 Created schema for AI recommendation storage:
@@ -97,64 +358,328 @@ Need to wire: Dashboard lifecycle → `POST /api/advisor/generate` trigger
   - Started with: `& "C:\Program Files\Git\bin\bash.exe" -c "cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && PORT=8080 pnpm run start"`
   - Successfully fetching market data (USD/EGP rates, gold prices, etc.)
 
-### ❌ Issue
-- **Frontend** - Dependency installation issues with native modules (Rollup, Tailwind oxide)
-  - This is a Windows + pnpm lockfile compatibility issue
-  - Native modules not properly installed for Windows x64
+### ❌ Issue (BEING FIXED)
+- **Frontend** - Native module binding issues with Tailwind oxide and Rollup
+  - Windows x64 compatibility issue with @tailwindcss/oxide native bindings
+  - pnpm lockfile conflicts with npm package manager
+  - PowerShell execution policy blocking npm commands
 
-### 🔧 SOLUTION OPTIONS
+### 🔧 CURRENT TROUBLESHOOTING (2026-08-16)
 
-**Option 1: Use the VSCode Tasks (Recommended)**
-1. Open Command Palette: `Ctrl+Shift+P`
-2. Type "Run Task"
-3. Select one of the start tasks if available
+**STATUS: NEARLY FIXED**
+- Issue: Native modules failing to load (@tailwindcss/oxide, esbuild, rollup)
+- Progress: Installing with `pnpm install --shamefully-hoist` to flatten dependencies
+- Next: Start frontend once installation completes
 
-**Option 2: Use Docker** (If available)
-The monorepo likely has Docker support. Check for `Dockerfile` or `docker-compose.yml`.
-
-**Option 3: Manual Fix**
-1. Delete lock files and reinstall from root:
+**Working command:**
 ```bash
-cd g:\tp\ai\portofolio-dashbaord
-rm -r node_modules pnpm-lock.yaml
-pnpm install --no-frozen-lockfile
-pnpm run --filter @workspace/portfolio dev
+pnpm install --shamefully-hoist
+pnpm run dev  # Frontend
+pnpm run start  # Backend (api-server)
 ```
 
-2. Or try with npm workspace:
+## ⚙️ ENVIRONMENT & DEPENDENCIES
+
+### Node.js & Package Manager
+- **Node.js**: v24.18.0 (or v22+)
+  - Requirement: Node 22+ for yahoo-finance2 v4 compatibility
+  - Check: `node --version`
+- **pnpm**: v11.17.0+ (required - npm will fail with monorepo)
+  - Check: `pnpm --version`
+  - Location: `C:\Users\HP\AppData\Roaming\npm\pnpm.cmd`
+  - Why: This is a monorepo with `pnpm-workspace.yaml` catalog system
+  - npm will complain about `catalog:` URLs (unsupported protocol)
+
+### Key Dependencies with Native Bindings
+⚠️ These require proper Windows x64 installation:
+1. **@tailwindcss/oxide** - Tailwind CSS Rust-compiled native module
+2. **@rollup/rollup-win32-x64-msvc** (v4.62.2) - Rollup Windows binary
+3. **esbuild** - JavaScript/TypeScript bundler with native bindings
+4. **lightningcss-win32-x64-msvc** - Lightning CSS native Windows module
+
+### Installation Flags (IMPORTANT)
 ```bash
-cd g:\tp\ai\portofolio-dashbaord
-npm install --workspaces
-npm run --workspace=@workspace/portfolio dev
+# Use --shamefully-hoist to flatten node_modules
+pnpm install --shamefully-hoist
+
+# This merges nested pnpm stores into root node_modules
+# Required for: Vite, Tailwind, and build tools to find each other
 ```
 
-**Option 4: Use Previous Working Vite Setup**
-The initially started Vite server on port 3001 was working. Try:
+### TypeScript Configuration
+- **tsconfig.json**: Root config with monorepo base paths
+- **tsconfig.base.json**: Shared base configuration
+- **artifacts/portfolio/tsconfig.json**: Frontend-specific config
+- Vite uses TypeScript config automatically (vite.config.ts)
+
+### Port Configuration
+- **Frontend (Portfolio)**: PORT=3000 (configurable via env)
+- **Backend (API Server)**: PORT=8080 (configurable via env)
+- Vite runs with `--host 0.0.0.0` to allow network access
+
+---
+
+## 🚀 WORKING START METHODS (2026-08-16)
+
+### Method 1: pnpm (RECOMMENDED - What Works)
 ```bash
+# REQUIRED: Full install with shamefully-hoist flag
+cd g:\tp\ai\portofolio-dashbaord
+pnpm install --shamefully-hoist
+
+# Terminal 1: Backend
+cd artifacts/api-server
+pnpm run start   # Uses PORT=8080 by default
+
+# Terminal 2: Frontend
+cd artifacts/portfolio
+pnpm run dev     # Uses PORT=3000 by default
+```
+
+### Method 2: Git Bash (Workaround for PowerShell restrictions)
+```bash
+# Use Git Bash if PowerShell has execution policy issues
+
+# Terminal 1: Backend
+"C:\Program Files\Git\bin\bash.exe" -c "cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && PORT=8080 pnpm run start"
+
+# Terminal 2: Frontend
+"C:\Program Files\Git\bin\bash.exe" -c "cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio' && PORT=3000 pnpm run dev"
+```
+
+### Method 3: cmd.exe (Bypass PowerShell)
+```cmd
+# Use cmd.exe if PowerShell execution policy is blocking
+
+cd /d g:\tp\ai\portofolio-dashbaord\artifacts\portfolio
+pnpm.cmd run dev
+
+# Or with explicit port
+cd /d g:\tp\ai\portofolio-dashbaord\artifacts\portfolio && SET PORT=3000 && pnpm.cmd run dev
+```
+
+### Method 4: Batch Files (From root)
+```batch
+cd g:\tp\ai\portofolio-dashbaord
+
+# Terminal 1
+start-backend.bat    # Runs on port 8080
+
+# Terminal 2  
+start-frontend.bat   # Runs on port 3000
+```
+
+---
+
+## 🔍 TROUBLESHOOTING CHECKLIST
+
+### Issue: "Cannot find native binding" errors
+**Root Cause**: Native modules (@tailwindcss/oxide, Rollup, esbuild) not compiled for Windows x64
+**Solution**:
+```bash
+cd g:\tp\ai\portofolio-dashbaord
+rm -rf node_modules artifacts/*/node_modules
+pnpm install --shamefully-hoist --force
+```
+
+### Issue: "Cannot find package esbuild/rollup/tailwind"
+**Root Cause**: pnpm strict dependency resolution (uses nested node_modules)
+**Solution**:
+```bash
+pnpm install --shamefully-hoist  # Flatten dependency tree
+```
+
+### Issue: "Unsupported URL Type 'catalog:'"
+**Root Cause**: Using npm instead of pnpm (npm doesn't understand pnpm catalog references)
+**Solution**: Use `pnpm.cmd` instead of `npm`
+
+### Issue: PowerShell execution policy error
+**Root Cause**: Windows PowerShell security policy blocking npm/pnpm scripts
+**Solutions**:
+- Use `cmd.exe` or Git Bash instead
+- Or: Use batch files (start-backend.bat, start-frontend.bat)
+- Or: Run `pnpm.cmd` explicitly instead of `pnpm`
+
+### Issue: Port already in use
+**Solution**:
+```bash
+# Use custom ports
+PORT=4000 pnpm run dev    # Frontend on 4000
+PORT=9000 pnpm run start  # Backend on 9000
+```
+
+### Issue: "EPERM: operation not permitted" (esbuild/Windows)
+**Root Cause**: Windows file system or antivirus blocking rename operations during esbuild installation
+**Symptoms**: Error during `pnpm install`, file rename fails for esbuild package
+**Solutions** (in order of effectiveness):
+1. **Close other terminals and IDE instances**
+   - Close VSCode, close other PowerShell/cmd terminals
+   - This releases file locks that may block the operation
+2. **Use offline mode to skip re-downloading**
+   ```bash
+   pnpm install --prefer-offline
+   ```
+3. **Full clean reinstall with retry**
+   ```bash
+   cd g:\tp\ai\portofolio-dashbaord
+   pnpm install --shamefully-hoist --force --no-frozen-lockfile
+   ```
+4. **Disable Windows antivirus temporarily**
+   - Some antivirus software (McAfee, Norton, Avast) block file operations
+   - Try temporarily disabling real-time protection
+5. **If all else fails: Use Docker or remote dev environment**
+   - pnpm works reliably on Linux/Mac
+   - Consider using WSL2 (Windows Subsystem for Linux)
+
+### ⚠️ TROUBLESHOOTING IF STUCK (Step-by-Step Recovery)
+
+**If installation fails with "sh is not recognized", follow these steps:**
+
+The root `package.json` has a preinstall script that uses `sh` (shell), which doesn't exist on Windows by default.
+
+**Solution: Disable preinstall script temporarily**
+
+```bash
+# Use --ignore-scripts flag to skip the problematic preinstall
+pnpm install --ignore-scripts --shamefully-hoist --no-frozen-lockfile --prefer-offline
+
+# Then verify installation
+pnpm list --depth=0
+
+# Start frontend
+cd artifacts/portfolio
+pnpm run dev
+```
+
+**If that doesn't work, use Git Bash or WSL2:**
+```bash
+# Git Bash handles the sh -c command natively
+"C:\Program Files\Git\bin\bash.exe" -c "cd '/g/tp/ai/portofolio-dashbaord' && pnpm install --shamefully-hoist"
+```
+
+---
+
+**If installation fails with ANY other error, follow this checklist:**
+
+```bash
+# Step 1: Stop all running processes
+# Close all Terminal/PowerShell/cmd/VSCode windows
+# Wait 10 seconds
+
+# Step 2: Check for file locks
+# Open Task Manager → find "node.exe", "pnpm", "npm" → End Task
+# Close VSCode completely (it may be locking files)
+
+# Step 3: Clean everything
+cd g:\tp\ai\portofolio-dashbaord
+pnpm store prune        # Clean pnpm cache
+rm -r node_modules      # Delete node_modules (use PowerShell)
+
+# If PowerShell fails, use cmd.exe:
+cmd /c "cd /d g:\tp\ai\portofolio-dashbaord && rmdir /s /q node_modules"
+
+# Step 4: Full fresh install
+pnpm install --shamefully-hoist --no-frozen-lockfile --prefer-offline
+
+# Step 5: Verify installation
+pnpm list --depth=0    # Should show all packages installed
+
+# Step 6: Start frontend
 cd g:\tp\ai\portofolio-dashbaord\artifacts\portfolio
-npm install
-npm run dev
+pnpm run dev           # Should see "VITE vX.X.X ready in XXXms"
 ```
 
-## Quick Start - EASIEST METHOD
+**If you still get errors:**
 
-Run the `.bat` files from root directory `g:\tp\ai\portofolio-dashbaord\`:
+1. Try from a **fresh cmd.exe window** (right-click → "Run as administrator")
+2. Use `pnpm.cmd` explicitly instead of `pnpm`
+3. Check if antivirus is running → disable it temporarily
+4. Verify Node version: `node --version` (should be v22+)
+5. Clear pnpm global cache: `pnpm config set store-dir %APPDATA%\pnpm-store`
+6. As last resort: Use WSL2 or Docker (pnpm works perfectly on Linux)
 
-### Terminal 1: Start Backend
-```batch
-start-backend.bat
+---
+
+## ✅ VERIFICATION & DEBUGGING
+
+### How to Verify Frontend is Running
+```bash
+# Check if Vite dev server started
+# Look for output like:
+#   VITE v7.x.x ready in XXX ms
+#   ➜  Local:   http://localhost:3000/
+#   ➜  Network: http://192.168.x.x:3000/
+
+# Browser should load at: http://localhost:3000/
+# If page doesn't load, check:
+1. Terminal output for errors
+2. Node version: node --version (should be v22+)
+3. pnpm version: pnpm --version (should be v11.17.0+)
+4. Port 3000 is free: netstat -ano | findstr :3000
 ```
 
-Waits for: `Server listening on http://localhost:8080`
+### Enable Debug Logging (if needed)
+```bash
+# Set debug environment to see what pnpm is doing
+DEBUG=pnpm:* pnpm run dev
 
-### Terminal 2: Start Frontend  
-```batch
-start-frontend.bat
+# Or for Vite specifically
+DEBUG=vite pnpm run dev
 ```
 
-Frontend will start at:
-- **Local:** http://localhost:3000/
-- **Network:** Check terminal output for the address
+### Check Installation Status
+```bash
+# Verify all dependencies are installed
+pnpm list    # Shows all installed packages
+pnpm list --depth=0  # Show only top-level packages
+
+# Check for broken dependencies
+pnpm install --check-files
+```
+
+---
+
+## 📦 MONOREPO STRUCTURE & CONFIGURATION
+
+### pnpm Workspace Setup
+```yaml
+# pnpm-workspace.yaml defines:
+packages:
+  - artifacts/*    (portfolio, api-server, mockup-sandbox)
+  - lib/*          (shared libraries)
+  - lib/integrations/*
+  - scripts
+
+# Catalog system (synchronized versions)
+- All @vitejs, @replit, @tailwindcss, @tanstack deps use catalog versions
+- Prevents version mismatches across workspace packages
+```
+
+### Vite Configuration (artifacts/portfolio/vite.config.ts)
+```typescript
+// Environment variables:
+- PORT: Custom port (default: 3001)
+- BASE_PATH: URL base path (default: '/')
+- NODE_ENV: 'production' | 'development'
+- REPL_ID: Replit environment detection
+
+// Plugins:
+- @vitejs/plugin-react: Fast Refresh
+- @tailwindcss/vite: Tailwind compilation (uses native oxide)
+- @replit/vite-plugin-runtime-error-modal: Dev error overlay
+- @replit/vite-plugin-cartographer: File explorer (Replit only)
+- @replit/vite-plugin-dev-banner: Replit dev banner
+```
+
+### Build Commands (from artifacts/portfolio/package.json)
+```json
+"dev":       "vite --config vite.config.ts --host 0.0.0.0"
+"build":     "vite build --config vite.config.ts"
+"serve":     "vite preview --config vite.config.ts --host 0.0.0.0"
+"typecheck": "tsc -p tsconfig.json --noEmit"
+```
+
+---
 
 ## Alternative - Manual Start with Git Bash
 
@@ -170,22 +695,6 @@ PORT=8080 pnpm run start
 ```bash
 cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio'
 PORT=3000 pnpm run dev
-```
-
-## Alternative - Direct PowerShell (if pnpm works)
-
-If you have pnpm installed and working in PowerShell:
-
-### Terminal 1: Backend
-```powershell
-cd g:\tp\ai\portofolio-dashbaord
-& pnpm run --filter @workspace/api-server start
-```
-
-### Terminal 2: Frontend
-```powershell
-cd g:\tp\ai\portofolio-dashbaord  
-& pnpm run --filter @workspace/portfolio dev
 ```
 
 ## Project Structure
@@ -291,11 +800,74 @@ UI components are already set up from shadcn/ui. Check `src/components/ui/` to s
 
 ## Building for Production
 
+### Production Build Steps
 ```bash
-npm run build
+cd g:\tp\ai\portofolio-dashbaord\artifacts\portfolio
+
+# Build the app (creates dist/ folder)
+pnpm run build
+
+# Verify build succeeded (check for errors)
+# Output should show: "✓ built in XXXms"
+
+# Preview production build locally (optional)
+pnpm run serve
+# Will run on http://localhost:4173/
 ```
 
-Output will be in the `dist/` folder.
+### Build Output
+- **Location**: `artifacts/portfolio/dist/` folder
+- **Contents**: 
+  - `index.html` - Main entry point
+  - `assets/` - JavaScript bundles (minified & optimized)
+  - `*.js`, `*.css` - Compiled assets
+  - Ready to deploy to any static hosting (Netlify, Vercel, GitHub Pages, etc.)
+
+### Build Performance Tips
+- Build takes 30-60 seconds on first run (compiles TypeScript, bundles React, etc.)
+- Subsequent builds are faster (cached)
+- Build will fail if TypeScript errors exist - fix them with `pnpm run typecheck`
+
+### Environment Variables for Production
+Create `.env.production` or set before building:
+```bash
+# Set production API server URL
+VITE_API_URL=https://api.example.com  # Production API endpoint
+
+# Build with custom env
+VITE_API_URL=https://api.example.com pnpm run build
+```
+
+### Deployment (Examples)
+
+**Netlify/Vercel:**
+1. Connect GitHub repository
+2. Set build command: `pnpm run build`
+3. Set publish directory: `dist`
+4. Deploy automatically on push to `main` branch
+
+**Manual Static Hosting:**
+```bash
+# Build locally
+pnpm run build
+
+# Upload `dist/` folder contents to your web server
+# All files serve as static assets
+```
+
+**Docker Deployment:**
+```dockerfile
+# Create Dockerfile in root
+FROM node:24-alpine
+WORKDIR /app
+COPY . .
+RUN pnpm install --shamefully-hoist
+RUN pnpm run build
+EXPOSE 3000
+CMD ["pnpm", "run", "serve"]
+```
+
+---
 
 ## Dependencies
 
@@ -307,6 +879,32 @@ Output will be in the `dist/` folder.
 - **Sonner** - Toast notifications (see `components/ui/sonner.tsx`)
 
 ## Troubleshooting
+
+### "Refresh Prices" Returns 0 Results / Yahoo Finance Returns Fail (FIXED 2026-08-16)
+
+**Error:** `Call const yahooFinance = new YahooFinance() first. Upgrading from v2?`
+
+**Cause:** Import path was wrong in scraper:
+- Was importing old file: `artifacts/api-server/judge/enrichReturnsFromYahoo.ts` (v2 API, incompatible)
+- Should import new file: `artifacts/api-server/src/judge/enrichReturnsFromYahoo.ts` (v4 HTTP-based, works)
+
+**Fix Applied:**
+1. ✅ Changed import in `artifacts/api-server/src/scraper/runScraper.ts` line 19:
+   - From: `import { enrichReturnsFromYahoo } from "../../judge/enrichReturnsFromYahoo";`
+   - To: `import { enrichReturnsFromYahoo } from "../judge/enrichReturnsFromYahoo";`
+
+2. ✅ Deleted the old incompatible file: `artifacts/api-server/judge/enrichReturnsFromYahoo.ts`
+
+**Why it works now:**
+- New implementation uses direct HTTP fetch to Yahoo's quoteSummary endpoint
+- No library version conflicts
+- Compatible with yahoo-finance2 v4+
+
+**To test:** Run `npx tsx src/scraper/runScraper.ts` in the api-server folder
+
+**Note:** Stocks still won't show in the UI until they're marked `is_held = true` in the database
+
+---
 
 ### "Couldn't load your portfolio" - HTTP 500 Internal Server Error
 

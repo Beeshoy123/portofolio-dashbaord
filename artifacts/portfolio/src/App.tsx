@@ -177,9 +177,9 @@ export default function App() {
           showing placeholder zeros, not real figures.
         </div>
       )}
-      <div className="flex gap-4">
-        <div ref={containerRef} className="flex-1" />
-        <div className="w-96">
+      <div className="flex flex-col gap-6">
+        <div ref={containerRef} className="w-full" />
+        <div>
           <SmartAdvisorPanel />
         </div>
       </div>

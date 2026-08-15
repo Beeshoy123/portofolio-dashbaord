@@ -413,8 +413,10 @@ router.post("/portfolio/scan", async (req, res) => {
     apiKey?: string;
   };
 
-  if (!image || !mimeType || !mode || !apiKey) {
-    res.status(400).json({ error: "Missing required fields: image, mimeType, mode, apiKey" });
+  const resolvedApiKey = apiKey || process.env.GEMINI_API_KEY;
+
+  if (!image || !mimeType || !mode || !resolvedApiKey) {
+    res.status(400).json({ error: "Missing required fields: image, mimeType, mode, and a valid Gemini API key." });
     return;
   }
 
@@ -480,7 +482,7 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
   for (const model of MODEL_FALLBACK_CHAIN) {
     lastModel = model;
     const attempt = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${resolvedApiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -516,25 +518,89 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
     // else: try next model in the chain
   }
 
+  // If Gemini failed, try Qwen as fallback
+  let qwenRes: Response | undefined;
   if (!geminiRes || !geminiRes.ok) {
-    const status = geminiRes?.status ?? 429;
+    const qwenApiKey = process.env.QWEN_API_KEY;
+    if (qwenApiKey) {
+      try {
+        const qwenAttempt = await fetch("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${qwenApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "qwen-vl-max-latest",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: prompt },
+                  {
+                    type: "image_url",
+                    image_url: { url: `data:${mimeType};base64,${image}` },
+                  },
+                ],
+              },
+            ],
+            max_tokens: 256,
+            temperature: 0.1,
+          }),
+        });
+
+        if (qwenAttempt.ok) {
+          qwenRes = qwenAttempt;
+        } else {
+          const qwenErr = (await qwenAttempt.json().catch(() => ({}))) as {
+            error?: { message?: string };
+          };
+          console.warn(
+            `[scan] Qwen fallback failed (status: ${qwenAttempt.status}): ${qwenErr?.error?.message ?? "no detail"}`,
+          );
+        }
+      } catch (e) {
+        console.warn(`[scan] Qwen fallback error: ${e}`);
+      }
+    }
+  }
+
+  // If both Gemini and Qwen failed, use Qwen response if available, else Gemini
+  const finalRes = (qwenRes && qwenRes.ok) ? qwenRes : geminiRes;
+
+  if (!finalRes || !finalRes.ok) {
+    const status = finalRes?.status ?? 429;
     // Log the technical detail server-side for debugging, but show the user
     // a plain-language message — they can't act on a raw Google API string.
     console.warn(
-      `[scan] all models exhausted (last: ${lastModel}, status: ${status}): ${lastErrData?.error?.message ?? "no detail"}`,
+      `[scan] all models exhausted (Gemini: ${lastModel}, status: ${status}): ${lastErrData?.error?.message ?? "no detail"}`,
     );
     const friendlyMessage =
       status === 429 || status === 503
-        ? "Gemini is busy or your key's quota is used up right now. Wait a bit and try again, or enter the values manually."
+        ? "AI models are busy or quota exhausted. Wait a bit and try again, or enter the values manually."
         : "Could not read the image — please try again or enter the values manually.";
     res.status(status).json({ error: friendlyMessage });
     return;
   }
 
-  const data = (await geminiRes.json()) as {
+  const data = (await finalRes.json()) as {
     candidates?: { content?: { parts?: { text?: string }[] } }[];
+    choices?: { message?: { content?: string } }[];
   };
-  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
+  
+  // Handle both Gemini (candidates) and Qwen (choices) response formats
+  let raw = "";
+  if (data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+    raw = data.candidates[0].content.parts[0].text.trim();
+  } else if (data?.choices?.[0]?.message?.content) {
+    raw = data.choices[0].message.content.trim();
+  }
+
+  if (!raw) {
+    res.status(422).json({ error: "AI returned empty response. Try a clearer screenshot." });
+    return;
+  }
+
   const cleaned = raw
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/i, "")

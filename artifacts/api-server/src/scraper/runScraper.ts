@@ -17,7 +17,7 @@ import { parseFundPage } from "./parseFund";
 import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
-import { enrichReturnsFromYahoo } from "../../judge/enrichReturnsFromYahoo";
+import { enrichReturnsFromYahoo } from "../judge/enrichReturnsFromYahoo";
 import { judgeAllHoldings } from "../../judge/comparisonJudge";
 
 const pool = new Pool({

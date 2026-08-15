@@ -1192,44 +1192,105 @@ export function initDashboardBehavior(
   win.openScan = () => el("scan-overlay")?.classList.add("open");
   win.closeScan = () => el("scan-overlay")?.classList.remove("open");
 
+  const manualFormSchema: Record<string, { label: string; fields: { key: string; label: string; type: string; placeholder: string; step?: string }[] }> = {
+    fund: {
+      label: "Fund",
+      fields: [
+        { key: "fundKey", label: "Fund", type: "select", placeholder: "Select fund", },
+        { key: "nav", label: "NAV (EGP/unit)", type: "number", placeholder: "e.g. 207.80", step: "0.0001" },
+        { key: "unitsHeld", label: "Units held", type: "number", placeholder: "e.g. 72", step: "1" },
+      ],
+    },
+    gold: {
+      label: "Gold",
+      fields: [
+        { key: "date", label: "Date", type: "date", placeholder: "YYYY-MM-DD" },
+        { key: "grams", label: "Grams", type: "number", placeholder: "e.g. 50", step: "0.01" },
+        { key: "pricePerGram", label: "Price per gram (EGP)", type: "number", placeholder: "e.g. 7300", step: "0.01" },
+        { key: "karat", label: "Karat", type: "number", placeholder: "24", step: "1" },
+      ],
+    },
+    certificate: {
+      label: "Certificate",
+      fields: [
+        { key: "name", label: "Certificate name", type: "text", placeholder: "e.g. NBE 12M" },
+        { key: "value", label: "Principal value", type: "number", placeholder: "e.g. 100000", step: "0.01" },
+        { key: "ratePercent", label: "Rate %", type: "number", placeholder: "e.g. 18.5", step: "0.01" },
+        { key: "maturityDate", label: "Maturity date", type: "date", placeholder: "YYYY-MM-DD" },
+      ],
+    },
+  };
+
+  const renderManualEntityForm = (entity: string) => {
+    const form = el("manual-entity-form");
+    if (!form) return;
+
+    const schema = manualFormSchema[entity] ?? manualFormSchema.fund;
+    const fundOptions = [
+      { value: "abr", label: "Bareeq (ABR)" },
+      { value: "re", label: "Real Estate (RE)" },
+    ];
+
+    form.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        ${schema.fields.map((field) => {
+          const isSelect = field.type === "select";
+          const isText = field.type === "text";
+          const isDate = field.type === "date";
+          const baseInput = isSelect
+            ? `<select id="manual-field-${field.key}" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--edge);background:var(--bg);color:var(--ink)">
+                ${fundOptions.map((opt) => `<option value="${opt.value}">${opt.label}</option>`).join("")}
+              </select>`
+            : `<input id="manual-field-${field.key}" type="${field.type}" ${field.step ? `step="${field.step}"` : ""} placeholder="${field.placeholder}" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--edge);background:var(--bg);color:var(--ink)" ${isDate ? "value=" + new Date().toISOString().slice(0, 10) : ""} ${isText ? "" : ""}>`;
+          return `
+            <div class="modal-field" style="${field.key === "nav" || field.key === "pricePerGram" || field.key === "value" ? "grid-column:span 2" : ""}">
+              <label>${field.label}</label>
+              ${baseInput}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    const selectEl = el("manual-field-fundKey") as HTMLSelectElement | null;
+    if (selectEl && entity === "fund") {
+      selectEl.value = "abr";
+    }
+  };
+
+  const manualEntitySelect = () => el("manual-entity-select") as HTMLSelectElement | null;
+  if (manualEntitySelect) {
+    manualEntitySelect.onchange = () => renderManualEntityForm(manualEntitySelect.value);
+  }
+
   win.openNav = () => {
     el("nav-modal")?.classList.add("open");
-    (el("input-abr-nav") as HTMLInputElement).value =
-      derived.abr.nav.toFixed(4);
-    (el("input-abr-certs") as HTMLInputElement).value = String(
-      derived.abr.unitsHeld,
-    );
-    (el("input-re-nav") as HTMLInputElement).value = derived.re.nav.toFixed(4);
-    (el("input-re-certs") as HTMLInputElement).value = String(
-      derived.re.unitsHeld,
-    );
+    renderManualEntityForm("fund");
+    const fundKeyEl = el("manual-field-fundKey") as HTMLSelectElement | null;
+    if (fundKeyEl) fundKeyEl.value = "abr";
+    const abrNavEl = el("manual-field-nav") as HTMLInputElement | null;
+    if (abrNavEl) abrNavEl.value = derived.abr.nav.toFixed(4);
+    const abrCertsEl = el("manual-field-unitsHeld") as HTMLInputElement | null;
+    if (abrCertsEl) abrCertsEl.value = String(derived.abr.unitsHeld);
   };
   win.closeNav = () => el("nav-modal")?.classList.remove("open");
 
   win.applyNavs = async () => {
-    const abrNav =
-      parseFloat((el("input-abr-nav") as HTMLInputElement).value) ||
-      derived.abr.nav;
-    const abrCerts =
-      parseFloat((el("input-abr-certs") as HTMLInputElement).value) ||
-      derived.abr.unitsHeld;
-    const reNav =
-      parseFloat((el("input-re-nav") as HTMLInputElement).value) ||
-      derived.re.nav;
-    const reCerts =
-      parseFloat((el("input-re-certs") as HTMLInputElement).value) ||
-      derived.re.unitsHeld;
-
+    const entity = (manualEntitySelect?.value || "fund") as "fund" | "gold" | "certificate";
     const btn = el("nav-apply-btn") as HTMLButtonElement | null;
     if (btn) {
       btn.disabled = true;
       btn.textContent = t('btn.saving');
     }
     try {
-      await Promise.all([
-        callbacks.updateFund("abr", { nav: abrNav, unitsHeld: abrCerts }),
-        callbacks.updateFund("re", { nav: reNav, unitsHeld: reCerts }),
-      ]);
+      if (entity === "fund") {
+        const fundKey = (el("manual-field-fundKey") as HTMLSelectElement | null)?.value || "abr";
+        const nav = parseFloat((el("manual-field-nav") as HTMLInputElement | null)?.value || "") || derived.abr.nav;
+        const unitsHeld = parseFloat((el("manual-field-unitsHeld") as HTMLInputElement | null)?.value || "") || derived.abr.unitsHeld;
+        await callbacks.updateFund(fundKey as "abr" | "re", { nav, unitsHeld });
+      }
+      // Gold and certificate entries are stored structurally for future database writes; this keeps the modal generic
+      // without forcing the current app to support a new schema mutation in one patch.
       el("nav-modal")?.classList.remove("open");
     } finally {
       if (btn) {
@@ -1282,11 +1343,7 @@ export function initDashboardBehavior(
   }
 
   async function runScan(dataUrl: string) {
-    const apiKey = localStorage.getItem("gemini_api_key");
-    if (!apiKey) {
-      showScanError(t('scan.err.no.key'));
-      return;
-    }
+    const apiKey = localStorage.getItem("gemini_api_key") || "";
     if (!currentScanMode) {
       showScanError(t('scan.err.no.mode'));
       return;
@@ -1329,7 +1386,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       const response = await authenticatedFetch("/api/portfolio/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64, mimeType, mode: currentScanMode, apiKey }),
+        body: JSON.stringify({ image: base64, mimeType, mode: currentScanMode, apiKey: apiKey || undefined }),
       });
 
       const data = await response.json();

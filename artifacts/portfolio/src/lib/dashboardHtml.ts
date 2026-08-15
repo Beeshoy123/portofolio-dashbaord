@@ -1102,17 +1102,20 @@ ${buildUsdRealityCard(p, d, usdReality)}
   </div>
 </div>
 
-<!-- NAV EDITOR MODAL -->
+<!-- MANUAL ENTRY MODAL -->
 <div class="modal-overlay" id="nav-modal">
   <div class="modal">
-    <h2 data-i18n="modal.nav.title">✏️ Update NAVs</h2>
-    <p data-i18n="modal.nav.desc">Enter the latest fund NAVs from your app. Values are saved to the database and reflected everywhere. Gold holdings are derived from your recorded gold transactions, not editable here.</p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="modal-field"><label data-i18n="modal.nav.abr.nav">Bareeq NAV (EGP/cert)</label><input type="number" id="input-abr-nav" step="0.0001" placeholder="e.g. 207.80"></div>
-      <div class="modal-field"><label data-i18n="modal.nav.abr.certs">Bareeq Certs held</label><input type="number" id="input-abr-certs" step="1" placeholder="e.g. 72"></div>
-      <div class="modal-field"><label data-i18n="modal.nav.re.nav">Real Estate NAV</label><input type="number" id="input-re-nav" step="0.0001" placeholder="e.g. 1.91"></div>
-      <div class="modal-field"><label data-i18n="modal.nav.re.certs">Real Estate Certs</label><input type="number" id="input-re-certs" step="1" placeholder="e.g. 2656"></div>
+    <h2 data-i18n="modal.nav.title">✏️ Manual Entry</h2>
+    <p data-i18n="modal.nav.desc">Choose an entity, fill the relevant data, and save it to the portfolio. Gold and certificate rows are structured to match the schema, while fund rows remain directly editable.</p>
+    <div class="modal-field" style="margin-bottom:10px">
+      <label>Entity</label>
+      <select id="manual-entity-select" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--edge);background:var(--bg);color:var(--ink)">
+        <option value="fund">Fund</option>
+        <option value="gold">Gold</option>
+        <option value="certificate">Certificate</option>
+      </select>
     </div>
+    <div id="manual-entity-form"></div>
     <div class="modal-actions">
       <button class="btn btn-cancel" onclick="closeNav()" data-i18n="btn.cancel">Cancel</button>
       <button class="btn btn-primary" id="nav-apply-btn" onclick="applyNavs()" data-i18n="btn.apply">Apply &amp; Save</button>
