@@ -14,6 +14,7 @@ import { computeDerived } from './lib/portfolioMath';
 import { buildDashboardHtml } from './lib/dashboardHtml';
 import { initDashboardBehavior } from './lib/dashboardBehavior';
 import { runUSDRealityCheck } from './lib/usdRealityEngine';
+import { SmartAdvisorPanel } from './components/SmartAdvisorPanel';
 
 // Shown only in place of real data when the database has no rows yet, so the
 // full widget/card/heatmap layout can still be previewed with its real CSS —
@@ -176,7 +177,12 @@ export default function App() {
           showing placeholder zeros, not real figures.
         </div>
       )}
-      <div ref={containerRef} />
+      <div className="flex gap-4">
+        <div ref={containerRef} className="flex-1" />
+        <div className="w-96">
+          <SmartAdvisorPanel />
+        </div>
+      </div>
     </>
   );
 }
