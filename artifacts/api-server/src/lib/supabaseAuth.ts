@@ -1,5 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Request, Response, NextFunction } from "express";
+import WebSocket from "ws";
+
+// Supabase eagerly constructs its Realtime client during createClient().
+// Replit's API workflow runs on Node 20, which does not expose a native
+// WebSocket global. Realtime is not used by this API, but it still needs a
+// compatible constructor to let the auth client initialize.
+const runtime = globalThis as typeof globalThis & {
+  WebSocket?: typeof WebSocket;
+};
+if (!runtime.WebSocket) {
+  runtime.WebSocket = WebSocket;
+}
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error(

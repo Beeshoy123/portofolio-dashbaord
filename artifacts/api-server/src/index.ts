@@ -18,7 +18,9 @@ config(
   dotenvPath
     ? {
         path: dotenvPath,
-        override: process.env.NODE_ENV !== "production",
+        // Workflow-provided values such as PORT must take precedence over
+        // local .env defaults (the Replit API workflow uses port 8080).
+        override: false,
       }
     : undefined,
 );
