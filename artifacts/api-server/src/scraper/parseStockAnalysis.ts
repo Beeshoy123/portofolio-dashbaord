@@ -28,7 +28,7 @@
 //
 // npm installs needed: cheerio (already a dependency — see parseStock.ts)
 
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 
 const BASE_URL = "https://stockanalysis.com/quote/egx/";
 
