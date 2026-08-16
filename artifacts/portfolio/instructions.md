@@ -116,29 +116,48 @@
 
 ## ⚡ QUICKEST START (60 seconds)
 
-### Windows Users - COPY THIS (Use Git Bash, NOT PowerShell):
-Open Git Bash and run:
+### Windows Users - SETUP GIT BASH FIRST
+**⚠️ CRITICAL: PowerShell WILL NOT WORK - you must use Git Bash**
+
+**Step 1: Set Git Bash as default terminal in VS Code**
+1. Open VS Code terminal: `Ctrl + ~`
+2. Click the dropdown arrow next to "+" in the terminal panel
+3. Select "Git Bash" (if not listed, click "Select Default Profile" and choose Git Bash)
+4. Close current terminal (`Ctrl + Shift + ~`) and open new one (`Ctrl + ~`)
+5. Verify prompt shows `$` (bash), NOT `>` (PowerShell)
+
+**Step 2: Setup (run ONCE in Git Bash)**
 ```bash
 cd '/g/tp/ai/portofolio-dashbaord'
 pnpm install --ignore-scripts --shamefully-hoist --no-frozen-lockfile --prefer-offline
 pnpm rebuild  # Critical for Windows: compiles native modules like esbuild
 ```
 
-**Terminal 1** (Backend on 8080):
+**Step 3: BACKEND FIRST - Terminal 1 (REQUIRED - runs on port 8080)**
+⚠️ **START THIS FIRST - Frontend won't work without it!**
 ```bash
-cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && node --enable-source-maps ./build.mjs && PORT=8080 node --enable-source-maps ./dist/index.mjs
+cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server'
+PORT=8080 node --enable-source-maps ./dist/index.mjs
+```
+✅ Wait for this output before starting frontend:
+```
+Server listening port: 8080
+gold-price-cache: scraped fresh prices
 ```
 
-**Terminal 2** (Frontend on 3000):
+**Step 4: FRONTEND - Terminal 2 (runs on port 3001)**
 ```bash
-cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio' && PORT=3000 pnpm run dev
+cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio'
+PORT=3001 pnpm run dev
 ```
 
-**App URL:** http://localhost:3000/
+**App URL:** http://localhost:3001/
+⚠️ **BOTH servers must be running simultaneously**
 
-⚠️ **IMPORTANT**: Use **Git Bash** (`C:\Program Files\Git\bin\bash.exe`), NOT PowerShell!
+⚠️ **IMPORTANT**: Use **Git Bash ONLY**!
 - PowerShell has execution policy blocking npm/pnpm commands
 - Git Bash has `sh` support for the preinstall script
+- If you see PowerShell `>` prompt, your terminal is wrong - change it in VS Code settings
 
 ---
 
@@ -146,31 +165,127 @@ cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio' && PORT=3000 pnpm run dev
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
+| SmartAdvisor Token Limit Issue (Groq API) | SmartAdvisor API request too large for Groq model | See [SmartAdvisor Token Limit Issue](#smartadvisor-token-limit-issue-new-2026-08-16) |
+| "The server does not support SSL connections" | Database can't connect to Supabase over SSL (Windows firewall issue) | See [Database SSL Connection Issue](#database-ssl-connection-issue-new-2026-08-16) |
+| "Couldn't load your portfolio. HTTP 500 Internal Server Error" | Backend API not running OR database SSL error | **Start backend FIRST**: `cd artifacts/api-server && PORT=8080 node --enable-source-maps ./dist/index.mjs` (see [QUICKEST START](#-quickest-start-60-seconds)) |
+| "running scripts is disabled on this system" | Using PowerShell instead of Git Bash | **Set Git Bash as default terminal in VS Code** (see [QUICKEST START](#-quickest-start-60-seconds)) |
 | "Cannot find native binding" | Native modules not compiled | `pnpm install --shamefully-hoist --force` |
 | "Cannot find package esbuild" | pnpm using nested modules | Add `--shamefully-hoist` flag |
 | "Unsupported URL Type catalog:" | Using npm instead of pnpm | Use `pnpm.cmd` or `pnpm` |
-| PowerShell execution error | Windows security policy | **Use Git Bash instead** (`C:\Program Files\Git\bin\bash.exe`) |
 | "sh is not recognized" | Preinstall script uses `sh` | Use `pnpm install --ignore-scripts` or Git Bash |
 | Port already in use | Another app on same port | `PORT=4000 pnpm run dev` |
 | EPERM: operation not permitted (esbuild) | Antivirus/Windows blocking file ops | Close other terminals; try `pnpm install --prefer-offline` |
 
 ---
 
-## 🚀 TL;DR Quick Start (Detailed)
+## SmartAdvisor Token Limit Issue (NEW - 2026-08-16)
 
-**Backend API Server (WORKING):**
+### Problem
+When portfolio loads, the SmartAdvisor panel throws: 
+```
+Error handling model response
+Request too large for model 'llama-3.3-70b-version-3' context_length_exceeded
+```
+
+### Root Cause
+The backend's SmartAdvisor feature generates AI recommendations using Groq's Llama 3.3 API. When analyzing portfolio data, the context (portfolio state + analysis prompt) exceeds Llama 3.3's token limit of 12,000 tokens.
+
+**Current state:** Request size = 16,733 tokens (4,733 tokens over limit)
+
+### Solutions
+
+**Option 1: Disable SmartAdvisor (QUICKEST - recommended for now)**
+1. Edit [src/App.tsx](src/App.tsx#L183)
+2. Comment out or remove the `<SmartAdvisorPanel />` line
+3. Frontend will load portfolio data without advisor recommendations
+
+**Option 2: Reduce context size in SmartAdvisor**
+- Edit [src/components/SmartAdvisorPanel.tsx](src/components/SmartAdvisorPanel.tsx#L60)
+- Reduce the number of holdings analyzed or simplify the analysis prompt
+- Target: reduce context to <10,000 tokens
+
+**Option 3: Switch to different AI model** (requires backend changes)
+- Update backend API to use Groq's Llama 3.1 405B (larger context: 131k tokens)
+- Or switch to Claude 3.5 Sonnet via Anthropic API
+- Requires adding API key configuration to `.env`
+
+### Status
+**Investigating** - Will need to decide whether to:
+1. Remove SmartAdvisor as non-essential feature
+2. Rewrite to work within token limits
+3. Switch to larger-context model
+
+---
+
+## Database SSL Connection Issue (NEW - 2026-08-16)
+
+### Problem
+Backend API shows repeated errors:
+```
+Error: Failed query: select "id", "cashback_per_gram" from "gold_settings"
+caused by: Error: The server does not support SSL connections
+```
+Portfolio data fails to load with **HTTP 500 Internal Server Error**.
+
+### Root Cause
+This is a **Windows firewall / SSL certificate validation issue** when connecting to remote Supabase PostgreSQL database. 
+
+The backend tries to connect via: `postgresql://postgres:PASSWORD@db.gcyuahzdvaodrqijjqba.supabase.co:5432/postgres`
+
+Attempted fixes that didn't work:
+- ❌ `?sslmode=disable` - Still fails with SSL error
+- ❌ `?sslmode=require` - Still fails with SSL error  
+- ❌ Restarting backend - Error persists
+
+This suggests the issue is at the OS/network level, not the connection string.
+
+### Why This Matters
+**The app cannot run without database access** - every feature (portfolio data, gold prices, fund holdings, certificates, transactions) requires querying the Supabase database.
+
+### Solutions
+
+**Option 1: Use Local PostgreSQL** (RECOMMENDED for development)
+1. Install PostgreSQL 15+ on Windows
+2. Create a local database matching schema in `artifacts/api-server/src/lib/migrations/`
+3. Update `.env`: `DATABASE_URL=postgresql://postgres:password@localhost:5432/portfolio`
+4. Run migrations to set up tables
+
+**Option 2: Disable Windows Firewall** (RISKY - for testing only)
+- Temporarily disable Windows Defender Firewall or allow Node.js through it
+- `Settings → Privacy & Security → Windows Security → Firewall → Allow apps through firewall`
+- Add Node.js and Git to allowed apps
+
+**Option 3: Use Windows Proxy/VPN** (If behind corporate firewall)
+- Configure proxy in `.env` or Node environment:
+  ```bash
+  set HTTP_PROXY=http://proxy-server:port
+  set HTTPS_PROXY=http://proxy-server:port
+  ```
+
+**Option 4: Test from Different Network**
+- Try running on WiFi, different PC, or mobile hotspot to isolate if it's network-specific
+
+### Status
+**BLOCKED** - Database connectivity required to proceed. Need to implement one of the above solutions before portfolio can load.
+
+⚠️ **BACKEND MUST RUN FIRST - Frontend depends on it for portfolio data**
+
+**Terminal 1 - Backend API Server (REQUIRED - port 8080):**
 ```bash
 cd g:\tp\ai\portofolio-dashbaord\artifacts\api-server
-PORT=8080 pnpm run start
+PORT=8080 node --enable-source-maps ./dist/index.mjs
 ```
+✅ Wait for: `Server listening port: 8080`
 
-**Frontend (FIXED WITH pnpm --shamefully-hoist):**
+**Terminal 2 - Frontend (port 3001):**
 ```bash
 cd g:\tp\ai\portofolio-dashbaord\artifacts\portfolio
-PORT=3000 pnpm run dev
+PORT=3001 pnpm run dev
 ```
 
-**App URL:** http://localhost:3000/
+**App URL:** http://localhost:3001/
+
+**BOTH must be running simultaneously or you'll see "HTTP 500 Internal Server Error"**
 
 ---
 

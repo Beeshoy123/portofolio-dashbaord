@@ -179,9 +179,8 @@ export default function App() {
       )}
       <div className="flex flex-col gap-6">
         <div ref={containerRef} className="w-full" />
-        <div>
-          <SmartAdvisorPanel />
-        </div>
+        {/* SmartAdvisorPanel disabled due to Groq API token limit issue - see instructions.md */}
+        {/* <SmartAdvisorPanel /> */}
       </div>
     </>
   );
