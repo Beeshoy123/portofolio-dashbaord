@@ -4,6 +4,7 @@
 
 import { Pool } from "pg";
 import type { HoldingVerdict, ComparisonGroup, ComparisonEntry } from "./types";
+import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -15,12 +16,23 @@ async function judgeHolding(
   holding: any,
   period: "return_1y" | "return_6m" | "return_3m"
 ): Promise<HoldingVerdict> {
+  // Fetch fundamentals data for all holdings
+  const fundamentals = await getLatestFundamentals();
+  
   // Placeholder: implement based on your actual comparison logic
   // For now, this returns a minimal valid verdict
   
   const signal: "Strong" | "Mixed" | "Weak" = "Mixed";
   const flags: string[] = [];
   const groups: ComparisonGroup[] = [];
+
+  // NEW: compute fundamentals_flags_found flag
+  // Only check entities beating you (gap_percent < 0) with fundamentals concerns
+  const fundamentals_flags_found = groups.some((g) =>
+    g.entries.some(
+      (e) => e.gap_percent !== null && e.gap_percent < 0 && e.fundamentals && e.fundamentals.flags.length > 0
+    )
+  );
 
   const verdict: HoldingVerdict = {
     holding_ticker: holding.ticker,
@@ -33,6 +45,7 @@ async function judgeHolding(
     signal,
     flags,
     data_completeness_warning: false,
+    fundamentals_flags_found,
   };
 
   // V2 Alert System -- Step 1: log every verdict so Time Stop / Thesis

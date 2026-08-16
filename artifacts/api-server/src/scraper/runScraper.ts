@@ -1,23 +1,33 @@
 // Comparison Judge — Scraper Orchestrator
 //
-// Run this on a schedule (weekly, per the design decision earlier in this
-// project). It:
+// CHANGED: Yahoo Finance enrichment replaced with stockanalysis.com
+// fundamentals. The old enrichReturnsFromYahoo() was a dead stub — it
+// fetched a current price and then always wrote NULL for
+// return_30d/ytd/1y (see that file's own TODO comment). It never actually
+// enriched anything, so this isn't a like-for-like swap of working code —
+// it's real data replacing a no-op.
+//
+// Run this on a schedule (weekly, per the original design decision). It:
 //   1. Reads the fixed watchlist from comparison_watchlist
-//   2. Calls the right parser per entity_type
+//   2. Calls the right parser per entity_type (funds/stocks/indices from
+//      FoudaLens, exactly as before — unchanged)
 //   3. Inserts one row per entity into comparison_snapshots
+//   4. NEW: fetches fundamentals for every stock from stockanalysis.com
+//      and inserts into the new stock_fundamentals table
 //
 // Usage: `npx tsx scraper/runScraper.ts` (or wire into a Replit
 // scheduled deployment / cron trigger)
 //
 // Requires: npm install cheerio playwright pg
 // (playwright: run `npx playwright install chromium` once after install)
+// Run migrations/007_stockanalysis_fundamentals.sql once before first use.
 
 import { Pool } from "pg";
 import { parseFundPage } from "./parseFund";
 import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
-import { enrichReturnsFromYahoo } from "../judge/enrichReturnsFromYahoo";
+import { parseStockAnalysis, type StockFundamentals } from "./parseStockAnalysis";
 import { judgeAllHoldings } from "../../judge/comparisonJudge";
 
 const pool = new Pool({
@@ -56,6 +66,68 @@ async function saveSnapshot(snapshot: ScrapedSnapshot): Promise<void> {
       snapshot.market_cap,
       snapshot.sector_rank,
       snapshot.raw_fetch_ok,
+    ]
+  );
+}
+
+async function saveFundamentals(f: StockFundamentals): Promise<void> {
+  await pool.query(
+    `INSERT INTO stock_fundamentals
+      (watchlist_id, price, price_change_percent, market_cap, revenue_ttm,
+       revenue_growth_percent, net_income, net_income_growth_percent, eps,
+       eps_growth_percent, shares_out, pe_ratio, forward_pe,
+       dividend_yield_percent, dividend_per_share, ex_dividend_date, volume,
+       week52_low, week52_high, beta, analyst_rating, price_target,
+       price_target_upside_percent, earnings_date, debt_to_equity,
+       current_ratio, roe_percent, roic_percent, cash_on_hand, total_debt,
+       net_cash_position, operating_cash_flow, capex, free_cash_flow,
+       gross_margin_percent, operating_margin_percent, net_margin_percent,
+       ev_to_ebitda, ev_to_fcf, shares_change_percent, raw_fetch_ok)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
+       $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,
+       $36,$37,$38,$39,$40)`,
+    [
+      f.watchlist_id,
+      f.price,
+      f.price_change_percent,
+      f.market_cap,
+      f.revenue_ttm,
+      f.revenue_growth_percent,
+      f.net_income,
+      f.net_income_growth_percent,
+      f.eps,
+      f.eps_growth_percent,
+      f.shares_out,
+      f.pe_ratio,
+      f.forward_pe,
+      f.dividend_yield_percent,
+      f.dividend_per_share,
+      f.ex_dividend_date,
+      f.volume,
+      f.week52_low,
+      f.week52_high,
+      f.beta,
+      f.analyst_rating,
+      f.price_target,
+      f.price_target_upside_percent,
+      f.earnings_date,
+      f.debt_to_equity,
+      f.current_ratio,
+      f.roe_percent,
+      f.roic_percent,
+      f.cash_on_hand,
+      f.total_debt,
+      f.net_cash_position,
+      f.operating_cash_flow,
+      f.capex,
+      f.free_cash_flow,
+      f.gross_margin_percent,
+      f.operating_margin_percent,
+      f.net_margin_percent,
+      f.ev_to_ebitda,
+      f.ev_to_fcf,
+      f.shares_change_percent,
+      f.raw_fetch_ok,
     ]
   );
 }
@@ -105,11 +177,11 @@ export async function main() {
     await sleep(2000);
   }
 
-  // --- Indices: ONE request total for all 3 ---
+  // --- Indices: unchanged ---
   if (indices.length > 0) {
     const targets = indices.map((idx) => ({
       watchlistId: idx.id,
-      label: idx.name.replace(" Index", ""), // "EGX30 Index" -> "EGX30"
+      label: idx.name.replace(" Index", ""),
     }));
     const snapshots = await parseIndexPage(targets);
     for (const snapshot of snapshots) {
@@ -119,45 +191,51 @@ export async function main() {
     console.log(`[index] fetched ${snapshots.length} indices from shared page`);
   }
 
-  console.log(`\nDone. ${successCount} succeeded, ${failCount} failed out of ${watchlist.length}.`);
-  if (failCount > 0) {
+  console.log(`\nSnapshots done. ${successCount} succeeded, ${failCount} failed out of ${watchlist.length}.`);
+
+  // --- NEW: stock fundamentals from stockanalysis.com ---
+  // Replaces enrichReturnsFromYahoo(), which never wrote real data (see
+  // header comment). 2 requests per stock (Overview + Statistics) — not
+  // per data point — so ~35 stocks = ~70 requests total.
+  let fundamentalsOk = 0;
+  let fundamentalsFailed = 0;
+
+  if (stocks.length > 0) {
+    console.log(`\nFetching fundamentals for ${stocks.length} stocks from stockanalysis.com...`);
+    for (const stock of stocks) {
+      const fundamentals = await parseStockAnalysis(stock.ticker, stock.id);
+      await saveFundamentals(fundamentals);
+      fundamentals.raw_fetch_ok ? fundamentalsOk++ : fundamentalsFailed++;
+      console.log(
+        `[fundamentals] ${stock.ticker}: ${fundamentals.raw_fetch_ok ? "OK" : "FAILED"} — ` +
+          `P/E ${fundamentals.pe_ratio}, price ${fundamentals.price}`
+      );
+      await sleep(1500); // polite delay between stocks (2 requests each, already spaced internally)
+    }
     console.log(
-      `Some entities failed — check logs above for which ones. This is expected on first run, especially for stock pages (see parseStock.ts comments) — inspect and adjust selectors before relying on this data.`
+      `Fundamentals done. ${fundamentalsOk} succeeded, ${fundamentalsFailed} failed out of ${stocks.length}.`
     );
+    if (fundamentalsFailed > 0) {
+      console.log(
+        `Some fundamentals fetches failed or came back partial — check the [parseStockAnalysis] logs above. ` +
+          `This is expected on the first run until extractLabeled() patterns are confirmed against real page text.`
+      );
+    }
   }
 
-  // After the FoudaLens scraper populates comparison_snapshots rows with
-  // price and FoudaLens score, enrich those rows with historical returns
-  // from Yahoo Finance for entities that have a mapped `yahoo_ticker`.
+  // --- Comparison Judge (unchanged) ---
   try {
-    console.log("Running Yahoo enrichment for 30d/YTD/1y returns...");
-    await enrichReturnsFromYahoo(pool);
-    console.log("Yahoo enrichment complete.");
-  } catch (err) {
-    console.error("Yahoo enrichment failed:", err);
-  }
-
-  // After enrichment, run the comparison judge to compute rotation verdicts
-  // so the system has fresh decisions available immediately after a price
-  // check completes. This mirrors what the UI's "Rotation Verdict" fetch
-  // would compute, but runs it proactively here and logs the summary.
-  try {
-    console.log("Running Comparison Judge for held positions...");
+    console.log("\nRunning Comparison Judge for held positions...");
     const verdicts = await judgeAllHoldings("return_1y");
     console.log(`Comparison Judge produced ${verdicts.length} verdicts.`);
   } catch (err) {
     console.error("Comparison Judge failed:", err);
   }
 
-  // BUG FIX: removed `await pool.end();` from here. This file was written
-  // as a one-shot CLI script (run once, close the pool, exit) but is now
-  // imported into a long-running API server as `runScraper()`. Ending the
-  // shared `pool` after the first run permanently breaks every later call —
-  // that's exactly the "Cannot use a pool after calling end on the pool"
-  // error you hit clicking "Refresh prices" a second time. The pool now
-  // stays open for the life of the server, same as any other DB-backed
-  // route. If you want a clean shutdown, close it once in your server's
-  // own SIGTERM/SIGINT handler — not here.
+  // Pool intentionally stays open — see the original bug-fix comment this
+  // file carried before: closing it here breaks every subsequent call in
+  // the long-running API server. Close it once in your server's own
+  // SIGTERM/SIGINT handler if you want a clean shutdown.
 }
 
 // BUG FIX: removed the auto-invoking `main().catch(...)` block that used to

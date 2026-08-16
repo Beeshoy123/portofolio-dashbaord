@@ -1,6 +1,8 @@
 // Comparison Judge Types
 // Core data structures for portfolio comparison verdicts and alert system
 
+import type { FundamentalsSnapshot } from "./fundamentalsTypes";
+
 export interface ComparisonEntry {
   name: string;
   ticker: string;
@@ -11,6 +13,7 @@ export interface ComparisonEntry {
   foudalens_risk_level: string | null;
   risk_mismatch: boolean;
   gap_percent: number | null;
+  fundamentals: FundamentalsSnapshot | null;
 }
 
 export interface ComparisonGroup {
@@ -29,4 +32,5 @@ export interface HoldingVerdict {
   signal: "Strong" | "Mixed" | "Weak";
   flags: string[];
   data_completeness_warning: boolean;
+  fundamentals_flags_found: boolean;
 }
