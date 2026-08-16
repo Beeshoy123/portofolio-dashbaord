@@ -121,11 +121,12 @@ Open Git Bash and run:
 ```bash
 cd '/g/tp/ai/portofolio-dashbaord'
 pnpm install --ignore-scripts --shamefully-hoist --no-frozen-lockfile --prefer-offline
+pnpm rebuild  # Critical for Windows: compiles native modules like esbuild
 ```
 
 **Terminal 1** (Backend on 8080):
 ```bash
-cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && PORT=8080 pnpm run start
+cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && node --enable-source-maps ./build.mjs && PORT=8080 node --enable-source-maps ./dist/index.mjs
 ```
 
 **Terminal 2** (Frontend on 3000):
@@ -189,7 +190,14 @@ This is a **monorepo** (multiple packages in one repo) managed by **pnpm** with 
 
 ### Installation Order (CRITICAL)
 ```bash
-# ✅ CORRECT ORDER:
+# ✅ CORRECT ORDER (Windows with preinstall script issue):
+1. cd g:\tp\ai\portofolio-dashbaord
+2. pnpm install --ignore-scripts --shamefully-hoist --no-frozen-lockfile --prefer-offline
+3. pnpm rebuild                    # ← CRITICAL: Rebuild native modules (esbuild, etc)
+4. cd artifacts/portfolio
+5. pnpm run dev
+
+# OR (if no 'sh' error, standard flow):
 1. cd g:\tp\ai\portofolio-dashbaord
 2. pnpm install --shamefully-hoist
 3. cd artifacts/portfolio
@@ -204,6 +212,8 @@ This is a **monorepo** (multiple packages in one repo) managed by **pnpm** with 
 ### Windows-Specific Issues Encountered
 | Issue | Why | Solution |
 |-------|-----|----------|
+| Preinstall script fails with "'sh' is not recognized" | Windows doesn't have `sh` by default; script in package.json runs bash | Use `pnpm install --ignore-scripts` first, then `pnpm rebuild` to compile native modules |
+| "@esbuild/win32-x64 could not be found" | Using `--ignore-scripts` skips postinstall compilation | After `--ignore-scripts` install, run `pnpm rebuild` to compile platform-specific binaries |
 | EPERM on esbuild rename | File locks / antivirus blocking file operations | Use `--prefer-offline` flag or close other terminals |
 | PowerShell "execution policy" error | Windows security policy blocks npm scripts | Use `cmd.exe`, `pnpm.cmd`, or Git Bash |
 | "Cannot find package" errors | Missing `--shamefully-hoist` flag | Always add this flag when installing |
@@ -351,32 +361,68 @@ Need to wire: Dashboard lifecycle → `POST /api/advisor/generate` trigger
 
 ---
 
-## ⚠️ CURRENT STATUS
+## ⚠️ CURRENT STATUS (2026-08-16)
 
 ### ✅ Working
-- **API Backend Server** - Running on port 8080
-  - Started with: `& "C:\Program Files\Git\bin\bash.exe" -c "cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server' && PORT=8080 pnpm run start"`
-  - Successfully fetching market data (USD/EGP rates, gold prices, etc.)
+- **API Backend Server** - Running on port 8080 ✅
+  - All endpoints operational (healthz, portfolio, advisor, etc.)
+  - Successfully fetching market data (USD/EGP rates, gold prices, XAU/USD)
+  - Database connection established to Supabase
+  - Authentication middleware requiring valid Supabase JWT tokens
 
-### ❌ Issue (BEING FIXED)
-- **Frontend** - Native module binding issues with Tailwind oxide and Rollup
-  - Windows x64 compatibility issue with @tailwindcss/oxide native bindings
-  - pnpm lockfile conflicts with npm package manager
-  - PowerShell execution policy blocking npm commands
+- **Frontend Dev Server** - Running on port 3000 ✅  
+  - Vite dev server running with hot module reloading
+  - Tailwind CSS Rust compiler working (@tailwindcss/oxide)
+  - Native module bindings resolved (esbuild, Rollup, Lightning CSS)
+  - Vite proxy configured to forward `/api/*` requests to `http://localhost:8080`
 
-### 🔧 CURRENT TROUBLESHOOTING (2026-08-16)
+### 🔧 CURRENT ISSUE - Authentication Required
 
-**STATUS: NEARLY FIXED**
-- Issue: Native modules failing to load (@tailwindcss/oxide, esbuild, rollup)
-- Progress: Installing with `pnpm install --shamefully-hoist` to flatten dependencies
-- Next: Start frontend once installation completes
+**Status**: Frontend starts successfully but shows "Loading your portfolio..." then fails with 401 UNAUTHENTICATED
 
-**Working command:**
-```bash
-pnpm install --shamefully-hoist
-pnpm run dev  # Frontend
-pnpm run start  # Backend (api-server)
+**Root Cause**: No authenticated Supabase user session available
+
+**What's Happening:**
+1. Frontend loads and checks for Supabase session via AuthGate
+2. If a session exists in localStorage/cookies, it bypasses the login screen
+3. App.tsx calls `/api/portfolio` endpoint
+4. Backend requires Authorization header with valid Supabase JWT token
+5. If token is invalid/expired, API returns 401
+
+**Solution - Create Test User in Supabase:**
+
+You must create a test user account in Supabase before the app will work:
+
 ```
+1. Go to: https://app.supabase.com/
+2. Log in with your Supabase account
+3. Open project: gcyuahzdvaodrqijjqba
+4. Navigate to: Authentication → Users
+5. Click "Add user" 
+6. Create test user:
+   - Email: test@example.com
+   - Password: TestPassword123!
+7. Copy the user ID and save it
+
+Then log in to http://localhost:3000/ with these credentials.
+```
+
+**Alternative - Clear Session and Log In:**
+If there's an old session, clear browser storage:
+```
+Open browser DevTools (F12)
+→ Application → Local Storage → Clear All
+→ Application → Cookies → Delete portfolio cookies
+→ Refresh page
+→ Log in with valid Supabase credentials
+```
+
+**Verification:**
+Once logged in, you should see:
+- Portfolio data loading
+- No more "Loading..." message
+- Dashboard with funds, gold holdings, transaction history
+- Smart Advisor panel with recommendations
 
 ## ⚙️ ENVIRONMENT & DEPENDENCIES
 
@@ -768,6 +814,276 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 4. **API Server** → Supabase Database (via DATABASE_URL)
 
 If the frontend can't reach the API server, you get **HTTP 500 errors**.
+
+---
+
+## 📦 COMPLETE DEPENDENCY & INSTALLATION GUIDE
+
+### System Prerequisites (MUST INSTALL FIRST)
+
+Before installing any npm/pnpm packages, ensure you have these installed on your system:
+
+| Requirement | Version | Status | Command |
+|-------------|---------|--------|---------|
+| **Node.js** | v24.18.0 (or v22+) | ✅ Required | `node --version` |
+| **pnpm** | v11.17.0+ | ✅ Required | `pnpm --version` |
+| **Git Bash** | Latest | ✅ Recommended | Check: `C:\Program Files\Git\bin\bash.exe` |
+| **TypeScript** | v5.9.3+ | ✅ Included as devDep | Auto-installed via pnpm |
+| **Visual Studio Build Tools** | Latest | ⚠️ For native modules | Only if installation fails on native modules |
+
+**Important Notes:**
+- ❌ **DO NOT USE npm** - This project uses pnpm-workspace.yaml with `catalog:` URLs that npm doesn't understand
+- ❌ **DO NOT USE PowerShell directly** - Use `pnpm.cmd`, Git Bash, or cmd.exe instead
+- ⚠️ **Windows x64 only** - Native modules are compiled for Windows x64 MSVC platform
+
+### Root Workspace Dependencies
+
+**Location:** `g:\tp\ai\portofolio-dashbaord\package.json`
+
+**Runtime Dependencies:**
+- `@replit/connectors-sdk` (v0.4.2) - Replit connector utilities for workspace integration
+
+**Dev Dependencies:**
+- `prettier` (v3.9.6) - Code formatter for entire workspace
+- `typescript` (v5.9.3) - TypeScript compiler, shared across all packages
+
+**Native Modules (Windows x64):**
+- `@tailwindcss/oxide-win32-x64-msvc` (v4.3.3) - Tailwind CSS Rust-compiled binary for Windows
+
+**Purpose:** Root package.json manages the monorepo workspace and shared dependencies.
+
+### Frontend (Portfolio) Dependencies
+
+**Location:** `g:\tp\ai\portofolio-dashbaord\artifacts\portfolio\package.json`
+
+**UI Framework & React Ecosystem:**
+- `react` (catalog: from pnpm-workspace.yaml) - React library
+- `react-dom` (catalog:) - React DOM renderer
+- `@vitejs/plugin-react` (catalog:) - Vite plugin for React JSX
+- `@types/react` (catalog:) - TypeScript types for React
+- `@types/react-dom` (catalog:) - TypeScript types for React DOM
+
+**Vite & Build Tools:**
+- `vite` (catalog:) - Frontend build tool and dev server
+- `@tailwindcss/vite` (catalog:) - Tailwind CSS Vite plugin (integrates @tailwindcss/oxide)
+- `tailwindcss` (catalog:) - Tailwind CSS utility framework
+- `lightningcss-win32-x64-msvc` (v1.33.0) - Lightning CSS Windows x64 native module
+- `@rollup/rollup-win32-x64-msvc` (v4.62.2) - Rollup bundler Windows x64 native module
+
+**UI Components (Radix UI):**
+- `@radix-ui/react-*` (v1.x & v2.x) - Unstyled, accessible component primitives:
+  - Accordion, Alert Dialog, Aspect Ratio, Avatar, Badge, Breadcrumb
+  - Checkbox, Collapsible, Command, Context Menu, Dialog, Drawer
+  - Dropdown Menu, Hover Card, Label, Menubar, Navigation Menu
+  - Popover, Progress, Radio Group, Scroll Area, Select, Separator
+  - Slider, Switch, Tabs, Toast, Toggle, Tooltip
+- `@radix-ui/react-slot` (v1.2.0) - Slot composition pattern
+
+**Forms & Validation:**
+- `react-hook-form` (v7.55.0) - React form state management
+- `@hookform/resolvers` (v3.10.0) - Validation resolvers for react-hook-form (Zod, Yup, etc.)
+- `zod` (catalog:) - TypeScript-first schema validation
+- `cmdk` (v1.1.1) - Command menu component
+
+**State Management & Data:**
+- `@tanstack/react-query` (catalog:) - Server state management, caching, synchronization
+- `wouter` (v3.3.5) - Router for React (lightweight alternative to React Router)
+
+**Styling & Animations:**
+- `tailwind-merge` (catalog:) - Merge Tailwind CSS classes without conflicts
+- `class-variance-authority` (catalog:) - Create component variants with Tailwind
+- `clsx` (catalog:) - Conditional className utility
+- `framer-motion` (catalog:) - Animation library for React
+- `tw-animate-css` (v1.4.0) - Tailwind CSS animation utilities
+- `@tailwindcss/typography` (v0.5.15) - Typography plugin for Tailwind
+
+**Data Display & Charts:**
+- `recharts` (v2.15.2) - React charts library
+- `embla-carousel-react` (v8.6.0) - Carousel component
+
+**Utilities & Components:**
+- `react-icons` (v5.4.0) - Icon library (Font Awesome, Feather, etc.)
+- `lucide-react` (catalog:) - Icon library (curated SVG icons)
+- `sonner` (v2.0.7) - Toast notification library
+- `react-day-picker` (v9.11.1) - Calendar day picker component
+- `input-otp` (v1.4.2) - One-Time Password input component
+- `react-resizable-panels` (v2.1.7) - Resizable panel layout
+- `vaul` (v1.1.2) - Drawer/modal component
+- `date-fns` (v3.6.0) - Date manipulation library
+- `next-themes` (v0.4.6) - Theme management (dark/light mode)
+
+**Backend Integration:**
+- `@workspace/api-client-react` (workspace:*) - Local monorepo package for API client React hooks
+- `@supabase/supabase-js` (v2.45.0) - Supabase JavaScript client library
+
+**TypeScript & Types:**
+- `@types/node` (catalog:) - TypeScript types for Node.js APIs
+
+**Dev-only (Vite plugins):**
+- `@replit/vite-plugin-cartographer` (catalog:) - Maps function definitions for debugging
+- `@replit/vite-plugin-dev-banner` (catalog:) - Development mode banner
+- `@replit/vite-plugin-runtime-error-modal` (catalog:) - Runtime error modal overlay
+
+### Backend (API Server) Dependencies
+
+**Location:** `g:\tp\ai\portofolio-dashbaord\artifacts/api-server/package.json`
+
+The backend uses Express and includes database/API utilities. Full dependencies are managed in api-server/package.json.
+
+### Monorepo Structure (pnpm-workspace.yaml)
+
+This project uses **pnpm monorepo** with:
+
+**Workspaces (9 total):**
+- `artifacts/portfolio` - Frontend React application (Vite)
+- `artifacts/api-server` - Backend Express API server
+- `artifacts/mockup-sandbox` - Development sandbox/testing
+- `lib/*` - Shared libraries and utilities
+- `scripts/*` - Automation scripts
+
+**Catalog System (Version Management):**
+The `pnpm-workspace.yaml` uses a `catalog:` system to sync versions across workspaces:
+
+```yaml
+catalog:
+  vite: "^7.3.6"
+  react: "^18.3.1"
+  "@types/react": "^18.3.0"
+  tailwindcss: "^4.3.3"
+  # ... (many more dependencies)
+```
+
+**Why this matters:**
+- Using `"vite": "catalog:"` instead of `"vite": "^7.3.6"` in package.json
+- Ensures all workspaces use the same version
+- Prevents version conflicts across monorepo
+- npm doesn't understand `catalog:` syntax (only pnpm does)
+
+### Critical Native Modules (Windows x64)
+
+These packages require platform-specific binaries compiled for Windows x64 MSVC:
+
+| Package | Version | Purpose | Binary Path |
+|---------|---------|---------|------------|
+| **@tailwindcss/oxide** | 4.3.3 | Tailwind CSS Rust engine | `node_modules/@tailwindcss/oxide-win32-x64-msvc/` |
+| **@rollup/rollup-win32-x64-msvc** | 4.62.2 | Rollup bundler binary | `node_modules/@rollup/rollup-win32-x64-msvc/` |
+| **esbuild** | v0.27.3+ | JS/TS bundler binary | `node_modules/@esbuild/win32-x64/` |
+| **lightningcss-win32-x64-msvc** | 1.33.0 | CSS engine binary | `node_modules/lightningcss-win32-x64-msvc/` |
+
+**Installation Tips:**
+- These are optional dependencies automatically installed for your platform
+- If missing, run: `pnpm install --shamefully-hoist --force`
+- They must be compiled AFTER installation (not downloaded pre-compiled)
+
+### Installation Steps (Complete Guide)
+
+**Step 1: Verify Prerequisites**
+```bash
+node --version       # Must show v22+ (e.g., v24.18.0)
+pnpm --version      # Must show v11.17.0 or higher
+```
+
+**Step 2: Navigate to Root**
+```bash
+cd g:\tp\ai\portofolio-dashbaord
+```
+
+**Step 3: Install All Dependencies**
+```bash
+# Standard installation (recommended):
+pnpm install --shamefully-hoist
+
+# OR if you encounter 'sh is not recognized' error:
+pnpm install --ignore-scripts --shamefully-hoist --no-frozen-lockfile --prefer-offline
+
+# The --shamefully-hoist flag is CRITICAL:
+# - Flattens nested pnpm store into root node_modules
+# - Allows build tools to find each other's dependencies
+# - Required for Vite, Tailwind, esbuild, Rollup to work
+```
+
+**Step 4: Verify Installation**
+```bash
+# Check root workspace packages
+pnpm list --depth=0
+
+# Should show:
+# @workspace/portfolio@0.0.0
+# @workspace/api-server@0.0.0
+# ... (other workspaces)
+
+# Check frontend dependencies
+cd artifacts/portfolio
+pnpm list --depth=0
+```
+
+**Step 5: Build Frontend (Optional)**
+```bash
+cd g:\tp\ai\portofolio-dashbaord\artifacts\portfolio
+pnpm run build      # Compiles to dist/ folder
+```
+
+**Step 6: Build Backend (Optional)**
+```bash
+cd g:\tp\ai\portofolio-dashbaord\artifacts/api-server
+pnpm run build      # Compiles to dist/ folder (uses esbuild)
+```
+
+### Installation Flags Explained
+
+| Flag | Purpose | When to Use |
+|------|---------|-----------|
+| `--shamefully-hoist` | Flatten node_modules tree | **ALWAYS** - Required for build tools |
+| `--ignore-scripts` | Skip preinstall/postinstall scripts | When preinstall fails (sh not found) |
+| `--force` | Re-download and reinstall everything | When native modules are broken |
+| `--prefer-offline` | Use cache first, network only if needed | On slow internet or if EPERM errors occur |
+| `--no-frozen-lockfile` | Update lockfile if needed | When lockfile conflicts occur |
+
+### Troubleshooting Installation
+
+**Error: "Cannot find native binding"**
+```bash
+# Solution: Force rebuild native modules
+pnpm install --shamefully-hoist --force
+```
+
+**Error: "sh is not recognized"**
+```bash
+# Solution: Skip preinstall script, then rebuild
+pnpm install --ignore-scripts --shamefully-hoist --no-frozen-lockfile
+```
+
+**Error: "EPERM: operation not permitted" (esbuild/Windows)**
+```bash
+# Solution: Use offline mode or clean rebuild
+pnpm install --prefer-offline --shamefully-hoist
+# OR
+pnpm store prune
+pnpm install --shamefully-hoist --force
+```
+
+**Error: Unsupported URL Type "catalog:"**
+```bash
+# Solution: Use pnpm, NOT npm
+# ❌ Wrong:  npm install
+# ✅ Correct: pnpm install
+```
+
+### Dependency Update Strategy
+
+The monorepo uses pnpm catalog for centralized version management:
+
+**To update a shared dependency:**
+1. Edit `pnpm-workspace.yaml` in the `catalog:` section
+2. Run: `pnpm install`
+3. All workspaces automatically use the new version
+
+**To update workspace-specific dependency:**
+1. Go to that workspace: `cd artifacts/portfolio`
+2. Run: `pnpm add package@version`
+3. It automatically uses `catalog:` format if available
+
+---
 
 ## Common Tasks
 
