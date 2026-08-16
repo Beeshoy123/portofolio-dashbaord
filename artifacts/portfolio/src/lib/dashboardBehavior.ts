@@ -50,6 +50,8 @@ export function initDashboardBehavior(
     input: RequestInfo | URL,
     init: RequestInit = {},
   ): Promise<Response> => {
+    if (!supabase) return fetch(input, init);
+
     const { data } = await supabase.auth.getSession();
     const headers = new Headers(init.headers);
     const token = data.session?.access_token;

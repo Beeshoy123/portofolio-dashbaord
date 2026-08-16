@@ -12,17 +12,24 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    const client = supabase;
+    if (!client) {
+      setAuthTokenGetter(async () => null);
+      setLoading(false);
+      return;
+    }
+
+    client.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = client.auth.onAuthStateChange((_event, newSession) => {
       setSession(newSession);
     });
 
     setAuthTokenGetter(async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data } = await client.auth.getSession();
       return data.session?.access_token ?? null;
     });
 
@@ -31,6 +38,8 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
+    if (!supabase) return;
+
     setSubmitting(true);
     setLoginError(null);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -39,6 +48,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   }
 
   async function handleLogout() {
+    if (!supabase) return;
     await supabase.auth.signOut();
   }
 
@@ -46,6 +56,27 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     return (
       <div className="portfolio-loading-screen">
         <div className="portfolio-loading-spinner" />
+      </div>
+    );
+  }
+
+  if (!supabase) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="auth-badge">Portfolio setup</div>
+          <h1>Portfolio · Beeshoy</h1>
+          <p className="auth-subtitle">
+            Authentication is not connected in this environment yet.
+          </p>
+          <div className="auth-error">
+            Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable sign-in.
+          </div>
+          <p className="auth-help">
+            The app is ready to run once its Supabase project is connected. No
+            placeholder credentials are used.
+          </p>
+        </div>
       </div>
     );
   }

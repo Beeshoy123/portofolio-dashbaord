@@ -63,6 +63,13 @@ body.dark .auth-badge {
   margin-bottom: 22px;
 }
 
+.auth-help {
+  margin-top: 16px;
+  color: var(--muted-foreground, #4b5563);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;
