@@ -24,6 +24,10 @@ The portfolio frontend is the user-facing app (port 21113). The API server runs 
 
 - `DATABASE_URL` — PostgreSQL connection string (provisioned by Replit)
 - `SESSION_SECRET` — secret for session signing
+- `VITE_SUPABASE_URL` — Supabase project URL required by the portfolio auth gate
+- `VITE_SUPABASE_ANON_KEY` — Supabase public client key required by the portfolio auth gate
+
+The portfolio workflow starts successfully, but the frontend intentionally stops with a clear configuration error until both Supabase variables are supplied. Do not replace them with placeholder values.
 
 ## First-time setup (after import/clone)
 
