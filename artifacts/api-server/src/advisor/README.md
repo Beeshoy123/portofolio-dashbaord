@@ -27,7 +27,7 @@ Scraper → Comparison Snapshots → Comparison Judge → Smart Advisor (NEW)
 - Enforces strict constraints: no guesswork, no hype, educational format
 
 ### 2. **generateRecommendation.ts** — Gemini Caller
-- Sends structured data block + system rules to Gemini 2.0 Flash
+- Sends structured data block + system rules to Gemini 3.6 Flash
 - Handles API errors with diagnostic info (safety filters, token limits, etc.)
 - Returns clean `AdvisorRecommendation` object with text + metadata
 
@@ -165,7 +165,7 @@ All enforced via `SYSTEM_INSTRUCTIONS` in buildPrompt.ts:
 
 ## Gemini Configuration
 
-- **Model:** `gemini-2.0-flash` (adjust in `generateRecommendation.ts` if needed)
+- **Model:** `gemini-3.6-flash` (adjust in `generateRecommendation.ts` if needed)
 - **Temperature:** 0.4 (low — factual task, not creative)
 - **Max Tokens:** 650 (room for rotation split breakdowns)
 - **SystemInstruction:** Separated from data for better rule adherence

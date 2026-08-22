@@ -1066,23 +1066,11 @@ ${buildUsdRealityCard(p, d, usdReality)}
     <div class="scan-result" id="scan-result"><div class="scan-result-title" id="scan-result-title" data-i18n="scan.result.title">Extracted Data</div><div id="scan-result-body"></div></div>
     <div id="scan-actions" style="display:none;margin-top:4px"><button class="btn btn-primary" style="width:100%" id="scan-apply-btn" onclick="applyScanResult()" data-i18n="scan.apply">Apply to Dashboard</button></div>
     <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--edge);display:flex;justify-content:space-between;align-items:center">
-      <span style="font-size:10px;color:var(--dim)" id="scan-key-status" data-i18n="scan.key.notset">API Key: not set</span>
-      <button onclick="openApiKey()" style="border:none;background:var(--bg);border-radius:7px;padding:4px 10px;font-size:10.5px;font-weight:600;color:var(--dim);cursor:pointer" data-i18n="scan.setkey">⚙️ Set API Key</button>
+      <span style="font-size:10px;color:var(--pnl-up)" id="scan-key-status">Server API key configured</span>
     </div>
   </div>
 </div>
 
-<!-- API KEY SETUP MODAL -->
-<div class="apikey-overlay" id="apikey-overlay">
-  <div class="apikey-modal">
-    <h2 data-i18n="apikey.title">🔑 Gemini API Key</h2>
-    <p data-i18n="apikey.desc">This key is stored only in your browser (localStorage) and never sent anywhere except Google's API.</p>
-    <div class="apikey-steps"><b>Get your free key:</b><br>1. Go to <b>aistudio.google.com</b><br>2. Sign in with Google<br>3. Click <b>Get API Key → Create API key</b><br>4. Copy and paste it below</div>
-    <div class="modal-field" style="margin-top:12px"><label data-i18n="apikey.label">Gemini API Key</label><input type="password" id="input-gemini-key" placeholder="AIza..."></div>
-    <div class="apikey-status" id="apikey-status"></div>
-    <div class="modal-actions"><button class="btn btn-cancel" onclick="closeApiKey()" data-i18n="btn.cancel">Cancel</button><button class="btn btn-primary" onclick="saveApiKey()" data-i18n="apikey.save">Save Key</button></div>
-  </div>
-</div>
 
 <!-- INSIGHTS DRAWER -->
 <div class="insight-overlay" id="insight-overlay">

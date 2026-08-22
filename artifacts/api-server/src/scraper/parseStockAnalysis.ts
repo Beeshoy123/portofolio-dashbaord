@@ -149,6 +149,11 @@ function percentageChange(current: number, previous: number | null): number | nu
   return ((current - previous) / previous) * 100;
 }
 
+function extractChartReferencePrice(html: string, key: "price1m" | "priceYTD" | "price1y"): number | null {
+  const match = html.match(new RegExp(`changes:\\{[^}]*${key}:([^,}]+)`, "i"));
+  return match ? parsePlainNumber(match[1]) : null;
+}
+
 async function fetchHistory(ticker: string): Promise<Partial<StockFundamentals>> {
   try {
     const headers = {
@@ -295,10 +300,16 @@ async function fetchOverview(ticker: string): Promise<Partial<StockFundamentals>
   const priceMatch = text.match(/([\d,]+\.\d+)\s*[-+]\s*[\d.]+\s*\(([-+]?[\d.]+)%\)/);
   const price = priceMatch ? parsePlainNumber(priceMatch[1]) : null;
   const price_change_percent = priceMatch ? parsePercent(priceMatch[2]) : null;
+  const chart30d = extractChartReferencePrice(html, "price1m");
+  const chartYtd = extractChartReferencePrice(html, "priceYTD");
+  const chart1y = extractChartReferencePrice(html, "price1y");
 
   const result: Partial<StockFundamentals> = {
     price,
     price_change_percent,
+    return_30d_percent: price !== null ? percentageChange(price, chart30d) : null,
+    return_ytd_percent: price !== null ? percentageChange(price, chartYtd) : null,
+    return_1y_percent: price !== null ? percentageChange(price, chart1y) : null,
     market_cap: parseSuffixedNumber(extractLabeled(text, "Market Cap")),
     revenue_ttm: parseSuffixedNumber(extractLabeled(text, "Revenue")),
     revenue_growth_percent: parsePercent(extractLabeled(text, "Revenue Growth")),
@@ -425,7 +436,7 @@ export async function parseStockAnalysis(
   const result = emptyFundamentals(watchlistId, ticker);
 
   // Merge overview and stats
-  const merged = { ...result, ...overview, ...stats, ...history };
+  const merged = { ...result, ...history, ...overview, ...stats };
 
   // Verify raw_fetch_ok: true only if both pages fetched successfully
   merged.raw_fetch_ok = overview !== null && stats !== null && stats !== undefined;

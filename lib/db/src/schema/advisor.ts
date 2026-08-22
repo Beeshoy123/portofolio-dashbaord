@@ -13,7 +13,7 @@ export const advisorRecommendationsTable = pgTable("advisor_recommendations", {
   id: serial("id").primaryKey(),
   watchlist_id: integer("watchlist_id").notNull(),
   recommendation_text: text("recommendation_text").notNull(),
-  model_used: text("model_used").notNull(), // e.g. 'gemini-2.0-flash'
+  model_used: text("model_used").notNull(), // e.g. 'gemini-3.6-flash'
   generated_at: timestamp("generated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

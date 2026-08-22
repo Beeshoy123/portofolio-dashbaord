@@ -1464,25 +1464,6 @@ export function initDashboardBehavior(
     }
   };
 
-  win.openApiKey = () => {
-    el("apikey-overlay")?.classList.add("open");
-    const savedKey = localStorage.getItem("gemini_api_key") || "";
-    (el("input-gemini-key") as HTMLInputElement).value = savedKey
-      ? "••••••••"
-      : "";
-  };
-  win.closeApiKey = () => el("apikey-overlay")?.classList.remove("open");
-
-  win.saveApiKey = () => {
-    const key = (el("input-gemini-key") as HTMLInputElement).value.trim();
-    if (key && !key.startsWith("•")) {
-      localStorage.setItem("gemini_api_key", key);
-      const status = el("scan-key-status");
-      if (status) status.textContent = t('scan.key.set');
-    }
-    el("apikey-overlay")?.classList.remove("open");
-  };
-
   // ── AI Scanner state ──────────────────────────────────────────────────────
   let currentScanMode = "";
   let pendingScanResult: {
@@ -1509,7 +1490,6 @@ export function initDashboardBehavior(
   }
 
   async function runScan(dataUrl: string) {
-    const apiKey = localStorage.getItem("gemini_api_key") || "";
     if (!currentScanMode) {
       showScanError(t('scan.err.no.mode'));
       return;
@@ -1534,7 +1514,7 @@ export function initDashboardBehavior(
       const response = await authenticatedFetch("/api/portfolio/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: base64, mimeType, mode: currentScanMode, apiKey: apiKey || undefined }),
+        body: JSON.stringify({ image: base64, mimeType, mode: currentScanMode }),
       });
 
       const data = await response.json();

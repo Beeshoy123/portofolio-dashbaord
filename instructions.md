@@ -54,7 +54,8 @@ repository or environment secrets rather than a secrets file.
 
 The server-side AI Bot reads `GEMINI_API_KEY` from the same ignored
 `.secrets/api-server.env` file. Add it as `GEMINI_API_KEY=...` locally; do not
-put it in frontend code or rely on the browser-only Gemini settings field.
+put it in frontend code or rely on a browser-stored key. The AI Scanner uses
+this server-side key and does not send credentials from the browser.
 
 Because a database password was exposed during troubleshooting, rotate the
 Supabase database password and service-role key before pushing or sharing this
@@ -123,7 +124,11 @@ results without recording secrets or real portfolio values.
 - 2026-08-22: AI Price Checker reported all entities failed because `comparison_watchlist` had zero rows. Migrations `001` through `011` were then applied in dependency order, including public comparison metadata from `002` and `004` but no personal portfolio values; Supabase now has 60 comparison entities for the next AI run.
 - 2026-08-22: Audited and reran the authoritative root migrations in order (`001`, `002`, `004`, `005`-`011`); all passed. Live Supabase contains every required comparison/AI table, and no duplicate advisor run keys were found. Do not run the overlapping legacy files under `artifacts/api-server/src/lib/migrations` for this deployment.
 - 2026-08-22: Stock routing was corrected: StockAnalysis now provides stock prices, fundamentals, and available historical returns from its history page; FoudaLens remains the source for fund NAVs and index levels, plus comparison-only stock fields not exposed by StockAnalysis.
+- 2026-08-22: Final Gemini audit found the screenshot scanner's separate fallback chain still used retired `gemini-2.0-flash`; it now starts with `gemini-3.6-flash`. Smart Advisor and the scanner no longer actively use Gemini 2.0.
+- 2026-08-22: AI Scanner was changed to server-secret-only. It no longer asks for, stores, or sends a browser Gemini key; `/api/portfolio/scan` uses `GEMINI_API_KEY` loaded from the ignored root `.secrets/api-server.env`.
+- 2026-08-22: Imported the reviewed dated order screenshots directly into Supabase using an atomic temporary importer: 10 new transactions were inserted and 4 existing matches were skipped. Temporary importer files were deleted immediately; no financial values were written to Git-tracked files.
 - 2026-08-22: StockAnalysis history retrieval now checks multiple history pages (up to 12) for dates needed by 30-day, YTD, and one-year calculations. A dash remains correct when the site does not expose a prior close for that period; no Yahoo fallback is used.
+- 2026-08-22: Fixed missing StockAnalysis YTD values by reading the overview page's embedded `changes.priceYTD` reference price and calculating the return from the current StockAnalysis price. The same embedded source supplies `price1m` and `price1y`; history-page data remains the fallback.
 - 2026-08-22: Tested StockAnalysis routes for `EGX30`, `EGX70`, and `EGX100` (`/quote/egx/`, `/index/`, and `/indexes/` patterns); all index routes return `404`, and the Egypt listing contains company quotes only. Indices therefore remain sourced from FoudaLens until StockAnalysis publishes an official index endpoint.
 - 2026-08-22: The Gemini key was initially placed under `artifacts/portfolio/.secrets`, which the API does not read. It was consolidated into the ignored repository-root `.secrets/api-server.env`; the API loaded that file and `/api/portfolio` returned `200`.
 - 2026-08-22: `ERR_CONNECTION_REFUSED` on `http://localhost:3001/` was caused by the frontend/backend processes having been stopped, not by the Market Comparison sorting change. Restarted API `8080` and Vite frontend `3001`; the page returned `200`.

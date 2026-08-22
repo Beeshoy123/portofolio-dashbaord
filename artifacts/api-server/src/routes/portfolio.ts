@@ -470,14 +470,13 @@ router.get("/portfolio/gold-prices", (_req, res) => {
 // Calls Gemini from the server so the request originates from Replit's
 // infrastructure, bypassing regional free-tier quota restrictions.
 router.post("/portfolio/scan", async (req, res) => {
-  const { image, mimeType, mode, apiKey } = req.body as {
+  const { image, mimeType, mode } = req.body as {
     image?: string;
     mimeType?: string;
     mode?: string;
-    apiKey?: string;
   };
 
-  const resolvedApiKey = apiKey || process.env.GEMINI_API_KEY;
+  const resolvedApiKey = process.env.GEMINI_API_KEY;
 
   if (!image || !mimeType || !mode || !resolvedApiKey) {
     res.status(400).json({ error: "Missing required fields: image, mimeType, mode, and a valid Gemini API key." });
@@ -563,7 +562,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   // through to the next one on the same key before giving up. Other errors
   // (bad key, bad request) surface immediately since retrying won't help.
   const MODEL_FALLBACK_CHAIN = [
-    "gemini-2.0-flash",
+    "gemini-3.6-flash",
     "gemini-2.5-flash",
     "gemini-2.5-flash-lite",
     "gemini-flash-latest",
