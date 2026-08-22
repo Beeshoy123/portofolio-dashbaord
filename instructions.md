@@ -28,8 +28,40 @@ To export data: ask the agent to generate a temporary SQL dump, download it, the
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from `lib/api-spec/openapi.yaml` after editing the spec
 - `pnpm --filter @workspace/db run push` — push Drizzle schema changes to the dev DB
+- `pnpm --filter @workspace/api-server run build` — rebuild the API bundle before restarting its workflow
 - Required env: `DATABASE_URL` — Postgres connection string (managed by Replit's built-in DB, never exposed to the frontend)
 - Required env: `PORTFOLIO_OWNER_USER_ID` — Supabase user UUID allowed to access this personal portfolio; the API fails closed when it is missing and rejects other authenticated users
+
+## Replit API recovery
+
+The API workflow owns port `8080`. Never start a second API process on that
+port. If the console shows `EADDRINUSE`, stop the existing API workflow (or
+stop the whole Project workflow) and start the Project workflow again.
+
+After backend changes, use this order:
+
+1. Stop the API workflow so no old process remains on port `8080`.
+2. Run `pnpm --filter @workspace/api-server run build`.
+3. Start the API workflow with `PORT=8080 pnpm --filter @workspace/api-server run dev`.
+4. Confirm the console says `Server listening` on port `8080`.
+5. Confirm `POST /api/ai-bot/run` returns `202` or `409`, never `404`.
+
+If the API crashes during startup with `zod.int is not a function`, rebuild the
+generated API schema compatibility output before restarting. The installed
+Zod runtime uses `zod.number().int()`.
+
+The frontend workflow uses port `21113` and must not be used as a replacement
+for the API workflow. A frontend `Unknown error` on the AI pipeline can be a
+masked HTML API error; inspect the API console and HTTP status first.
+
+## Financial data privacy
+
+Never put real balances, prices, quantities, order dates, or transaction
+amounts in source files, fixtures, screenshots committed to the repository,
+tests, GitHub, or permanent Replit files. Real financial data belongs only in
+the user's Supabase/Postgres database. Scanner imports must be reviewed by the
+user and written through authenticated API endpoints. Temporary user-provided
+imports or exports must be deleted immediately after use.
 
 ## Stack
 

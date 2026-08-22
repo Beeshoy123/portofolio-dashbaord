@@ -7,6 +7,8 @@
  */
 import * as zod from 'zod';
 
+const integer = () => zod.number().int();
+
 
 /**
  * Returns server health status
@@ -36,19 +38,19 @@ export const GetPortfolioResponse = zod.object({
   "sellPrice21k": zod.number().nullable(),
   "goldPriceStatus": zod.string().nullable().describe('\'live\' | \'fallback\' | null'),
   "transactions": zod.array(zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "date": zod.coerce.date(),
-  "quantity": zod.int(),
+  "quantity": integer(),
   "weightPerUnitGrams": zod.number(),
   "totalWeightGrams": zod.number(),
-  "karat": zod.int(),
+  "karat": integer(),
   "spotPricePerGram": zod.number(),
   "manufacturingFeePerGram": zod.number(),
   "totalPaid": zod.number()
 }))
 }).describe('gramsHeld, costBasis and avgCostPerGram are always computed live from gold transaction history, never stored as a static number. livePricePerGram is the 24K sell price scraped from goldbullioneg.com (null if scrape has not succeeded yet). currentValue and pnl (net, including cashback) are derived from livePricePerGram. buyPrice24k \/ sellPrice24k \/ buyPrice21k \/ sellPrice21k are all EGP-per-gram values from the same scrape. goldPriceStatus is \'live\' when the latest scrape succeeded, \'fallback\' when using stale cached prices, or null if no scrape has completed yet.'),
   "funds": zod.array(zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "key": zod.string(),
   "name": zod.string(),
   "ticker": zod.string(),
@@ -59,14 +61,14 @@ export const GetPortfolioResponse = zod.object({
   "apyPercent": zod.number().nullish()
 })),
   "certificates": zod.array(zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "name": zod.string(),
   "value": zod.number(),
   "ratePercent": zod.number(),
   "maturityDate": zod.coerce.date()
 })),
   "transactions": zod.array(zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "assetType": zod.string(),
   "name": zod.string(),
   "meta": zod.string(),
@@ -75,7 +77,7 @@ export const GetPortfolioResponse = zod.object({
   "txType": zod.enum(['buy', 'sell'])
 })),
   "snapshots": zod.array(zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "snapshotDate": zod.coerce.date(),
   "value": zod.number()
 })),
@@ -111,12 +113,12 @@ export const UpdateGoldSettingsResponse = zod.object({
   "sellPrice21k": zod.number().nullable(),
   "goldPriceStatus": zod.string().nullable().describe('\'live\' | \'fallback\' | null'),
   "transactions": zod.array(zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "date": zod.coerce.date(),
-  "quantity": zod.int(),
+  "quantity": integer(),
   "weightPerUnitGrams": zod.number(),
   "totalWeightGrams": zod.number(),
-  "karat": zod.int(),
+  "karat": integer(),
   "spotPricePerGram": zod.number(),
   "manufacturingFeePerGram": zod.number(),
   "totalPaid": zod.number()
@@ -130,9 +132,9 @@ export const UpdateGoldSettingsResponse = zod.object({
  */
 export const CreateGoldTransactionBody = zod.object({
   "date": zod.coerce.date(),
-  "quantity": zod.int(),
+  "quantity": integer(),
   "weightPerUnitGrams": zod.number(),
-  "karat": zod.int(),
+  "karat": integer(),
   "spotPricePerGram": zod.number(),
   "manufacturingFeePerGram": zod.number(),
   "totalPaid": zod.number()
@@ -152,12 +154,12 @@ export const CreateGoldTransactionResponse = zod.object({
   "sellPrice21k": zod.number().nullable(),
   "goldPriceStatus": zod.string().nullable().describe('\'live\' | \'fallback\' | null'),
   "transactions": zod.array(zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "date": zod.coerce.date(),
-  "quantity": zod.int(),
+  "quantity": integer(),
   "weightPerUnitGrams": zod.number(),
   "totalWeightGrams": zod.number(),
-  "karat": zod.int(),
+  "karat": integer(),
   "spotPricePerGram": zod.number(),
   "manufacturingFeePerGram": zod.number(),
   "totalPaid": zod.number()
@@ -178,7 +180,7 @@ export const UpdateFundBody = zod.object({
 })
 
 export const UpdateFundResponse = zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "key": zod.string(),
   "name": zod.string(),
   "ticker": zod.string(),
@@ -198,7 +200,7 @@ export const CreateGrowthSnapshotBody = zod.object({
 })
 
 export const CreateGrowthSnapshotResponse = zod.object({
-  "id": zod.int(),
+  "id": integer(),
   "snapshotDate": zod.coerce.date(),
   "value": zod.number()
 })

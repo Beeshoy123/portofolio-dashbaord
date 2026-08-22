@@ -1208,9 +1208,16 @@ export function initDashboardBehavior(
     try {
       const runResp = await authenticatedFetch("/api/ai-bot/run", { method: "POST", signal: scraperController.signal });
       if (!runResp.ok) {
-        const err = await runResp.json().catch(() => ({ error: "Unknown error" }));
+        const responseText = await runResp.text();
+        let errorMessage = runResp.statusText || "Request failed";
+        try {
+          const err = JSON.parse(responseText) as { error?: string; message?: string };
+          errorMessage = err.error ?? err.message ?? errorMessage;
+        } catch {
+          if (responseText.trim()) errorMessage = responseText.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+        }
         if (runResp.status !== 409) {
-          if (statusEl) statusEl.textContent = `❌ Run failed: ${(err as any).error ?? runResp.statusText}`;
+          if (statusEl) statusEl.textContent = `❌ Run failed (${runResp.status}): ${errorMessage}`;
           if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
           if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
           if (engineUpdated) engineUpdated.textContent = "Refresh failed";
