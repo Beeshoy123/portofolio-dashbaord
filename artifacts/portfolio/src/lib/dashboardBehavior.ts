@@ -60,6 +60,7 @@ export function initDashboardBehavior(
   };
 
   const CERTS_DATA: DerivedCertificate[] = derived.certs;
+  const scraperController = new AbortController();
 
   function updateTime() {
     const now = new Date();
@@ -1205,7 +1206,7 @@ export function initDashboardBehavior(
     }
 
     try {
-      const runResp = await authenticatedFetch("/api/ai-bot/run", { method: "POST" });
+      const runResp = await authenticatedFetch("/api/ai-bot/run", { method: "POST", signal: scraperController.signal });
       if (!runResp.ok) {
         const err = await runResp.json().catch(() => ({ error: "Unknown error" }));
         if (runResp.status !== 409) {
@@ -1224,13 +1225,13 @@ export function initDashboardBehavior(
       let runStatus: { running: boolean; runId: number | null; startedAt: string | null; error: string | null; stages: Record<string, string> };
       do {
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        const statusResp = await authenticatedFetch("/api/ai-bot/status");
+        const statusResp = await authenticatedFetch("/api/ai-bot/status", { signal: scraperController.signal });
         if (!statusResp.ok) throw new Error("Could not check scraper status.");
         runStatus = (await statusResp.json()) as typeof runStatus;
         updateAiPipeline(runStatus.stages);
         let fetchedCount = 0;
-        if (tableEl && resultsEl && runStatus.startedAt) {
-          const liveSnapResp = await authenticatedFetch(`/api/scraper/snapshots?since=${encodeURIComponent(runStatus.startedAt)}`);
+        if (tableEl && resultsEl && runStatus.runId !== null) {
+          const liveSnapResp = await authenticatedFetch(`/api/scraper/snapshots?runId=${encodeURIComponent(runStatus.runId)}`, { signal: scraperController.signal });
           if (liveSnapResp.ok) {
             const liveData = (await liveSnapResp.json()) as { snapshots: any[] };
             fetchedCount = renderPriceCheckerTable(liveData.snapshots, tableEl, resultsEl);
@@ -1254,10 +1255,10 @@ export function initDashboardBehavior(
       }
 
       // Fetch the final snapshots now that the run succeeded
-      const snapshotsUrl = runStatus.startedAt
-        ? `/api/scraper/snapshots?since=${encodeURIComponent(runStatus.startedAt)}`
+      const snapshotsUrl = runStatus.runId !== null
+        ? `/api/scraper/snapshots?runId=${encodeURIComponent(runStatus.runId)}`
         : "/api/scraper/snapshots";
-      const snapResp = await authenticatedFetch(snapshotsUrl);
+      const snapResp = await authenticatedFetch(snapshotsUrl, { signal: scraperController.signal });
       if (!snapResp.ok) { if (statusEl) statusEl.textContent = "❌ Could not load snapshots after run."; return; }
       const { snapshots, lastRunAt } = (await snapResp.json()) as { snapshots: any[]; lastRunAt: string | null };
 
@@ -1282,6 +1283,7 @@ export function initDashboardBehavior(
       if (advisorMount) advisorMount.style.display = "";
       await loadRotationVerdicts();
     } catch (err: any) {
+      if (scraperController.signal.aborted) return;
       if (statusEl) statusEl.textContent = `❌ Network error: ${err?.message ?? "Unknown"}`;
       if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
       if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
@@ -1433,12 +1435,14 @@ export function initDashboardBehavior(
   // ── AI Scanner state ──────────────────────────────────────────────────────
   let currentScanMode = "";
   let pendingScanResult: {
-    fund: "abr" | "re" | "azs";
+    fund: string;
+    fundDetails?: { key: string; ticker: string; name: string; icon: string; isNew?: boolean };
     nav?: number;
     unitsHeld?: number;
   } | null = null;
   let pendingOrdersList: Array<{
-    assetType: "abr" | "re" | "azs";
+    assetType: string;
+    fund?: { key: string; ticker: string; name: string; icon: string; isNew?: boolean };
     side: "buy" | "sell";
     pricePerUnit: number;
     amountEgp: number;
@@ -1475,24 +1479,6 @@ export function initDashboardBehavior(
     const base64 = dataUrl.split(",")[1];
     const mimeType = dataUrl.split(";")[0].split(":")[1] || "image/jpeg";
 
-    const prompt =
-      currentScanMode === "order"
-        ? `You are analyzing a Thndr (Egyptian investment app) order confirmation screenshot.
-Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
-{
-  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
-  "nav": <number: NAV per unit shown on screen, e.g. 1.2345>,
-  "unitsHeld": <number: total units/certificates held AFTER this transaction>
-}
-Omit any field you cannot read confidently. Return ONLY the JSON.`
-        : `You are analyzing an Egyptian investment fund NAV or price page screenshot.
-Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
-{
-  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
-  "nav": <number: current NAV per unit shown on screen, e.g. 1.2345>
-}
-Omit any field you cannot read confidently. Return ONLY the JSON.`;
-
     try {
       const response = await authenticatedFetch("/api/portfolio/scan", {
         method: "POST",
@@ -1511,14 +1497,23 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         const rows = Array.isArray(data.rows) ? data.rows : [];
         if (rows.length === 0) throw new Error(t('scan.err.no.rows') ?? 'No rows');
         pendingOrdersList = rows
-          .map((r: any) => ({
-            assetType: r.assetType || r.asset || r.fund,
+          .map((r: any) => {
+            const details = r.fund && typeof r.fund === "object" ? {
+              key: String(r.fund.key || r.assetType || r.ticker).toLowerCase(),
+              ticker: String(r.fund.ticker || r.ticker || r.assetType),
+              name: String(r.fund.name || r.fund.ticker || r.ticker || r.assetType),
+              icon: String(r.fund.icon || ""),
+              isNew: !portfolio.funds.some((fund) => fund.key === String(r.fund.key || "").toLowerCase() || fund.ticker === String(r.fund.ticker || "")),
+            } : undefined;
+            return {
+            assetType: details?.key || r.assetType || r.asset || r.ticker,
+            fund: details,
             side: r.side,
             pricePerUnit: Number(r.pricePerUnit),
             amountEgp: Number(r.amountEgp),
             occurredAt: r.occurredAt,
             selected: true,
-          }))
+          }; })
           .filter((r: any) => r.assetType && r.side && Number.isFinite(r.pricePerUnit) && Number.isFinite(r.amountEgp));
 
         if (pendingOrdersList.length === 0) throw new Error(t('scan.err.no.rows') ?? 'No valid rows');
@@ -1535,12 +1530,23 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       // Single-object modes (order/nav)
       const obj = data as { fund?: unknown; nav?: unknown; unitsHeld?: unknown };
 
-      if (!obj.fund || !["abr", "re", "azs"].includes(String(obj.fund))) {
+      if (!obj.fund || (typeof obj.fund !== "string" && typeof obj.fund !== "object")) {
         throw new Error(t('scan.err.no.fund'));
       }
 
+      const detected = typeof obj.fund === "object" ? obj.fund as { key?: string; ticker?: string; name?: string; icon?: string } : { key: obj.fund, ticker: obj.fund, name: obj.fund, icon: "" };
+      const fundKey = String(detected.key || detected.ticker || "").toLowerCase();
+      if (!fundKey) throw new Error(t('scan.err.no.fund'));
+
       pendingScanResult = {
-        fund: obj.fund as "abr" | "re" | "azs",
+        fund: fundKey,
+        fundDetails: {
+          key: fundKey,
+          ticker: String(detected.ticker || fundKey),
+          name: String(detected.name || detected.ticker || fundKey),
+          icon: String(detected.icon || ""),
+          isNew: !portfolio.funds.some((fund) => fund.key === fundKey || fund.ticker === String(detected.ticker || "")),
+        },
         nav: obj.nav != null ? Number(obj.nav) : undefined,
         unitsHeld: obj.unitsHeld != null ? Number(obj.unitsHeld) : undefined,
       };
@@ -1551,8 +1557,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         (resultEl as HTMLElement).style.display = "block";
         const body = el("scan-result-body");
         if (body) {
-          const fundName =
-            pendingScanResult.fund === "abr" ? "Bareeq (ABR)" : pendingScanResult.fund === "re" ? "Real Estate (BRE)" : "Azimut (AZS)";
+          const fundName = pendingScanResult.fundDetails?.name || pendingScanResult.fund;
           body.innerHTML = [
             `<div class="scan-result-row"><span>${t('scan.result.fund')}</span><span>${fundName}</span></div>`,
             pendingScanResult.nav != null
@@ -1615,6 +1620,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
           pricePerUnit: r.pricePerUnit,
           amountEgp: r.amountEgp,
           occurredAt: r.occurredAt,
+          fund: r.fund,
         }));
         if (rowsToSend.length === 0) throw new Error(t('scan.err.no.rows') ?? 'No rows selected');
       const resp = await authenticatedFetch('/api/portfolio/fund-transactions', {
@@ -1632,11 +1638,28 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       }
 
       if (!pendingScanResult) return;
-      const { fund, nav, unitsHeld } = pendingScanResult;
+      const { fund, fundDetails, nav, unitsHeld } = pendingScanResult;
       const body: { nav?: number; unitsHeld?: number } = {};
       if (nav != null) body.nav = nav;
       if (unitsHeld != null) body.unitsHeld = unitsHeld;
-      await callbacks.updateFund(fund, body);
+      if (fundDetails?.isNew) {
+        const response = await authenticatedFetch('/api/portfolio/funds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: fundDetails.key,
+            ticker: fundDetails.ticker,
+            name: fundDetails.name,
+            icon: fundDetails.icon,
+            unitsHeld: unitsHeld ?? 0,
+            costBasisTotal: unitsHeld && nav ? unitsHeld * nav : 0,
+            nav,
+          }),
+        });
+        if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error ?? 'Failed to add fund');
+      } else {
+        await callbacks.updateFund(fund as "abr" | "re", body);
+      }
       pendingScanResult = null;
       el("scan-overlay")?.classList.remove("open");
     } catch (err) {
@@ -1657,7 +1680,8 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         <div class="scan-result-row" style="display:flex;align-items:center;gap:8px">
           <input type="checkbox" id="order-row-${i}" ${r.selected ? 'checked' : ''} onchange="(function(){ const el = document.getElementById('order-row-${i}') as HTMLInputElement; window.toggleOrderRow && window.toggleOrderRow(${i}, el.checked); })()" />
           <div style="flex:1">
-            <div><strong>${r.assetType.toUpperCase()}</strong> ${r.side.toUpperCase()} · ${r.amountEgp.toFixed(2)} EGP @ ${r.pricePerUnit.toFixed(4)}</div>
+            <div><strong>${(r.fund?.ticker || r.assetType).toUpperCase()}</strong> ${r.side.toUpperCase()} · ${r.amountEgp.toFixed(2)} EGP @ ${r.pricePerUnit.toFixed(4)}</div>
+            ${r.fund?.isNew ? `<div style="color:var(--warning-border);font-size:11px">New fund detected: ${r.fund.name}</div>` : ''}
             <div style="font-size:11px;color:var(--dim)">${r.occurredAt ?? ''}</div>
           </div>
         </div>
@@ -2221,6 +2245,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   }
 
   return () => {
+    scraperController.abort();
     clearInterval(timeInterval);
     document.removeEventListener("click", closeSortPopover);
     document.removeEventListener("click", closeSettingsOutside);

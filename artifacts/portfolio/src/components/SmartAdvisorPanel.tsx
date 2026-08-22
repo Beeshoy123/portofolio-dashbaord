@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -36,6 +36,12 @@ interface AlertSummaryResponse {
       drawdown_percent?: number | null;
     };
   };
+}
+
+interface DrawdownAlert {
+  is_alert?: boolean;
+  current_drawdown_percent?: number | null;
+  drawdown_percent?: number | null;
 }
 
 interface BotStatusResponse {
@@ -88,7 +94,8 @@ export function SmartAdvisorPanel() {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);
-  const [drawdown, setDrawdown] = useState<AlertSummaryResponse['portfolio'] extends { drawdown?: infer T } ? T : undefined>();
+  const [drawdown, setDrawdown] = useState<DrawdownAlert | undefined>();
+  const manualRequestRef = useRef<AbortController | null>(null);
 
   // Check if enough time has passed for auto-generation
   const canAutoGenerate = () => {
@@ -107,6 +114,7 @@ export function SmartAdvisorPanel() {
 
   // Fetch recommendations and alerts
   useEffect(() => {
+    const controller = new AbortController();
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -114,31 +122,39 @@ export function SmartAdvisorPanel() {
 
         const botStatus = await requestJson<BotStatusResponse>(
           '/api/ai-bot/status',
-          {},
+          { signal: controller.signal },
           'Failed to fetch AI Bot status',
         );
-        const recommendationsPath = botStatus.runId === null
-          ? '/api/advisor/recommendations'
-          : `/api/advisor/recommendations?runId=${encodeURIComponent(botStatus.runId)}`;
-        const [recRes, alertRes] = await Promise.all([
-          requestJson<AdvisorRecommendation[]>(recommendationsPath, {}, 'Failed to fetch recommendations'),
-          requestJson<AlertSummaryResponse>(
-            '/api/alerts/summary',
-            {},
+        const recommendationsRequest = botStatus.runId === null
+          ? Promise.resolve<AdvisorRecommendation[]>([])
+          : requestJson<AdvisorRecommendation[]>(
+            `/api/advisor/recommendations?runId=${encodeURIComponent(botStatus.runId)}`,
+            { signal: controller.signal },
+            'Failed to fetch recommendations',
+          );
+        const alertsRequest = botStatus.runId === null
+          ? Promise.resolve<AlertSummaryResponse>({ alerts: {} })
+          : requestJson<AlertSummaryResponse>(
+            `/api/alerts/summary?runId=${encodeURIComponent(botStatus.runId)}`,
+            { signal: controller.signal },
             'Failed to fetch alerts',
-          ),
+          );
+        const [recRes, alertRes] = await Promise.all([
+          recommendationsRequest,
+          alertsRequest,
         ]);
 
         setRecommendations(Array.isArray(recRes) ? recRes : []);
         setAlerts(alertRes.alerts || {});
         setDrawdown(alertRes.portfolio?.drawdown);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Unknown error');
         setRecommendations([]);
         setAlerts({});
         setDrawdown(undefined);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
@@ -151,27 +167,38 @@ export function SmartAdvisorPanel() {
     fetchData();
     // Refetch every 5 minutes
     const interval = setInterval(fetchData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      controller.abort();
+      clearInterval(interval);
+      manualRequestRef.current?.abort();
+    };
   }, []);
 
   // Auto-generate recommendations on mount if cooldown has passed
   useEffect(() => {
+    const controller = new AbortController();
     const autoGenerate = async () => {
       if (!canAutoGenerate() || generating) return;
 
       try {
         setGenerating(true);
-        await requestJson('/api/advisor/generate', { method: 'POST' }, 'Failed to generate recommendations');
+        const botStatus = await requestJson<BotStatusResponse>('/api/ai-bot/status', { signal: controller.signal }, 'Failed to fetch AI Bot status');
+        if (botStatus.runId === null) return;
+        await requestJson(
+          `/api/advisor/generate?runId=${encodeURIComponent(botStatus.runId)}`,
+          { method: 'POST', signal: controller.signal },
+          'Failed to generate recommendations',
+        );
         recordGenerationTime();
 
-        const botStatus = await requestJson<BotStatusResponse>('/api/ai-bot/status', {}, 'Failed to fetch AI Bot status');
         const data = await requestJson<AdvisorRecommendation[]>(
-          botStatus.runId === null ? '/api/advisor/recommendations' : `/api/advisor/recommendations?runId=${encodeURIComponent(botStatus.runId)}`,
-          {},
+          `/api/advisor/recommendations?runId=${encodeURIComponent(botStatus.runId)}`,
+          { signal: controller.signal },
           'Failed to fetch recommendations',
         );
         setRecommendations(Array.isArray(data) ? data : []);
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Failed to generate recommendations');
         console.error('Auto-generation failed:', err);
       } finally {
@@ -183,30 +210,43 @@ export function SmartAdvisorPanel() {
     if (!loading && canAutoGenerate()) {
       autoGenerate();
     }
+    return () => controller.abort();
   }, [loading]); // Only run once after initial load
 
   // Generate new recommendations (manual)
   const handleGenerateRecommendations = async () => {
+    manualRequestRef.current?.abort();
+    const controller = new AbortController();
+    manualRequestRef.current = controller;
     try {
       setGenerating(true);
       setError(null);
 
-      await requestJson('/api/advisor/generate', { method: 'POST' }, 'Failed to generate recommendations');
+      const botStatus = await requestJson<BotStatusResponse>('/api/ai-bot/status', { signal: controller.signal }, 'Failed to fetch AI Bot status');
+      if (botStatus.runId === null) {
+        throw new Error('Run the AI Bot pipeline before generating recommendations.');
+      }
+      await requestJson(
+        `/api/advisor/generate?runId=${encodeURIComponent(botStatus.runId)}`,
+        { method: 'POST', signal: controller.signal },
+        'Failed to generate recommendations',
+      );
 
       recordGenerationTime();
 
       // Refetch after generation
-      const botStatus = await requestJson<BotStatusResponse>('/api/ai-bot/status', {}, 'Failed to fetch AI Bot status');
       const data = await requestJson<AdvisorRecommendation[]>(
-        botStatus.runId === null ? '/api/advisor/recommendations' : `/api/advisor/recommendations?runId=${encodeURIComponent(botStatus.runId)}`,
-        {},
+        `/api/advisor/recommendations?runId=${encodeURIComponent(botStatus.runId)}`,
+        { signal: controller.signal },
         'Failed to fetch recommendations',
       );
       setRecommendations(Array.isArray(data) ? data : []);
     } catch (err) {
+      if (controller.signal.aborted) return;
       setError(err instanceof Error ? err.message : 'Failed to generate recommendations');
     } finally {
-      setGenerating(false);
+      if (!controller.signal.aborted) setGenerating(false);
+      if (manualRequestRef.current === controller) manualRequestRef.current = null;
     }
   };
 
@@ -358,24 +398,17 @@ export function SmartAdvisorPanel() {
                   </p>
 
                   {/* Alert details */}
-                  {alerts[rec.holding_ticker] && (
+                  {alerts[rec.ticker] && (
                     <div className="mt-3 space-y-2 border-t pt-2">
-                      {alerts[rec.holding_ticker].timeStop?.is_alert && (
+                      {alerts[rec.ticker].timeStop?.is_stagnant && (
                         <div className="text-xs text-muted-foreground">
                           <span className="font-medium">Time Stop:</span> Stagnant for{' '}
-                          {alerts[rec.holding_ticker].timeStop.days_stagnant} days
+                          {alerts[rec.ticker].timeStop?.stagnant_days ?? 'an unknown number of'} days
                         </div>
                       )}
-                      {alerts[rec.holding_ticker].thesis?.is_alert && (
+                      {alerts[rec.ticker].thesis?.has_reversal && (
                         <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Thesis Check:</span> Signal reversed,
-                          current return {(alerts[rec.holding_ticker].thesis.current_return || 0).toFixed(2)}%
-                        </div>
-                      )}
-                      {alerts[rec.holding_ticker].portfolio?.is_alert && (
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Portfolio Drawdown:</span>{' '}
-                          {(alerts[rec.holding_ticker].portfolio.drawdown_percent || 0).toFixed(2)}%
+                          <span className="font-medium">Thesis Check:</span> Signal reversed.
                         </div>
                       )}
                     </div>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { judgeAllHoldings } from "../../judge/comparisonJudge";
+import { judgeAllHoldings } from "../judge/comparisonJudge";
 
 const router = Router();
 

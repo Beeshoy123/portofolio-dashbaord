@@ -6,6 +6,7 @@ import { setAuthTokenGetter } from '@workspace/api-client-react';
 export default function AuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authInitializationError, setAuthInitializationError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -19,8 +20,14 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       return;
     }
 
-    client.auth.getSession().then(({ data }) => {
+    client.auth.getSession().then(({ data, error }) => {
+      if (error) throw error;
       setSession(data.session);
+    }).catch((error: unknown) => {
+      setAuthInitializationError(
+        error instanceof Error ? error.message : 'Authentication could not be initialized.',
+      );
+    }).finally(() => {
       setLoading(false);
     });
 
@@ -29,8 +36,12 @@ export default function AuthGate({ children }: { children: ReactNode }) {
     });
 
     setAuthTokenGetter(async () => {
-      const { data } = await client.auth.getSession();
-      return data.session?.access_token ?? null;
+      try {
+        const { data } = await client.auth.getSession();
+        return data.session?.access_token ?? null;
+      } catch {
+        return null;
+      }
     });
 
     return () => listener.subscription.unsubscribe();
@@ -75,6 +86,24 @@ export default function AuthGate({ children }: { children: ReactNode }) {
           <p className="auth-help">
             The app is ready to run once its Supabase project is connected. No
             placeholder credentials are used.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authInitializationError) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="auth-badge">Authentication unavailable</div>
+          <h1>Portfolio · Beeshoy</h1>
+          <p className="auth-subtitle">
+            The authentication service could not be initialized.
+          </p>
+          <div className="auth-error">{authInitializationError}</div>
+          <p className="auth-help">
+            Check the Supabase configuration and reload the page.
           </p>
         </div>
       </div>

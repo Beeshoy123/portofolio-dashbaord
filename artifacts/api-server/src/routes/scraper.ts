@@ -15,9 +15,12 @@ router.post("/scraper/run", async (req, res) => {
 });
 
 // GET /api/scraper/snapshots — returns the latest snapshot per watchlist entity
-router.get("/scraper/snapshots", async (_req, res) => {
+router.get("/scraper/snapshots", async (req, res) => {
   try {
-    const since = typeof _req.query.since === "string" ? _req.query.since : null;
+    const runId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
+      ? Number(req.query.runId)
+      : null;
+    const since = typeof req.query.since === "string" ? req.query.since : null;
     const result = await pool.query(`
       SELECT
         w.id,
@@ -45,14 +48,19 @@ router.get("/scraper/snapshots", async (_req, res) => {
       LEFT JOIN LATERAL (
         SELECT * FROM comparison_snapshots cs
         WHERE cs.watchlist_id = w.id
-          AND ($1::timestamptz IS NULL OR cs.scraped_at >= $1::timestamptz)
-          AND ($1::timestamptz IS NOT NULL OR cs.raw_fetch_ok = true)
+          AND ($1::bigint IS NULL OR cs.run_id = $1::bigint)
+          AND ($2::timestamptz IS NULL OR cs.scraped_at >= $2::timestamptz)
+          AND ($2::timestamptz IS NOT NULL OR $1::bigint IS NOT NULL OR cs.raw_fetch_ok = true)
         ORDER BY cs.scraped_at DESC
         LIMIT 1
       ) s ON true
       ORDER BY w.entity_type, w.sector, w.ticker
-    `, [since]);
-    res.json({ snapshots: result.rows });
+    `, [runId, since]);
+    const lastRunAt = result.rows.reduce<string | null>((latest, row) => {
+      if (!row.scraped_at) return latest;
+      return latest === null || new Date(row.scraped_at) > new Date(latest) ? row.scraped_at : latest;
+    }, null);
+    res.json({ snapshots: result.rows, lastRunAt });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "DB query failed" });
   }

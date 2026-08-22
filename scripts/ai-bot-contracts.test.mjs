@@ -27,13 +27,14 @@ test("scraper preserves successful snapshots and reports partial runs", () => {
   const botRoute = read("artifacts/api-server/src/routes/aiBot.ts");
   assert.match(botRoute, /result\.failed === result\.total/);
   assert.match(botRoute, /"partial"/);
-  assert.match(dashboard, /scraper\/snapshots\?since=/);
+  assert.match(dashboard, /scraper\/snapshots\?runId=/);
 });
 
 test("scraper and advisor generation use database advisory locks", () => {
   assert.match(scraperRoute, /STANDALONE_SCRAPER_DEPRECATED/);
   assert.match(read("artifacts/api-server/src/routes/aiBot.ts"), /BOT_LOCK_ID/);
-  assert.match(advisorRoute, /pg_try_advisory_lock\(1844674408\)/);
+  assert.match(advisorRoute, /tryAcquireAdvisoryLock/);
+  assert.match(read("artifacts/api-server/src/lib/advisoryLock.ts"), /pg_try_advisory_lock/);
 });
 
 test("alert history schema exists for every alert engine", () => {
@@ -62,4 +63,17 @@ test("obsolete Yahoo implementation is not referenced by the active scraper", ()
   );
   assert.doesNotMatch(read("artifacts/api-server/src/scraper/runScraper.ts"), /Yahoo/);
   assert.doesNotMatch(read("artifacts/api-server/package.json"), /yahoo-finance2/);
+});
+
+test("pipeline API contracts require explicit run IDs", () => {
+  assert.match(scraperRoute, /cs\.run_id = \$1::bigint/);
+  assert.match(advisorRoute, /runId is required/);
+  assert.match(read("artifacts/api-server/src/routes/alerts.ts"), /runId is required/);
+  assert.match(read("migrations/010_engine_run_links.sql"), /legacy_run_id/);
+});
+
+test("AI scanner tries Qwen before Gemini", () => {
+  const scanner = read("artifacts/api-server/src/routes/portfolio.ts");
+  assert.ok(scanner.indexOf("QWEN_API_KEY") < scanner.indexOf("MODEL_FALLBACK_CHAIN"));
+  assert.match(scanner, /Qwen is preferred for image scanning/);
 });

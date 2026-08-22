@@ -56,12 +56,14 @@ export async function checkThesis(watchlistId: number, runId?: number): Promise<
 
     const ticker = tickerResult.rows[0].ticker;
 
+    const runFilter = runId === undefined ? "" : "AND run_id = $2";
     const result = await pool.query<VerdictHistoryRow>(
       `SELECT signal, flags, recorded_at, run_id
        FROM verdict_history
        WHERE watchlist_id = $1
+       ${runFilter}
        ORDER BY recorded_at DESC`,
-      [watchlistId]
+      runId === undefined ? [watchlistId] : [watchlistId, runId]
     );
 
     const rows = result.rows;
@@ -81,9 +83,7 @@ export async function checkThesis(watchlistId: number, runId?: number): Promise<
       };
     }
 
-    const latest = runId === undefined
-      ? rows[0]
-      : rows.find((row) => row.run_id === runId) ?? rows[0];
+    const latest = rows[0];
 
     // Walk from newest to oldest; the first row that's already at least
     // LOOKBACK_DAYS old is the closest available stand-in for "a month ago."

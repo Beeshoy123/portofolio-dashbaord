@@ -63,12 +63,14 @@ export async function checkTimeStop(watchlistId: number, runId?: number): Promis
 
     const ticker = tickerResult.rows[0].ticker;
 
+    const runFilter = runId === undefined ? "" : "AND run_id = $2";
     const result = await pool.query<VerdictHistoryRow>(
       `SELECT signal, flags, recorded_at, run_id
        FROM verdict_history
        WHERE watchlist_id = $1
+       ${runFilter}
        ORDER BY recorded_at DESC`,
-      [watchlistId]
+      runId === undefined ? [watchlistId] : [watchlistId, runId]
     );
 
     const rows = result.rows;
@@ -85,9 +87,7 @@ export async function checkTimeStop(watchlistId: number, runId?: number): Promis
       };
     }
 
-    const latest = runId === undefined
-      ? rows[0]
-      : rows.find((row) => row.run_id === runId) ?? rows[0];
+    const latest = rows[0];
     let stagnantSince = latest.recorded_at;
 
     // Walk backward from the most recent row while the verdict keeps matching.

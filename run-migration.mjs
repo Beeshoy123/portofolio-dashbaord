@@ -10,12 +10,19 @@ const pool = new Pool({ connectionString: databaseUrl });
 
 async function runMigration() {
   try {
-    const sql = fs.readFileSync('./migrations/006_advisor_recommendations.sql', 'utf8');
+    const migrationNames = [
+      '009_bot_runs.sql',
+      '010_engine_run_links.sql',
+      '011_advisor_run_idempotency.sql',
+    ];
     const client = await pool.connect();
     
     try {
-      console.log('Executing migration: 006_advisor_recommendations.sql');
-      await client.query(sql);
+      for (const migrationName of migrationNames) {
+        const sql = fs.readFileSync(`./migrations/${migrationName}`, 'utf8');
+        console.log(`Executing migration: ${migrationName}`);
+        await client.query(sql);
+      }
       console.log('✅ Migration completed successfully!');
     } finally {
       client.release();

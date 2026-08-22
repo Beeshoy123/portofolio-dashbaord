@@ -164,6 +164,15 @@
         "/^Set-Location \"G:\\\\tp\\\\ai\\\\portofolio-dashbaord\"; node --test scripts/\\*\\.test\\.mjs$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "npm.cmd": true,
+        "/^node --test scripts\\\\ai-bot-pipeline\\.test\\.mjs$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --test \\.\\.\\\\\\.\\.\\\\scripts\\\\ai-bot-pipeline\\.test\\.mjs$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

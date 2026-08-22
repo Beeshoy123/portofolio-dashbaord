@@ -10,9 +10,11 @@ import { computeDrawdown } from "../judge/drawdown";
 const router = Router();
 
 // GET /api/alerts/time-stops - Check for stagnant signals
-router.get("/time-stops", async (_req: Request, res: Response) => {
+router.get("/time-stops", async (req: Request, res: Response) => {
   try {
-    const timeStops = await checkAllTimeStops();
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
+    const timeStops = await checkAllTimeStops(runId);
     res.json(timeStops);
   } catch (err: any) {
     console.error("[/api/alerts/time-stops]", err);
@@ -21,9 +23,11 @@ router.get("/time-stops", async (_req: Request, res: Response) => {
 });
 
 // GET /api/alerts/thesis-checks - Check for reversed signals
-router.get("/thesis-checks", async (_req: Request, res: Response) => {
+router.get("/thesis-checks", async (req: Request, res: Response) => {
   try {
-    const theses = await checkAllTheses();
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
+    const theses = await checkAllTheses(runId);
     res.json(theses);
   } catch (err: any) {
     console.error("[/api/alerts/thesis-checks]", err);
@@ -32,9 +36,11 @@ router.get("/thesis-checks", async (_req: Request, res: Response) => {
 });
 
 // GET /api/alerts/drawdown - Check portfolio drawdown
-router.get("/drawdown", async (_req: Request, res: Response) => {
+router.get("/drawdown", async (req: Request, res: Response) => {
   try {
-    const drawdown = await computeDrawdown();
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
+    const drawdown = await computeDrawdown(runId);
     res.json(drawdown);
   } catch (err: any) {
     console.error("[/api/alerts/drawdown]", err);
@@ -45,11 +51,13 @@ router.get("/drawdown", async (_req: Request, res: Response) => {
 // GET /api/alerts/all - Get all alerts for a specific ticker
 router.get("/all/:ticker", async (req: Request, res: Response) => {
   try {
-    const { ticker } = req.params;
+    const ticker = String(req.params.ticker);
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
 
-    const allTimeStops = await checkAllTimeStops();
-    const allTheses = await checkAllTheses();
-    const drawdown = await computeDrawdown();
+    const allTimeStops = await checkAllTimeStops(runId);
+    const allTheses = await checkAllTheses(runId);
+    const drawdown = await computeDrawdown(runId);
 
     const timeStop = allTimeStops.find((ts) => ts.ticker === ticker.toUpperCase());
     const thesis = allTheses.find((t) => t.ticker === ticker.toUpperCase());
@@ -69,11 +77,13 @@ router.get("/all/:ticker", async (req: Request, res: Response) => {
 });
 
 // GET /api/alerts/summary - Full alert summary for Smart Advisor
-router.get("/summary", async (_req: Request, res: Response) => {
+router.get("/summary", async (req: Request, res: Response) => {
   try {
-    const timeStops = await checkAllTimeStops();
-    const theses = await checkAllTheses();
-    const drawdown = await computeDrawdown();
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
+    const timeStops = await checkAllTimeStops(runId);
+    const theses = await checkAllTheses(runId);
+    const drawdown = await computeDrawdown(runId);
 
     // Build alert summary keyed by ticker
     const alertsByTicker: Record<string, any> = {};
@@ -102,3 +112,9 @@ router.get("/summary", async (_req: Request, res: Response) => {
 });
 
 export default router;
+
+function parseRunId(value: unknown): number | null {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
+  const runId = Number(value);
+  return Number.isSafeInteger(runId) && runId > 0 ? runId : null;
+}

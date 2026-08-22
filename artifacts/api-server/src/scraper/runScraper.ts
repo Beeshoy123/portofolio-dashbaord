@@ -24,6 +24,7 @@ import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
 import { parseStockAnalysis, type StockFundamentals } from "./parseStockAnalysis";
+import { enrichHistoricalReturns } from "./historicalReturns";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL, // Replit sets this automatically
@@ -31,7 +32,7 @@ const pool = new Pool({
 
 async function getWatchlist(): Promise<WatchlistEntity[]> {
   const result = await pool.query<WatchlistEntity>(
-    `SELECT id, ticker, name, entity_type, source_code, sector, manager, is_held
+    `SELECT id, ticker, name, entity_type, source_code, sector, manager, is_held, yahoo_ticker
      FROM comparison_watchlist
      ORDER BY entity_type, ticker`
   );
@@ -44,11 +45,10 @@ async function saveSnapshot(snapshot: ScrapedSnapshot, runId: number): Promise<v
       (watchlist_id, nav_or_price, return_30d_percent, return_ytd_percent,
        return_1y_percent, cagr_percent, total_score, risk_level,
        signal, pe_ratio, dividend_yield_percent, market_cap, sector_rank,
-      import { enrichHistoricalReturns } from "./historicalReturns";
        raw_fetch_ok, run_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
-          `SELECT id, ticker, name, entity_type, source_code, sector, manager, is_held, yahoo_ticker
+      snapshot.watchlist_id,
       snapshot.nav_or_price,
       snapshot.return_30d_percent,
       snapshot.return_ytd_percent,
@@ -85,10 +85,7 @@ async function saveFundamentals(f: StockFundamentals, runId: number): Promise<vo
       $36,$37,$38,$39,$40,$41,$42)`,
     [
       f.watchlist_id,
-          const snapshot = await enrichHistoricalReturns(
-            await parseStockPage(stock.ticker, stock.id),
-            stock.yahoo_ticker ?? null,
-          );
+      f.price,
       f.price_change_percent,
       f.market_cap,
       f.revenue_ttm,
@@ -108,7 +105,7 @@ async function saveFundamentals(f: StockFundamentals, runId: number): Promise<vo
       f.week52_high,
       f.beta,
       f.analyst_rating,
-            enrichedSnapshot.raw_fetch_ok ? successCount++ : failCount++;
+      f.price_target,
       f.price_target_upside_percent,
       f.earnings_date,
       f.debt_to_equity,
@@ -140,11 +137,10 @@ function sleep(ms: number): Promise<void> {
 
 export { main as runScraper };
 
-export async function main(): Promise<{ runId: number; succeeded: number; failed: number; total: number }> {
-  const runResult = await pool.query<{ id: number }>(
+export async function main(existingRunId?: number): Promise<{ runId: number; succeeded: number; failed: number; total: number }> {
+  const runId = existingRunId ?? Number((await pool.query<{ id: number }>(
     `INSERT INTO bot_runs (status) VALUES ('running') RETURNING id`,
-  );
-  const runId = Number(runResult.rows[0].id);
+  )).rows[0].id);
   const watchlist = await getWatchlist();
   console.log(`Loaded ${watchlist.length} entities from comparison_watchlist`);
 
@@ -173,7 +169,10 @@ export async function main(): Promise<{ runId: number; succeeded: number; failed
 
   // --- Stocks: one request each, unverified pattern, may be slow (browser fallback) ---
   for (const stock of stocks) {
-    const snapshot = await parseStockPage(stock.ticker, stock.id);
+    const snapshot = await enrichHistoricalReturns(
+      await parseStockPage(stock.ticker, stock.id),
+      stock.yahoo_ticker ?? null,
+    );
     await saveSnapshot(snapshot, runId);
     snapshot.raw_fetch_ok ? successCount++ : failCount++;
     console.log(

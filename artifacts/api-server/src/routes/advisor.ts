@@ -12,6 +12,7 @@ import { checkThesis } from "../judge/thesisCheck";
 import { computeDrawdown } from "../judge/drawdown";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
+import { releaseAdvisoryLock, tryAcquireAdvisoryLock } from "../lib/advisoryLock";
 
 const router = Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -19,16 +20,20 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 // Get latest recommendation for a specific ticker
 router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
   try {
-    const { ticker } = req.params;
+    const ticker = String(req.params.ticker);
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) {
+      return res.status(400).json({ error: "runId is required" });
+    }
 
     const result = await pool.query(
       `SELECT ar.id, ar.recommendation_text, ar.model_used, ar.generated_at
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
-       WHERE cw.ticker = $1
+      WHERE cw.ticker = $1 AND ar.run_id = $2
        ORDER BY ar.generated_at DESC
        LIMIT 1`,
-      [ticker.toUpperCase()]
+      [ticker.toUpperCase(), runId]
     );
 
     if (result.rows.length === 0) {
@@ -45,9 +50,10 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
 // Get all latest recommendations
 router.get("/recommendations", async (req: Request, res: Response) => {
   try {
-    const runId = typeof req.query.runId === "string" ? Number(req.query.runId) : null;
-    const runFilter = runId !== null && Number.isInteger(runId) ? "AND ar.run_id = $1" : "";
-    const params = runFilter ? [runId] : [];
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
+    const runFilter = "AND ar.run_id = $1";
+    const params = [runId];
     const result = await pool.query(
       `SELECT DISTINCT ON (cw.ticker) 
               cw.ticker, ar.recommendation_text, ar.model_used, ar.generated_at
@@ -70,32 +76,33 @@ router.post("/generate", async (req: Request, res: Response) => {
   let lockClient: PoolClient | null = null;
   try {
     lockClient = await pool.connect();
-    const lockResult = await lockClient.query<{ locked: boolean }>(
-      "SELECT pg_try_advisory_lock(1844674408) AS locked",
-    );
-    if (!lockResult.rows[0]?.locked) {
+    const acquired = await tryAcquireAdvisoryLock(lockClient, 1844674408);
+    if (!acquired) {
       lockClient.release();
       res.status(409).json({ error: "Recommendation generation already running. Please wait." });
       return;
     }
 
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) {
+      res.status(400).json({ error: "runId is required" });
+      return;
+    }
     const runResult = await pool.query<{ id: number }>(
       `SELECT id FROM bot_runs
-       WHERE status IN ('completed', 'partial')
-       ORDER BY completed_at DESC NULLS LAST, started_at DESC
-       LIMIT 1`,
+       WHERE id = $1 AND status IN ('completed', 'partial')`,
+      [runId],
     );
     if (runResult.rows.length === 0) {
       res.status(409).json({ error: "Run the AI Bot price workflow before generating recommendations." });
       return;
     }
 
-    const runId = Number(runResult.rows[0].id);
     const verdicts = await judgeAllHoldings("return_1y", runId);
     const [timeStops, theses, drawdown] = await Promise.all([
       checkAllTimeStops(runId),
       checkAllTheses(runId),
-      computeDrawdown(),
+      computeDrawdown(runId),
     ]);
 
     if (verdicts.length === 0) {
@@ -164,7 +171,7 @@ router.post("/generate", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to generate recommendations" });
   } finally {
     if (lockClient) {
-      await lockClient.query("SELECT pg_advisory_unlock(1844674408)").catch((err) => {
+      await releaseAdvisoryLock(lockClient, 1844674408).catch((err) => {
         console.error("[advisor] could not release generation lock", err);
       });
       lockClient.release();
@@ -175,18 +182,20 @@ router.post("/generate", async (req: Request, res: Response) => {
 // Get recommendation with alert system context
 router.get("/alerts-context/:ticker", async (req: Request, res: Response) => {
   try {
-    const { ticker } = req.params;
+    const ticker = String(req.params.ticker);
     const upperTicker = ticker.toUpperCase();
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
 
     // Fetch latest recommendation
     const recResult = await pool.query(
       `SELECT ar.id, ar.recommendation_text, ar.model_used, ar.generated_at
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
-       WHERE cw.ticker = $1
+      WHERE cw.ticker = $1 AND ar.run_id = $2
        ORDER BY ar.generated_at DESC
        LIMIT 1`,
-      [upperTicker]
+      [upperTicker, runId]
     );
 
     if (recResult.rows.length === 0) {
@@ -206,9 +215,9 @@ router.get("/alerts-context/:ticker", async (req: Request, res: Response) => {
     const watchlistId = watchlistResult.rows[0].id;
 
     // Fetch alert context
-    const timeStop = await checkTimeStop(watchlistId);
-    const thesis = await checkThesis(watchlistId);
-    const drawdown = await computeDrawdown();
+    const timeStop = await checkTimeStop(watchlistId, runId);
+    const thesis = await checkThesis(watchlistId, runId);
+    const drawdown = await computeDrawdown(runId);
 
     res.json({
       recommendation: recResult.rows[0],
@@ -225,3 +234,9 @@ router.get("/alerts-context/:ticker", async (req: Request, res: Response) => {
 });
 
 export default router;
+
+function parseRunId(value: unknown): number | null {
+  if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
+  const runId = Number(value);
+  return Number.isSafeInteger(runId) && runId > 0 ? runId : null;
+}

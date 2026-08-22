@@ -6,12 +6,4 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export type TransactionAssetType = typeof TransactionAssetType[keyof typeof TransactionAssetType];
-
-
-export const TransactionAssetType = {
-  gold: 'gold',
-  abr: 'abr',
-  re: 're',
-  azs: 'azs',
-} as const;
+export type TransactionAssetType = string;

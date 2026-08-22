@@ -109,12 +109,11 @@ export function buildDataBlock(
       );
     }
 
-    if (alerts.drawdown && alerts.drawdown.current_drawdown_percent !== null) {
-      if (alerts.drawdown.current_drawdown_percent > 10) {
+    const drawdownPercent = alerts.drawdown?.current_drawdown_percent;
+    if (drawdownPercent !== null && drawdownPercent !== undefined && drawdownPercent > 10) {
         alertLines.push(
-          `⚠ PORTFOLIO DRAWDOWN: The total portfolio is currently ${alerts.drawdown.current_drawdown_percent.toFixed(1)}% below its peak. Acknowledge broader portfolio context.`
+          `⚠ PORTFOLIO DRAWDOWN: The total portfolio is currently ${drawdownPercent.toFixed(1)}% below its peak. Acknowledge broader portfolio context.`
         );
-      }
     }
 
     if (alertLines.length > 0) {

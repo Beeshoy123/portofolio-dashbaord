@@ -4,9 +4,10 @@ import { runScraper } from "../scraper/runScraper";
 import { judgeAllHoldings } from "../judge/comparisonJudge";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
-import { computeDrawdown } from "../judge/drawdown";
+import { capturePortfolioValue, computeDrawdown } from "../judge/drawdown";
 import { generateRecommendation } from "../advisor/generateRecommendation";
 import { runBotPipeline } from "../aiBot/pipeline";
+import { releaseAdvisoryLock, tryAcquireAdvisoryLock } from "../lib/advisoryLock";
 
 const router = Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -39,10 +40,10 @@ let status: BotStatus = {
   },
 };
 
-async function runBot(lockClient: PoolClient): Promise<void> {
+async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
   status = {
     running: true,
-    runId: null,
+    runId,
     startedAt: new Date().toISOString(),
     error: null,
     stages: {
@@ -56,8 +57,7 @@ async function runBot(lockClient: PoolClient): Promise<void> {
   try {
     const summary = await runBotPipeline({
       runPriceChecker: async () => {
-        const result = await runScraper();
-        status.runId = result.runId;
+        const result = await runScraper(runId);
         status.stages.priceChecker = result.failed === result.total ? "failed" : "completed";
         return result;
       },
@@ -69,10 +69,11 @@ async function runBot(lockClient: PoolClient): Promise<void> {
       },
       runAlerts: async (runId) => {
         status.stages.alerts = "running";
+        await capturePortfolioValue(runId);
         const result = await Promise.all([
           checkAllTimeStops(runId),
           checkAllTheses(runId),
-          computeDrawdown(),
+          computeDrawdown(runId),
         ]);
         status.stages.alerts = "completed";
         return result;
@@ -113,24 +114,15 @@ async function runBot(lockClient: PoolClient): Promise<void> {
           ? "alerts"
           : "smartAdvisor";
     status.stages[failedStage] = "failed";
-    if (status.runId === null && status.startedAt) {
-      const runResult = await pool.query<{ id: number }>(
-        `SELECT id FROM bot_runs WHERE started_at >= $1 ORDER BY id DESC LIMIT 1`,
-        [status.startedAt],
-      );
-      if (runResult.rows[0]) status.runId = Number(runResult.rows[0].id);
-    }
-    if (status.runId !== null) {
-      await pool.query(
-        `UPDATE bot_runs SET status = 'failed', completed_at = now(),
-         error_message = $1 WHERE id = $2 AND status = 'running'`,
-        [status.error, status.runId],
-      );
-    }
+    await pool.query(
+      `UPDATE bot_runs SET status = 'failed', completed_at = now(),
+       error_message = $1 WHERE id = $2 AND status = 'running'`,
+      [status.error, runId],
+    );
   } finally {
     status.running = false;
     try {
-      await lockClient.query(`SELECT pg_advisory_unlock(${BOT_LOCK_ID})`);
+      await releaseAdvisoryLock(lockClient, BOT_LOCK_ID);
     } finally {
       lockClient.release();
     }
@@ -141,24 +133,70 @@ router.post("/ai-bot/run", async (_req, res) => {
   let lockClient: PoolClient | null = null;
   try {
     lockClient = await pool.connect();
-    const result = await lockClient.query<{ locked: boolean }>(
-      `SELECT pg_try_advisory_lock(${BOT_LOCK_ID}) AS locked`,
-    );
-    if (!result.rows[0]?.locked) {
+    const acquired = await tryAcquireAdvisoryLock(lockClient, BOT_LOCK_ID);
+    if (!acquired) {
       lockClient.release();
       res.status(409).json({ error: "AI Bot is already running. Please wait." });
       return;
     }
-    void runBot(lockClient);
-    res.status(202).json({ running: true });
+    const runResult = await lockClient.query<{ id: number }>(
+      `INSERT INTO bot_runs (status) VALUES ('running') RETURNING id`,
+    );
+    const runId = Number(runResult.rows[0].id);
+    void runBot(lockClient, runId).catch((err) => {
+      console.error("[ai-bot] background run failed unexpectedly:", err);
+    });
+    res.status(202).json({ running: true, runId });
   } catch (err) {
     lockClient?.release();
     res.status(503).json({ error: "AI Bot lock unavailable. Please try again." });
   }
 });
 
-router.get("/ai-bot/status", (_req, res) => {
-  res.json(status);
+router.get("/ai-bot/status", async (_req, res) => {
+  if (status.running) {
+    res.json(status);
+    return;
+  }
+
+  try {
+    await pool.query(
+      `UPDATE bot_runs
+       SET status = 'failed', completed_at = now(), error_message = 'API restarted while run was active'
+       WHERE status = 'running' AND started_at < now() - interval '15 minutes'`,
+    );
+    const result = await pool.query<{
+      id: number;
+      status: string;
+      started_at: string;
+      completed_at: string | null;
+      error_message: string | null;
+    }>(
+      `SELECT id, status, started_at, completed_at, error_message
+       FROM bot_runs ORDER BY id DESC LIMIT 1`,
+    );
+    const latest = result.rows[0];
+    if (!latest) {
+      res.json(status);
+      return;
+    }
+
+    res.json({
+      running: latest.status === "running",
+      runId: Number(latest.id),
+      startedAt: latest.started_at,
+      error: latest.error_message,
+      stages: {
+        priceChecker: latest.status === "failed" ? "failed" : latest.status === "running" ? "running" : "completed",
+        comparisonJudge: latest.status === "completed" || latest.status === "partial" ? "completed" : "waiting",
+        alerts: latest.status === "completed" || latest.status === "partial" ? "completed" : "waiting",
+        smartAdvisor: latest.status === "completed" || latest.status === "partial" ? "completed" : "waiting",
+      },
+    });
+  } catch (err) {
+    console.error("[ai-bot] could not load persisted status:", err);
+    res.json(status);
+  }
 });
 
 export default router;

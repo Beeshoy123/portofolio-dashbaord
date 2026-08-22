@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { getGoldPrices } from "../lib/goldPriceCache";
 import { getGlobalGoldPrice } from "../lib/globalGoldCache";
 import { getUsdEgpRate } from "../lib/usdEgpCache";
@@ -219,35 +219,6 @@ router.get("/portfolio", async (_req, res) => {
             new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
         ),
       snapshots: snapshotRows.map(toGrowthSnapshot),
-
-      // Drawdown needs a time series, not just the current portfolio response.
-      // Record only complete valuations and suppress refresh noise within a
-      // short window so opening the dashboard does not create fake volatility.
-      if (data.gold.currentValue !== null) {
-        const fundMarketValue = data.funds.reduce(
-          (sum, fund) => sum + fund.nav * fund.unitsHeld,
-          0,
-        );
-        const fundCostBasis = data.funds.reduce(
-          (sum, fund) => sum + fund.costBasisTotal,
-          0,
-        );
-        const totalMarketValue = data.gold.currentValue + fundMarketValue;
-        const totalCostBasis = data.gold.costBasis + fundCostBasis;
-
-        try {
-          await db.execute(sql`
-            INSERT INTO portfolio_value_history (total_cost_basis, total_market_value)
-            SELECT ${totalCostBasis}, ${totalMarketValue}
-            WHERE NOT EXISTS (
-              SELECT 1 FROM portfolio_value_history
-              WHERE recorded_at > now() - interval '15 minutes'
-            )
-          `);
-        } catch (historyError) {
-          logger.warn({ err: historyError }, "Could not record portfolio history for alerts");
-        }
-      }
       settings: (() => {
         // Prefer the live server-side rate; fall back to the DB value if
         // the first fetch hasn't completed yet (cold start race window).
@@ -262,6 +233,35 @@ router.get("/portfolio", async (_req, res) => {
         };
       })(),
     });
+
+    // Drawdown needs a time series, not just the current portfolio response.
+    // Record only complete valuations and suppress refresh noise within a
+    // short window so opening the dashboard does not create fake volatility.
+    if (data.gold.currentValue !== null) {
+      const fundMarketValue = data.funds.reduce(
+        (sum, fund) => sum + fund.nav * fund.unitsHeld,
+        0,
+      );
+      const fundCostBasis = data.funds.reduce(
+        (sum, fund) => sum + fund.costBasisTotal,
+        0,
+      );
+      const totalMarketValue = data.gold.currentValue + fundMarketValue;
+      const totalCostBasis = data.gold.costBasis + fundCostBasis;
+
+      try {
+        await db.execute(sql`
+          INSERT INTO portfolio_value_history (total_cost_basis, total_market_value)
+          SELECT ${totalCostBasis}, ${totalMarketValue}
+          WHERE NOT EXISTS (
+            SELECT 1 FROM portfolio_value_history
+            WHERE recorded_at > now() - interval '15 minutes'
+          )
+        `);
+      } catch (historyError) {
+        logger.warn({ err: historyError }, "Could not record portfolio history for alerts");
+      }
+    }
 
     res.json(data);
   } catch (err) {
@@ -388,6 +388,41 @@ router.patch("/portfolio/funds/:key", async (req, res) => {
   res.json(UpdateFundResponse.parse(toFund(updated)));
 });
 
+router.post("/portfolio/funds", async (req, res) => {
+  const { key, ticker, name, icon, unitsHeld, costBasisTotal, nav } = req.body as Record<string, unknown>;
+  const normalizedKey = typeof key === "string" ? key.trim().toLowerCase() : "";
+  const normalizedTicker = typeof ticker === "string" ? ticker.trim() : "";
+  const normalizedName = typeof name === "string" ? name.trim() : "";
+  const numericUnits = Number(unitsHeld);
+  const numericCost = Number(costBasisTotal);
+  const numericNav = Number(nav);
+
+  if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(normalizedKey) || !normalizedTicker || !normalizedName ||
+      !Number.isFinite(numericUnits) || numericUnits < 0 || !Number.isFinite(numericCost) || numericCost < 0 ||
+      !Number.isFinite(numericNav) || numericNav <= 0) {
+    res.status(400).json({ error: "Invalid fund details" });
+    return;
+  }
+
+  const [existing] = await db.select().from(fundsTable).where(eq(fundsTable.key, normalizedKey)).limit(1);
+  if (existing) {
+    res.status(409).json({ error: "Fund already exists", fund: toFund(existing) });
+    return;
+  }
+
+  const [created] = await db.insert(fundsTable).values({
+    key: normalizedKey,
+    ticker: normalizedTicker.slice(0, 40),
+    name: normalizedName.slice(0, 120),
+    icon: typeof icon === "string" ? icon.slice(0, 20) : "",
+    unitsHeld: String(numericUnits),
+    costBasisTotal: String(numericCost),
+    nav: String(numericNav),
+    apyPercent: null,
+  }).returning();
+  res.status(201).json(toFund(created));
+});
+
 // Lightweight endpoint so the client can poll for a fresh USD/EGP rate
 // without re-fetching the entire portfolio.
 router.get("/portfolio/usd-rate", (_req, res) => {
@@ -449,12 +484,26 @@ router.post("/portfolio/scan", async (req, res) => {
     return;
   }
 
-  const prompt =
+  const ordersListPrompt = `You are analyzing a screenshot that contains multiple executed orders (an orders list/table).
+Extract ONLY a JSON ARRAY of rows — no markdown, no code fences, just the JSON array. Each row must contain these fields:
+[
+  {
+    "assetType": "stable internal key when known, otherwise a short ticker key",
+    "fund": { "key": "...", "ticker": "...", "name": "...", "icon": "..." },
+    "side": "buy" or "sell",
+    "pricePerUnit": <number: price per unit/cert shown on screen>,
+    "amountEgp": <number: total EGP value of the order>,
+    "occurredAt": <optional ISO-8601 datetime string if visible>
+  }
+]
+Omit any row you cannot read confidently. Return ONLY the JSON array.`;
+
+  let prompt =
     mode === "order"
       ? `You are analyzing a Thndr (Egyptian investment app) order confirmation screenshot.
 Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
 {
-  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
+  "fund": { "key": "stable short key", "ticker": "ticker shown", "name": "full fund name", "icon": "short icon or empty string" },
   "nav": <number: NAV per unit shown on screen, e.g. 1.2345>,
   "unitsHeld": <number: total units/certificates held AFTER this transaction>
 }
@@ -462,7 +511,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`
       : `You are analyzing an Egyptian investment fund NAV or price page screenshot.
 Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
 {
-  "fund": "abr" or "re"  (ABR / Bareeq / بريق = "abr", BRE / Real Estate / عقاري = "re"),
+  "fund": { "key": "stable short key", "ticker": "ticker shown", "name": "full fund name", "icon": "short icon or empty string" },
   "nav": <number: current NAV per unit shown on screen, e.g. 1.2345>
 }
 Omit any field you cannot read confidently. Return ONLY the JSON.`;
@@ -473,26 +522,42 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     // The rows should be an array of objects with these fields:
     // { assetType: "abr"|"re"|"azs", side: "buy"|"sell", pricePerUnit: <number>, amountEgp: <number>, occurredAt?: <iso string> }
     // Return ONLY the raw JSON array.
-    const ORDERS_LIST_PROMPT = `You are analyzing a screenshot that contains multiple executed orders (an orders list/table).
-Extract ONLY a JSON ARRAY of rows — no markdown, no code fences, just the JSON array. Each row must contain these fields:
-[
-  {
-    "assetType": "abr" or "re" or "azs",
-    "side": "buy" or "sell",
-    "pricePerUnit": <number: price per unit/cert shown on screen>,
-    "amountEgp": <number: total EGP value of the order>,
-    "occurredAt": <optional ISO-8601 datetime string if visible>
-  }
-]
-Omit any row you cannot read confidently. Return ONLY the JSON array.`;
-    // Override prompt for orders-list
-    // eslint-disable-next-line no-unused-vars
-    // (we intentionally keep `prompt` variable name for parity with Gemini calls below)
-    // @ts-ignore - reassign for clarity
-    // NOTE: we'll set promptText local variable to avoid confusing the earlier `prompt` const
+    prompt = ordersListPrompt;
   }
 
-  // Tried in order — if a model's quota is exhausted (429), the model is
+  // Qwen is preferred for image scanning. Gemini remains the fallback chain
+  // when Qwen is unavailable, busy, or returns an unusable response.
+  let qwenRes: Response | undefined;
+  const qwenApiKey = process.env.QWEN_API_KEY;
+  if (qwenApiKey) {
+    try {
+      const qwenAttempt = await fetch("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${qwenApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "qwen-vl-max-latest",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { type: "image_url", image_url: { url: `data:${mimeType};base64,${image}` } },
+            ],
+          }],
+          max_tokens: 256,
+          temperature: 0.1,
+        }),
+      });
+      if (qwenAttempt.ok) qwenRes = qwenAttempt;
+      else console.warn(`[scan] Qwen preferred attempt failed with status ${qwenAttempt.status}; trying Gemini fallback.`);
+    } catch (error) {
+      console.warn(`[scan] Qwen preferred attempt failed; trying Gemini fallback: ${error}`);
+    }
+  }
+
+  // Gemini fallback chain — if a model's quota is exhausted (429), is
   // unavailable (404, e.g. deprecated), or Google's servers are transiently
   // overloaded (503 "model is currently experiencing high demand"), fall
   // through to the next one on the same key before giving up. Other errors
@@ -508,7 +573,7 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
   let lastErrData: { error?: { message?: string } } = {};
   let lastModel = MODEL_FALLBACK_CHAIN[0];
 
-  for (const model of MODEL_FALLBACK_CHAIN) {
+  if (!qwenRes) for (const model of MODEL_FALLBACK_CHAIN) {
     lastModel = model;
     const attempt = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${resolvedApiKey}`,
@@ -547,54 +612,7 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
     // else: try next model in the chain
   }
 
-  // If Gemini failed, try Qwen as fallback
-  let qwenRes: Response | undefined;
-  if (!geminiRes || !geminiRes.ok) {
-    const qwenApiKey = process.env.QWEN_API_KEY;
-    if (qwenApiKey) {
-      try {
-        const qwenAttempt = await fetch("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${qwenApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "qwen-vl-max-latest",
-            messages: [
-              {
-                role: "user",
-                content: [
-                  { type: "text", text: prompt },
-                  {
-                    type: "image_url",
-                    image_url: { url: `data:${mimeType};base64,${image}` },
-                  },
-                ],
-              },
-            ],
-            max_tokens: 256,
-            temperature: 0.1,
-          }),
-        });
-
-        if (qwenAttempt.ok) {
-          qwenRes = qwenAttempt;
-        } else {
-          const qwenErr = (await qwenAttempt.json().catch(() => ({}))) as {
-            error?: { message?: string };
-          };
-          console.warn(
-            `[scan] Qwen fallback failed (status: ${qwenAttempt.status}): ${qwenErr?.error?.message ?? "no detail"}`,
-          );
-        }
-      } catch (e) {
-        console.warn(`[scan] Qwen fallback error: ${e}`);
-      }
-    }
-  }
-
-  // If both Gemini and Qwen failed, use Qwen response if available, else Gemini
+  // Use the preferred Qwen response when available, otherwise Gemini.
   const finalRes = (qwenRes && qwenRes.ok) ? qwenRes : geminiRes;
 
   if (!finalRes || !finalRes.ok) {
@@ -653,7 +671,7 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
             },
             body: JSON.stringify({
               model: "gpt-4o-mini",
-              messages: [{ role: "user", content: ORDERS_LIST_PROMPT }],
+              messages: [{ role: "user", content: ordersListPrompt }],
               max_tokens: 512,
               temperature: 0.1,
             }),
@@ -683,10 +701,21 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
       const price = Number(r.pricePerUnit ?? r.price ?? r.unitPrice ?? r.pricePer_unit ?? null);
       const amount = Number(r.amountEgp ?? r.amount ?? r.total ?? null);
       const occurredAt = typeof r.occurredAt === "string" ? r.occurredAt : undefined;
-      if (!asset || !["abr", "re", "azs"].includes(asset)) continue;
+      const fund = r.fund && typeof r.fund === "object" ? r.fund : undefined;
+      const discoveredKey = fund?.key || r.assetType || r.asset || r.ticker;
+      if (!discoveredKey || typeof discoveredKey !== "string" || !/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(discoveredKey)) continue;
       if (!side || !["buy", "sell"].includes(side)) continue;
       if (!Number.isFinite(price) || !Number.isFinite(amount)) continue;
-      validRows.push({ assetType: asset, side, pricePerUnit: price, amountEgp: amount, occurredAt });
+      validRows.push({
+        assetType: discoveredKey.toLowerCase(),
+        fund: fund ? {
+          key: String(fund.key || discoveredKey).toLowerCase(),
+          ticker: String(fund.ticker || discoveredKey).slice(0, 40),
+          name: String(fund.name || fund.ticker || discoveredKey).slice(0, 120),
+          icon: String(fund.icon || "").slice(0, 20),
+        } : undefined,
+        side, pricePerUnit: price, amountEgp: amount, occurredAt
+      });
     }
 
     if (validRows.length === 0) {
@@ -699,7 +728,7 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
   }
 
   // Otherwise (order/nav single-object modes) parse as before
-  let parsed: { fund?: unknown; nav?: unknown; unitsHeld?: unknown };
+  let parsed: { fund?: unknown; nav?: unknown; unitsHeld?: unknown } | undefined;
   try {
     parsed = JSON.parse(cleaned) as typeof parsed;
   } catch {
@@ -735,13 +764,16 @@ Omit any row you cannot read confidently. Return ONLY the JSON array.`;
     }
   }
 
-  if (!parsed.fund || !["abr", "re", "azs"].includes(parsed.fund as string)) {
+  if (!parsed.fund || (typeof parsed.fund !== "string" && typeof parsed.fund !== "object")) {
     res.status(422).json({ error: "Could not identify the fund (ABR, RE or AZS). Try a clearer screenshot." });
     return;
   }
 
+  const fund = typeof parsed.fund === "string"
+    ? { key: parsed.fund, ticker: parsed.fund, name: parsed.fund, icon: "" }
+    : parsed.fund;
   res.json({
-    fund: parsed.fund,
+    fund,
     nav: parsed.nav != null ? Number(parsed.nav) : undefined,
     unitsHeld: parsed.unitsHeld != null ? Number(parsed.unitsHeld) : undefined,
   });
@@ -776,34 +808,53 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
 
   try {
     await db.transaction(async (tx) => {
-      for (const r of body.rows) {
+      const rows = body.rows;
+      for (const r of rows) {
         if (!r || typeof r !== "object") continue;
-        const asset = (r.assetType || r.asset || r.fund) as string | undefined;
+        const detectedFund = r.fund && typeof r.fund === "object" ? r.fund : {};
+        const asset = (detectedFund.key || r.assetType || r.asset || r.ticker) as string | undefined;
         const side = (r.side || r.txType || r.type) as string | undefined;
         const price = Number(r.pricePerUnit ?? r.price ?? null);
         const amount = Number(r.amountEgp ?? r.amount ?? null);
         const occurredAt = r.occurredAt ? new Date(r.occurredAt) : new Date();
 
-        if (!asset || !["abr", "re", "azs"].includes(asset)) continue;
+        if (!asset || !/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(asset)) continue;
         if (!side || !["buy", "sell"].includes(side)) continue;
         if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(amount) || amount <= 0) continue;
 
-        const [fundRow] = await tx.select().from(fundsTable).where(eq(fundsTable.key, asset)).limit(1);
+        const [fundRowByKey] = await tx.select().from(fundsTable).where(eq(fundsTable.key, asset.toLowerCase())).limit(1);
+        const [fundRowByTicker] = fundRowByKey
+          ? [undefined]
+          : await tx.select().from(fundsTable).where(eq(fundsTable.ticker, String(detectedFund.ticker || asset))).limit(1);
+        let fundRow = fundRowByKey || fundRowByTicker;
         if (!fundRow) {
-          missingFunds.add(asset);
-          continue;
+          if (side === "sell") {
+            missingFunds.add(asset);
+            continue;
+          }
+          const fundKey = asset.toLowerCase();
+          [fundRow] = await tx.insert(fundsTable).values({
+            key: fundKey,
+            name: String(detectedFund.name || detectedFund.ticker || asset).slice(0, 120),
+            ticker: String(detectedFund.ticker || asset).slice(0, 40),
+            icon: String(detectedFund.icon || "").slice(0, 20),
+            unitsHeld: "0",
+            costBasisTotal: "0",
+            nav: String(price),
+            apyPercent: null,
+          }).returning();
         }
 
         // Duplicate detection: match assetType + amount + occurredAt + txType
         const dupMatch = await tx
           .select()
           .from(transactionsTable)
-          .where(
-            eq(transactionsTable.assetType, asset),
-            eq(transactionsTable.amount, String(amount)),
-            eq(transactionsTable.occurredAt, occurredAt.toISOString()),
-            eq(transactionsTable.txType, side),
-          )
+            .where(and(
+              eq(transactionsTable.assetType, asset),
+              eq(transactionsTable.amount, String(amount)),
+              eq(transactionsTable.occurredAt, occurredAt),
+              eq(transactionsTable.txType, side),
+            ))
           .limit(1);
         if (dupMatch.length > 0) {
           skippedDuplicates.push({ asset, amount, occurredAt: occurredAt.toISOString(), reason: "duplicate" });
