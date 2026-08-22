@@ -36,7 +36,7 @@ function extractPercentNear(fullText: string, label: string): number | null {
 
   // Defensive fallback in case a template variant renders value-before-label,
   // same pattern already used for NAV/score.
-  const before = fullText.slice(Math.max(0, idx - 80), idx);
+  const before = fullText.slice(Math.max(0, idx - 240), idx);
   const beforeMatch = before.match(/([-+]\d+(\.\d+)?)%(?!.*%)/);
   if (beforeMatch) return parseFloat(beforeMatch[1]);
 
@@ -68,12 +68,12 @@ function extractPriceNear(fullText: string, label: string): number | null {
   // consistently wrong, just about which direction, without ever having
   // been checked against a real page. This now checks both directions so
   // it survives either template.
-  const before = fullText.slice(Math.max(0, idx - 30), idx);
-  const beforeMatch = before.match(/(\d+(\.\d+)?)\s*EGP\s*$/);
+  const before = fullText.slice(Math.max(0, idx - 80), idx);
+  const beforeMatch = before.match(/(?:^|[^\d.])([\d]{1,6}(?:\.\d{1,6})?)\s*EGP\s*$/);
   if (beforeMatch) return parseFloat(beforeMatch[1]);
 
-  const after = fullText.slice(idx, idx + label.length + 60);
-  const afterMatch = after.match(/(\d+(\.\d+)?)\s*EGP/);
+  const after = fullText.slice(idx, idx + label.length + 240);
+  const afterMatch = after.match(/(?:^|[^\d.])([\d]{1,6}(?:\.\d{1,6})?)\s*EGP/);
   if (afterMatch) return parseFloat(afterMatch[1]);
 
   return null;
@@ -89,7 +89,7 @@ function extractScoreNear(fullText: string): number | null {
   // grabbing a sub-score instead. Real order here is value-then-label too:
   // "61/100 Total Score". parseFloat (not parseInt) to allow decimal scores,
   // matching the numeric(5,2) column in 001_create_comparison_snapshots.sql.
-  const match = fullText.match(/(\d{1,3}(?:\.\d+)?)\/100\s*Total Score/i);
+  const match = fullText.match(/(\d{1,3}(?:\.\d+)?)\s*\/\s*100\s*Total Score/i);
   if (!match) return null;
   return parseFloat(match[1]);
 }
@@ -133,7 +133,15 @@ export async function parseFundPage(
     // This is deliberately resilient to class-name changes — FoudaLens may
     // restyle the page, but the label text ("30-Day Return", "NAV") is
     // unlikely to change since it's user-facing copy.
-    const bodyText = $("body").text().replace(/\s+/g, " ");
+    // Preserve boundaries between adjacent rendered elements. Some fund
+    // pages place the ticker and NAV in neighboring spans without whitespace;
+    // body.text() would merge `T70` + `1.6738` into the false NAV `701.6738`.
+    const bodyText = $("body")
+      .html()
+      ?.replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " ")
+      .replace(/\s*\(\s*/g, " (")
+      .replace(/\s*\)\s*/g, ")") ?? "";
 
     const nav = extractPriceNear(bodyText, "Unit price (NAV)");
     const return30d = extractPercentNear(bodyText, "30-Day Return");
@@ -178,7 +186,7 @@ export async function parseFundPage(
   }
 }
 
-function emptySnapshot(watchlistId: number): ScrapedSnapshot {
+export function emptySnapshot(watchlistId: number): ScrapedSnapshot {
   return {
     watchlist_id: watchlistId,
     nav_or_price: null,

@@ -59,7 +59,11 @@ router.get("/recommendations", async (req: Request, res: Response) => {
               cw.ticker, ar.recommendation_text, ar.model_used, ar.generated_at
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
-       WHERE cw.is_held = true ${runFilter}
+       WHERE cw.is_held = true
+         AND ar.recommendation_text NOT LIKE '%STRICT RULES%'
+         AND ar.recommendation_text NOT LIKE '%Plain, direct, warm%'
+         AND ar.recommendation_text NOT LIKE '%Write the recommendation now%'
+         ${runFilter}
        ORDER BY cw.ticker, ar.generated_at DESC`
       , params
     );
@@ -147,7 +151,10 @@ router.post("/generate", async (req: Request, res: Response) => {
         await pool.query(
           `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id)
            VALUES ($1, $2, $3, $4)
-           ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL DO NOTHING`,
+           ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
+           DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
+                         model_used = EXCLUDED.model_used,
+                         generated_at = EXCLUDED.generated_at`,
           [watchlistResult.rows[0].id, recommendation.recommendation_text, recommendation.model_used, runId]
         );
 

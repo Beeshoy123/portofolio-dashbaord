@@ -164,8 +164,17 @@ export function computeDerived(portfolio: Portfolio): Derived {
   const rePnl = reValue - reCostBasisTotal;
   const rePnlPct = reCostBasisTotal > 0 ? (rePnl / reCostBasisTotal) * 100 : 0;
 
-  const liquidValue = abrValue + reValue;
-  const liquidCost = abrCostBasisTotal + reCostBasisTotal;
+  // The funds table is the current active-position source of truth. Do not
+  // limit wallet totals to the two legacy fund keys; newly imported funds
+  // must contribute exactly once here.
+  const liquidValue = portfolio.funds.reduce(
+    (sum, fund) => sum + fund.unitsHeld * fund.nav,
+    0,
+  );
+  const liquidCost = portfolio.funds.reduce(
+    (sum, fund) => sum + fund.costBasisTotal,
+    0,
+  );
   const liquidPnl = liquidValue - liquidCost;
   const liquidPnlPct = liquidCost > 0 ? (liquidPnl / liquidCost) * 100 : 0;
 
@@ -200,20 +209,28 @@ export function computeDerived(portfolio: Portfolio): Derived {
   // excluded from Total P&L until the live price feature ships.
   const goldValueForTotals = goldValue ?? goldCost;
 
-  const totalValue = goldValueForTotals + abrValue + reValue + totalPrincipal;
-  const totalCost = goldCost + abrCostBasisTotal + reCostBasisTotal + totalPrincipal;
+  const totalValue = goldValueForTotals + liquidValue + totalPrincipal;
+  const totalCost = goldCost + liquidCost + totalPrincipal;
   const totalPnl = totalValue - totalCost;
   const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
-  const totalYieldMonthly = abrMonthlyYield + totalMonthly;
+  const totalYieldMonthly = portfolio.funds.reduce(
+    (sum, fund) =>
+      sum + (fund.unitsHeld * fund.nav * (fund.apyPercent ?? 0)) / 100 / 12,
+    0,
+  ) + totalMonthly;
 
   // ── Whole-wallet performance fields (Total toggle) ───────────────────────
   // Capital P&L: unrealized gains from price-appreciating assets only.
   // Certs are always at face value, so their capital contribution is zero.
   const capitalPnl = (goldNetPnl ?? 0) + liquidPnl;
-  const abrAnnualIncome = abrMonthlyYield * 12;
+  const fundAnnualIncome = portfolio.funds.reduce(
+    (sum, fund) =>
+      sum + (fund.unitsHeld * fund.nav * (fund.apyPercent ?? 0)) / 100,
+    0,
+  );
   // Income P&L: what the wallet earns annually from yield-bearing assets.
-  const incomePnl = abrAnnualIncome + annualYield;
+  const incomePnl = fundAnnualIncome + annualYield;
   const totalBlendedYieldPct =
     totalValue > 0 ? round1((totalYieldMonthly * 12 / totalValue) * 100) : 0;
   // Attribution: each bucket's share of capitalPnl / incomePnl.
@@ -223,7 +240,7 @@ export function computeDerived(portfolio: Portfolio): Derived {
   const liquidCapitalPct =
     capitalPnl !== 0 ? (liquidPnl / capitalPnl) * 100 : 0;
   const abrIncomePct =
-    incomePnl > 0 ? (abrAnnualIncome / incomePnl) * 100 : 0;
+    incomePnl > 0 ? (fundAnnualIncome / incomePnl) * 100 : 0;
   const certIncomePct =
     incomePnl > 0 ? (annualYield / incomePnl) * 100 : 0;
 
@@ -235,8 +252,7 @@ export function computeDerived(portfolio: Portfolio): Derived {
     emergencyFundTarget > 0 ? (abrCostBasisTotal / emergencyFundTarget) * 100 : 0;
   const emergencyFundScore = Math.max(0, Math.min(100, emergencyFundPct));
 
-  const abrAnnualYield = (abrValue * abrApyPercent) / 100;
-  const blendedYieldPct = totalValue > 0 ? ((abrAnnualYield + annualYield) / totalValue) * 100 : 0;
+  const blendedYieldPct = totalValue > 0 ? ((fundAnnualIncome + annualYield) / totalValue) * 100 : 0;
   const yieldScore = Math.max(
     0,
     Math.min(100, (blendedYieldPct / YIELD_BENCHMARK_PCT) * 100),

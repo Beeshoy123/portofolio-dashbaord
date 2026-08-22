@@ -154,6 +154,9 @@ export default function App() {
         await createSnapshotMutation.mutateAsync({ data: { value } });
         await invalidate();
       },
+      refreshPortfolio: async () => {
+        if (!notSeeded) await invalidate();
+      },
     });
 
     return () => {

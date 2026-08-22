@@ -142,6 +142,13 @@ function toTransaction(row: typeof transactionsTable.$inferSelect) {
   };
 }
 
+function importedUnitsFromMeta(meta: string): number | null {
+  const match = meta
+    .replace(/,/g, "")
+    .match(/(?:^|\s)(\d+(?:\.\d+)?)\s*units?(?:\s|$)/i);
+  return match ? Number(match[1]) : null;
+}
+
 function toGrowthSnapshot(row: typeof growthSnapshotsTable.$inferSelect) {
   return {
     id: row.id,
@@ -210,7 +217,10 @@ router.get("/portfolio", async (_req, res) => {
 
     const data = GetPortfolioResponse.parse({
       gold: buildGoldPosition(goldTxRows, goldSettings),
-      funds: fundRows.map(toFund),
+      // `funds` is the current holdings collection consumed by every
+      // portfolio card. Keep sold-out funds in transaction history, but do
+      // not expose zero-unit positions as active holdings.
+      funds: fundRows.filter((row) => Number(row.unitsHeld) > 0).map(toFund),
       certificates: certRows.map(toCertificate),
       transactions: txRows
         .map(toTransaction)
@@ -811,21 +821,51 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
       for (const r of rows) {
         if (!r || typeof r !== "object") continue;
         const detectedFund = r.fund && typeof r.fund === "object" ? r.fund : {};
-        const asset = (detectedFund.key || r.assetType || r.asset || r.ticker) as string | undefined;
-        const side = (r.side || r.txType || r.type) as string | undefined;
+        const rawAsset = (detectedFund.key || r.assetType || r.asset || r.ticker) as string | undefined;
+        const rawSide = (r.side || r.txType || r.type) as string | undefined;
         const price = Number(r.pricePerUnit ?? r.price ?? null);
         const amount = Number(r.amountEgp ?? r.amount ?? null);
         const occurredAt = r.occurredAt ? new Date(r.occurredAt) : new Date();
 
-        if (!asset || !/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(asset)) continue;
-        if (!side || !["buy", "sell"].includes(side)) continue;
-        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(amount) || amount <= 0) continue;
+        if (!rawAsset || !/^[a-z0-9][a-z0-9_-]{0,39}$/i.test(rawAsset)) continue;
+        if (rawSide !== "buy" && rawSide !== "sell") continue;
+        const side: "buy" | "sell" = rawSide;
+        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(amount) || amount <= 0 || Number.isNaN(occurredAt.getTime())) continue;
 
-        const [fundRowByKey] = await tx.select().from(fundsTable).where(eq(fundsTable.key, asset.toLowerCase())).limit(1);
+        const asset = rawAsset.trim().toLowerCase();
+        const ticker = String(detectedFund.ticker || rawAsset).trim();
+
+        const [fundRowByKey] = await tx.select().from(fundsTable).where(eq(fundsTable.key, asset)).limit(1);
         const [fundRowByTicker] = fundRowByKey
           ? [undefined]
-          : await tx.select().from(fundsTable).where(eq(fundsTable.ticker, String(detectedFund.ticker || asset))).limit(1);
+          : await tx.select().from(fundsTable).where(sql`lower(${fundsTable.ticker}) = lower(${ticker})`).limit(1);
         let fundRow = fundRowByKey || fundRowByTicker;
+        const unitsDelta = amount / price;
+
+        // Resolve aliases before duplicate detection so the same order cannot
+        // be imported once by ticker and again by fund key. Timestamps from
+        // screenshots often shift by a timezone offset, so exact timestamp
+        // matching is not a reliable order identity.
+        const canonicalAsset = fundRow?.key ?? asset;
+        const candidateDuplicates = await tx
+          .select()
+          .from(transactionsTable)
+          .where(and(
+            eq(transactionsTable.assetType, canonicalAsset),
+            eq(transactionsTable.amount, amount.toFixed(2)),
+            eq(transactionsTable.txType, side),
+            sql`${transactionsTable.occurredAt} between ${new Date(occurredAt.getTime() - 6 * 60 * 60 * 1000)} and ${new Date(occurredAt.getTime() + 6 * 60 * 60 * 1000)}`,
+          ))
+          .limit(20);
+        const duplicate = candidateDuplicates.find((candidate) => {
+          const candidateUnits = importedUnitsFromMeta(candidate.meta);
+          return candidateUnits !== null && Math.abs(candidateUnits - unitsDelta) <= Math.max(0.001, unitsDelta * 0.0001);
+        });
+        if (duplicate) {
+          skippedDuplicates.push({ asset: canonicalAsset, amount, occurredAt: occurredAt.toISOString(), reason: "duplicate" });
+          continue;
+        }
+
         if (!fundRow) {
           if (side === "sell") {
             missingFunds.add(asset);
@@ -844,23 +884,6 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
           }).returning();
         }
 
-        // Duplicate detection: match assetType + amount + occurredAt + txType
-        const dupMatch = await tx
-          .select()
-          .from(transactionsTable)
-            .where(and(
-              eq(transactionsTable.assetType, asset),
-              eq(transactionsTable.amount, String(amount)),
-              eq(transactionsTable.occurredAt, occurredAt),
-              eq(transactionsTable.txType, side),
-            ))
-          .limit(1);
-        if (dupMatch.length > 0) {
-          skippedDuplicates.push({ asset, amount, occurredAt: occurredAt.toISOString(), reason: "duplicate" });
-          continue;
-        }
-
-        const unitsDelta = amount / price;
         const existingUnits = Number(fundRow.unitsHeld);
         const existingCost = Number(fundRow.costBasisTotal);
 
@@ -871,9 +894,14 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
           newUnitsHeld = existingUnits + unitsDelta;
           newCostBasisTotal = existingCost + amount;
         } else {
+          if (unitsDelta > existingUnits + 0.000001) {
+            const oversellError = new Error(`Cannot sell ${unitsDelta.toFixed(6)} units; only ${existingUnits.toFixed(6)} held`);
+            (oversellError as Error & { statusCode?: number }).statusCode = 400;
+            throw oversellError;
+          }
           const avgCostPerUnit = existingUnits > 0 ? existingCost / existingUnits : price;
           const costRemoved = avgCostPerUnit * unitsDelta;
-          newUnitsHeld = existingUnits - unitsDelta;
+          newUnitsHeld = Math.max(0, existingUnits - unitsDelta);
           newCostBasisTotal = Math.max(0, existingCost - costRemoved);
         }
 
@@ -885,7 +913,7 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
 
         const meta = `scan-import ${side} ${unitsDelta.toFixed(6)} units @ ${price.toFixed(4)} EGP, total ${amount.toFixed(2)} EGP`;
         const [created] = await tx.insert(transactionsTable).values({
-          assetType: asset,
+          assetType: fundRow.key,
           name: fundRow.name,
           meta,
           occurredAt: occurredAt.toISOString(),
@@ -898,6 +926,11 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
     });
   } catch (err) {
     console.error("/portfolio/fund-transactions error:", err);
+    const statusCode = (err as { statusCode?: number }).statusCode;
+    if (statusCode === 400 && err instanceof Error) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
     res.status(500).json({ error: "Internal error while inserting transactions" });
     return;
   }

@@ -21,6 +21,7 @@ export interface DashboardCallbacks {
     body: { unitsHeld?: number; nav?: number },
   ) => Promise<void>;
   createSnapshot: (value: number) => Promise<void>;
+  refreshPortfolio?: () => Promise<void>;
 }
 
 type WindowFns = Record<string, unknown>;
@@ -1087,14 +1088,30 @@ export function initDashboardBehavior(
   };
 
   function renderPriceCheckerTable(snapshots: any[], tableEl: HTMLElement, resultsEl: HTMLElement): number {
-    comparisonSnapshots = snapshots;
+    const isExcludedEntity = (snapshot: any) => {
+      const identity = `${snapshot.ticker ?? ""} ${snapshot.name ?? ""}`.toLowerCase();
+      return /\bezz\b|ezz steel|el ezz/.test(identity);
+    };
+    const displayName = (snapshot: any) => {
+      const identity = `${snapshot.ticker ?? ""} ${snapshot.name ?? ""}`.toLowerCase();
+      const name = String(snapshot.name ?? "");
+      if (/\btmg\b|talaat moustafa/.test(identity) && !/\(TMG\)/i.test(name)) {
+        return `${name} (TMG)`;
+      }
+      if (/\bcib\b|commercial international bank/.test(identity) && !/\(CIB\)/i.test(name)) {
+        return `${name} (CIB)`;
+      }
+      return name;
+    };
+    const visibleSnapshots = snapshots.filter((snapshot: any) => !isExcludedEntity(snapshot));
+    comparisonSnapshots = visibleSnapshots;
     comparisonTableEl = tableEl;
     comparisonResultsEl = resultsEl;
-    const funds = snapshots.filter((s: any) => s.entity_type === "fund" && s.raw_fetch_ok);
-    const stocks = snapshots.filter((s: any) => s.entity_type === "stock" && s.raw_fetch_ok);
-    const indices = snapshots.filter((s: any) => s.entity_type === "index" && s.raw_fetch_ok);
+    const funds = visibleSnapshots.filter((s: any) => s.entity_type === "fund" && s.raw_fetch_ok);
+    const stocks = visibleSnapshots.filter((s: any) => s.entity_type === "stock" && s.raw_fetch_ok);
+    const indices = visibleSnapshots.filter((s: any) => s.entity_type === "index" && s.raw_fetch_ok);
     const successful = [...funds, ...stocks, ...indices];
-    const failed = snapshots.filter((s: any) => s.raw_fetch_ok === false);
+    const failed = visibleSnapshots.filter((s: any) => s.raw_fetch_ok === false);
     const buyCount = successful.filter((s: any) => String(s.signal ?? "").toUpperCase().includes("BUY")).length;
     const holdCount = successful.filter((s: any) => String(s.signal ?? "").toUpperCase().includes("HOLD")).length;
     const reviewCount = successful.length - buyCount - holdCount;
@@ -1105,7 +1122,7 @@ export function initDashboardBehavior(
     const tableRow = (s: any) => `
       <tr style="border-bottom:1px solid var(--edge)">
         <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}${heldTag(s)}</td>
-        <td style="padding:6px 8px;color:var(--dim);font-size:10px">${s.name}</td>
+        <td style="padding:6px 8px;color:var(--dim);font-size:10px">${displayName(s)}</td>
         <td style="padding:6px 8px;text-align:right">${fmtNum(s.nav_or_price)}</td>
         <td style="padding:6px 8px;text-align:right;color:${Number(s.return_30d_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_30d_percent)}</td>
         <td style="padding:6px 8px;text-align:right;color:${Number(s.return_ytd_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_ytd_percent)}</td>
@@ -1114,7 +1131,7 @@ export function initDashboardBehavior(
     const failedRow = (s: any) => `
       <tr style="border-bottom:1px solid var(--edge);color:var(--dim)">
         <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}</td>
-        <td style="padding:6px 8px;font-size:10px">${s.name}</td>
+        <td style="padding:6px 8px;font-size:10px">${displayName(s)}</td>
         <td colspan="3" style="padding:6px 8px;text-align:center;font-size:10px">Price unavailable</td>
         <td style="padding:6px 8px;text-align:right;color:var(--pnl-down);font-weight:700">Failed</td>
       </tr>`;
@@ -1154,8 +1171,8 @@ export function initDashboardBehavior(
     const rows = comparisonSortKey
       ? snapshots.slice().sort(compareSnapshots).map((snapshot: any) => snapshot.raw_fetch_ok ? tableRow(snapshot) : failedRow(snapshot))
       : [
-          ...(funds.length ? [sectionHeader("Funds"), ...funds.sort((a: any, b: any) => Number(b.return_30d_percent ?? -999) - Number(a.return_30d_percent ?? -999)).map(tableRow)] : []),
-          ...(stocks.length ? [sectionHeader("Stocks"), ...stocks.sort((a: any, b: any) => Number(b.total_score ?? 0) - Number(a.total_score ?? 0)).map(tableRow)] : []),
+          ...(funds.length ? [sectionHeader("Funds"), ...funds.slice().sort((a: any, b: any) => Number(b.return_ytd_percent ?? -Infinity) - Number(a.return_ytd_percent ?? -Infinity)).map(tableRow)] : []),
+          ...(stocks.length ? [sectionHeader("Stocks"), ...stocks.slice().sort((a: any, b: any) => Number(b.return_ytd_percent ?? -Infinity) - Number(a.return_ytd_percent ?? -Infinity)).map(tableRow)] : []),
           ...(indices.length ? [sectionHeader("Indices"), ...indices.map(tableRow)] : []),
           ...(failed.length ? [sectionHeader("Needs review"), ...failed.map(failedRow)] : []),
         ];
@@ -1189,6 +1206,46 @@ export function initDashboardBehavior(
     }
     resultsEl.style.display = "block";
     return funds.length + stocks.length + indices.length;
+  }
+
+  async function loadSavedPriceShelf(): Promise<void> {
+    const resultsEl = el("price-checker-results");
+    const tableEl = el("price-checker-table");
+    if (!resultsEl || !tableEl) return;
+
+    try {
+      const response = await authenticatedFetch("/api/scraper/snapshots", {
+        signal: scraperController.signal,
+      });
+      if (!response.ok) return;
+
+      const data = (await response.json()) as {
+        snapshots?: any[];
+        lastRunAt?: string | null;
+      };
+      const snapshots = Array.isArray(data.snapshots) ? data.snapshots : [];
+      const fetchedCount = renderPriceCheckerTable(snapshots, tableEl, resultsEl);
+      if (fetchedCount === 0) return;
+
+      const engineState = el("ai-engine-state");
+      const engineUpdated = el("ai-engine-updated");
+      const statusEl = el("scraper-status");
+      if (engineState) {
+        engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Saved';
+        (engineState as HTMLElement).style.color = "var(--accent)";
+      }
+      if (engineUpdated) {
+        engineUpdated.textContent = data.lastRunAt
+          ? `Saved ${new Date(data.lastRunAt).toLocaleString()}`
+          : "Saved latest findings";
+      }
+      if (statusEl) {
+        statusEl.style.display = "block";
+        statusEl.textContent = `Showing saved findings · ${fetchedCount} entities · click Refresh prices for a new run`;
+      }
+    } catch {
+      // A shelf read is optional; the dashboard remains usable without it.
+    }
   }
 
   win.sortComparison = (key: string) => {
@@ -1324,6 +1381,7 @@ export function initDashboardBehavior(
       if (engineUpdated) engineUpdated.textContent = `Updated ${lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now"}`;
 
       if (tableEl && resultsEl) renderPriceCheckerTable(snapshots, tableEl, resultsEl);
+      await callbacks.refreshPortfolio?.();
 
       const verdictSection = el("rotation-verdict-section");
       if (verdictSection) {
@@ -1423,8 +1481,9 @@ export function initDashboardBehavior(
   };
 
   const manualEntitySelect = () => el("manual-entity-select") as HTMLSelectElement | null;
-  if (manualEntitySelect) {
-    manualEntitySelect.onchange = () => renderManualEntityForm(manualEntitySelect.value);
+  const manualEntitySelectEl = manualEntitySelect();
+  if (manualEntitySelectEl) {
+    manualEntitySelectEl.onchange = () => renderManualEntityForm(manualEntitySelectEl.value);
   }
 
   win.openNav = () => {
@@ -1440,7 +1499,7 @@ export function initDashboardBehavior(
   win.closeNav = () => el("nav-modal")?.classList.remove("open");
 
   win.applyNavs = async () => {
-    const entity = (manualEntitySelect?.value || "fund") as "fund" | "gold" | "certificate";
+    const entity = (manualEntitySelect()?.value || "fund") as "fund" | "gold" | "certificate";
     const btn = el("nav-apply-btn") as HTMLButtonElement | null;
     if (btn) {
       btn.disabled = true;
@@ -2274,6 +2333,8 @@ export function initDashboardBehavior(
       </div>`;
     }
   }
+
+  void loadSavedPriceShelf();
 
   return () => {
     scraperController.abort();

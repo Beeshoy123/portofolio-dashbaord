@@ -137,6 +137,8 @@ pnpm rebuild  # Critical for Windows: compiles native modules like esbuild
 ⚠️ **START THIS FIRST - Frontend won't work without it!**
 ```bash
 cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server'
+# Clear inherited values so dotenv loads the repository Supabase configuration.
+unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY
 PORT=8080 node --enable-source-maps ./dist/index.mjs
 ```
 ✅ Wait for this output before starting frontend:
@@ -144,6 +146,11 @@ PORT=8080 node --enable-source-maps ./dist/index.mjs
 Server listening port: 8080
 gold-price-cache: scraped fresh prices
 ```
+✅ Also confirm the backend log says `Using database host` with the Supabase host, not `localhost`.
+
+The backend automatically loads `../../.secrets/api-server.env`. That file must contain the real
+`DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` values. Do not put these secrets in
+`artifacts/portfolio/.env` or commit them to the repository.
 
 **Step 4: FRONTEND - Terminal 2 (runs on port 3001)**
 ```bash
@@ -168,6 +175,7 @@ PORT=3001 pnpm run dev
 | SmartAdvisor Token Limit Issue (Groq API) | SmartAdvisor API request too large for Groq model | See [SmartAdvisor Token Limit Issue](#smartadvisor-token-limit-issue-new-2026-08-16) |
 | "The server does not support SSL connections" | Database can't connect to Supabase over SSL (Windows firewall issue) | See [Database SSL Connection Issue](#database-ssl-connection-issue-new-2026-08-16) |
 | "Couldn't load your portfolio. HTTP 500 Internal Server Error" | Backend API not running OR database SSL error | **Start backend FIRST**: `cd artifacts/api-server && PORT=8080 node --enable-source-maps ./dist/index.mjs` (see [QUICKEST START](#-quickest-start-60-seconds)) |
+| Dashboard shows zeros or "database is empty" | An inherited `DATABASE_URL` points to an empty local database | In the backend terminal run `unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY`, then restart the backend so it loads `../../.secrets/api-server.env` |
 | "running scripts is disabled on this system" | Using PowerShell instead of Git Bash | **Set Git Bash as default terminal in VS Code** (see [QUICKEST START](#-quickest-start-60-seconds)) |
 | "Cannot find native binding" | Native modules not compiled | `pnpm install --shamefully-hoist --force` |
 | "Cannot find package esbuild" | pnpm using nested modules | Add `--shamefully-hoist` flag |

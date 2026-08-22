@@ -19,7 +19,7 @@
 // Run migrations/007_stockanalysis_fundamentals.sql once before first use.
 
 import { Pool } from "pg";
-import { parseFundPage } from "./parseFund";
+import { emptySnapshot, parseFundPage } from "./parseFund";
 import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
@@ -63,6 +63,18 @@ async function saveSnapshot(snapshot: ScrapedSnapshot, runId: number): Promise<v
       snapshot.raw_fetch_ok,
       runId,
     ]
+  );
+}
+
+async function syncFundNav(ticker: string, snapshot: ScrapedSnapshot): Promise<void> {
+  if (!snapshot.raw_fetch_ok || snapshot.nav_or_price === null) return;
+  const nav = Number(snapshot.nav_or_price);
+  if (!Number.isFinite(nav) || nav <= 0) return;
+
+  await pool.query(
+    `UPDATE funds SET nav = $1
+     WHERE lower(ticker) = lower($2) AND units_held > 0`,
+    [nav, ticker],
   );
 }
 
@@ -134,6 +146,36 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const item = items[nextIndex++];
+        await worker(item);
+      }
+    },
+  );
+  await Promise.all(workers);
+}
+
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallback: () => T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback()), timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 export { main as runScraper };
 
 export async function main(existingRunId?: number): Promise<{ runId: number; succeeded: number; failed: number; total: number }> {
@@ -151,41 +193,63 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
   let successCount = 0;
   let failCount = 0;
 
-  // --- Funds: one request each, confirmed working pattern ---
-  for (const fund of funds) {
+  // --- Funds: bounded concurrency preserves detail without rate spikes ---
+  await runWithConcurrency(funds, 3, async (fund) => {
     if (!fund.source_code) {
       console.error(`[main] Fund ${fund.ticker} has no source_code — skipping. Fix the seed data.`);
       failCount++;
-      continue;
+      return;
     }
-    const snapshot = await parseFundPage(fund.source_code, fund.id);
-    await saveSnapshot(snapshot, runId);
-    snapshot.raw_fetch_ok ? successCount++ : failCount++;
-    console.log(
-      `[fund] ${fund.ticker}: ${snapshot.raw_fetch_ok ? "OK" : "FAILED"} — NAV ${snapshot.nav_or_price}`
-    );
-    await sleep(1500); // be polite between requests
-  }
+    try {
+      const snapshot = await withTimeout(
+        parseFundPage(fund.source_code, fund.id),
+        45_000,
+        () => emptySnapshot(fund.id),
+      );
+      await saveSnapshot(snapshot, runId);
+      await syncFundNav(fund.ticker, snapshot);
+      snapshot.raw_fetch_ok ? successCount++ : failCount++;
+      console.log(
+        `[fund] ${fund.ticker}: ${snapshot.raw_fetch_ok ? "OK" : "FAILED"} — NAV ${snapshot.nav_or_price}`
+      );
+    } catch (error) {
+      failCount++;
+      console.error(`[fund] ${fund.ticker}: isolated failure —`, error);
+      try {
+        await saveSnapshot(emptySnapshot(fund.id), runId);
+      } catch (saveError) {
+        console.error(`[fund] ${fund.ticker}: could not save failure snapshot —`, saveError);
+      }
+    } finally {
+      await sleep(1500); // be polite between requests
+    }
+  });
 
-  // --- Stocks: one request each, unverified pattern, may be slow (browser fallback) ---
-  for (const stock of stocks) {
-    const fundamentals = await parseStockAnalysis(stock.ticker, stock.id);
-    stockAnalysisByTicker.set(stock.ticker, fundamentals);
-    await saveFundamentals(fundamentals, runId);
-    const snapshot = {
-      ...(await parseStockPage(stock.ticker, stock.id)),
-      nav_or_price: fundamentals.price,
-      return_30d_percent: fundamentals.return_30d_percent,
-      return_ytd_percent: fundamentals.return_ytd_percent,
-      return_1y_percent: fundamentals.return_1y_percent,
-    };
-    await saveSnapshot(snapshot, runId);
-    snapshot.raw_fetch_ok ? successCount++ : failCount++;
-    console.log(
-      `[stock] ${stock.ticker}: ${snapshot.raw_fetch_ok ? "OK" : "FAILED"} — price ${snapshot.nav_or_price}`
-    );
-    await sleep(2000);
-  }
+  // --- Stocks: bounded concurrency; fundamentals and price use same sequence per stock ---
+  await runWithConcurrency(stocks, 2, async (stock) => {
+    try {
+      const fundamentals = await parseStockAnalysis(stock.ticker, stock.id);
+      stockAnalysisByTicker.set(stock.ticker, fundamentals);
+      await saveFundamentals(fundamentals, runId);
+      const snapshot = {
+        ...(await parseStockPage(stock.ticker, stock.id)),
+        nav_or_price: fundamentals.price,
+        return_30d_percent: fundamentals.return_30d_percent,
+        return_ytd_percent: fundamentals.return_ytd_percent,
+        return_1y_percent: fundamentals.return_1y_percent,
+      };
+      await saveSnapshot(snapshot, runId);
+      snapshot.raw_fetch_ok ? successCount++ : failCount++;
+      console.log(
+        `[stock] ${stock.ticker}: ${snapshot.raw_fetch_ok ? "OK" : "FAILED"} — price ${snapshot.nav_or_price}`
+      );
+    } catch (error) {
+      failCount++;
+      console.error(`[stock] ${stock.ticker}: isolated failure —`, error);
+    } finally {
+      await sleep(2000);
+    }
+  });
 
   // --- Indices: unchanged ---
   if (indices.length > 0) {

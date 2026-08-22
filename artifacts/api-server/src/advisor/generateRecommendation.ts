@@ -100,9 +100,23 @@ export async function generateRecommendation(
     );
   }
 
+  const recommendationText = text.trim();
+  const promptEchoMarkers = [
+    "STRICT RULES",
+    "Plain, direct, warm",
+    "3-5 sentences when giving",
+    "Write the recommendation now",
+    "SYSTEM_INSTRUCTIONS",
+  ];
+  if (promptEchoMarkers.some((marker) => recommendationText.includes(marker))) {
+    throw new Error(
+      "[generateRecommendation] Gemini returned prompt instructions instead of a recommendation; response was rejected.",
+    );
+  }
+
   return {
     holding_ticker: verdict.holding_ticker,
-    recommendation_text: text.trim(),
+    recommendation_text: recommendationText,
     generated_at: new Date().toISOString(),
     model_used: GEMINI_MODEL,
   };

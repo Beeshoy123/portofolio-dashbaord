@@ -217,17 +217,15 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
 //   RE  (Beltone): Equity/RE fund. Performance is NAV market volatility.
 //                  Average cost basis logic applies.
 function buildCohortAnalysis(p: Portfolio, d: Derived): string {
-  // Parse unit count from meta strings like:
-  //   "48 units @ EGP 206.988"  → 48
-  //   "2,656 units @ EGP 1.888" → 2656
+  // Parse unit count from metadata while tolerating older labels/prefixes.
   function parseUnits(meta: string): number {
-    const m = meta.replace(/,/g, "").match(/^(\d+)/);
-    return m ? parseInt(m[1], 10) : 0;
+    const m = meta.replace(/,/g, "").match(/(?:^|\s)(\d+(?:\.\d+)?)\s*(?:units?|certs?)(?:\s|$)/i);
+    return m ? parseFloat(m[1]) : 0;
   }
 
-  // Parse avg cost per unit from meta strings like "48 units @ EGP 206.988" → 206.988
+  // Parse avg cost per unit from metadata like "48 units @ EGP 206.988".
   function parseAvgCost(meta: string): number {
-    const m = meta.match(/EGP\s*([\d.]+)/);
+    const m = meta.match(/(?:EGP|@)\s*([\d.]+)/i);
     return m ? parseFloat(m[1]) : 0;
   }
 
@@ -238,7 +236,14 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     fundTypeNote: string,
     accentColor: string,
   ): string {
-    const fundTypeNoteKey = assetKey === 'abr' ? 'cohort.fund.abr.note' : 'cohort.fund.re.note';
+    const fundTypeNoteKey = assetKey === 'abr'
+      ? 'cohort.fund.abr.note'
+      : assetKey === 're'
+        ? 'cohort.fund.re.note'
+        : '';
+    const fundTypeNoteMarkup = fundTypeNote
+      ? `<div style="font-size:10px;color:var(--dim);background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid var(--edge)"><span${fundTypeNoteKey ? ` data-i18n="${fundTypeNoteKey}"` : ''}>${fundTypeNote}</span></div>`
+      : '';
     type Tx = Portfolio["transactions"][number];
     const buys = p.transactions
       .filter((tx: Tx) => tx.assetType === assetKey && tx.txType === "buy")
@@ -247,21 +252,26 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
           new Date(a.occurredAt).getTime() - new Date(b.occurredAt).getTime(),
       );
 
-    if (buys.length === 0) {
+    // Older imported transactions can contain an amount without unit data.
+    // They cannot form a reliable cohort and must not inflate the position.
+    const completeBuys = buys.filter((tx: Tx) => parseUnits(tx.meta) > 0);
+
+    if (completeBuys.length === 0) {
       return `<div style="margin-bottom:24px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
           <div style="font-size:12px;font-weight:800;color:var(--fg)">${label}</div>
-          <div style="font-size:10px;color:var(--dim);background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid var(--edge)"><span data-i18n="${fundTypeNoteKey}">${fundTypeNote}</span></div>
+          ${fundTypeNoteMarkup}
         </div>
         <div style="font-size:11px;color:var(--dim);padding:12px 0" data-i18n="cohort.no.buys">No buy transactions recorded yet.</div>
       </div>`;
     }
 
-    let totalInvested = 0;
-    let totalUnits = 0;
-    let totalCurrentValue = 0;
+    const fund = p.funds.find((item) => item.key === assetKey);
+    const totalInvested = fund?.costBasisTotal ?? 0;
+    const totalUnits = fund?.unitsHeld ?? 0;
+    const totalCurrentValue = totalUnits * currentNav;
 
-    const dataRows = (buys as Tx[])
+    const dataRows = (completeBuys as Tx[])
       .map((tx: Tx, i: number) => {
         const units = parseUnits(tx.meta);
         const avgCost = parseAvgCost(tx.meta);
@@ -277,9 +287,6 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
           month: "short",
           year: "2-digit",
         });
-        totalInvested += invested;
-        totalUnits += units;
-        totalCurrentValue += currentValue;
         return `<tr class="cohort-batch-row cohort-batch-hidden">
           <td><span style="font-size:10px;font-weight:800;background:var(--bg);border:1px solid var(--edge);border-radius:6px;padding:2px 7px;color:${accentColor}">B${i + 1}</span></td>
           <td style="color:var(--dim);font-size:11px">${dateStr}</td>
@@ -314,7 +321,7 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
     return `<div style="margin-bottom:24px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
         <div style="font-size:12px;font-weight:800;color:var(--fg)">${label}</div>
-        <div style="font-size:9.5px;color:${accentColor};background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid ${accentColor};opacity:.8;display:none" aria-hidden="true"><span data-i18n="${fundTypeNoteKey}">${fundTypeNote}</span></div>
+        <div style="font-size:9.5px;color:${accentColor};background:var(--bg);padding:2px 8px;border-radius:10px;border:1px solid ${accentColor};opacity:.8;display:none" aria-hidden="true">${fundTypeNoteMarkup}</div>
         <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
           <div style="font-size:9.5px;color:var(--dim)">NAV: <b style="color:var(--fg)">${fmt2(currentNav)}</b> EGP</div>
           <button class="cohort-collapse-btn" id="${assetKey}-cohort-toggle" onclick="toggleCohortTable('${assetKey}-cohort-table')" aria-expanded="false" title="Expand/collapse batches">▸</button>
@@ -347,9 +354,22 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
         <div class="card-lbl" data-i18n="card.cohort.batches">📊 Cohort Analysis · Buy Batches</div>
         <div style="font-size:9.5px;color:var(--dim)" data-i18n="cohort.fund.profit.formula">Profit = (Units × Current NAV) − Invested</div>
       </div>
-      ${buildFundTable("abr", d.abr.nav, "🏦 Bareeq", "Fixed Income · Accrual — NAV grows daily, no yield harvest", "var(--accent)")}
-      <div style="height:1px;background:var(--edge);margin-bottom:20px"></div>
-      ${buildFundTable("re", d.re.nav, "🏢 Beltone Real Estate", "Equity Fund · NAV Volatility — avg cost basis", "var(--pnl-down)")}
+      ${p.funds
+        .map((fund, index) => {
+          const label = `${fund.icon || '📈'} ${fund.name}`;
+          const note = fund.key === 'abr'
+            ? 'Fixed Income · Accrual — NAV grows daily, no yield harvest'
+            : fund.key === 're'
+              ? 'Equity Fund · NAV Volatility — avg cost basis'
+              : 'Database fund · NAV and cost basis from Supabase';
+          const accent = fund.key === 're'
+            ? 'var(--pnl-down)'
+            : index % 2 === 0
+              ? 'var(--accent)'
+              : 'var(--pnl-up)';
+          return `${index > 0 ? '<div style="height:1px;background:var(--edge);margin-bottom:20px"></div>' : ''}${buildFundTable(fund.key, fund.nav, label, note, accent)}`;
+        })
+        .join('')}
     </div>
   </div>`;
 }
