@@ -212,7 +212,7 @@ function buildGoldCohortAnalysis(p: Portfolio, d: Derived): string {
 // hardcoded numbers.
 //
 // Fund-type distinctions (per product spec):
-//   ABR (Bareeq):  Fixed-income accumulative. NAV accrues daily. NO dividend
+//   ABR (Bareeq):  Money-market emergency reserve. NAV accrues daily. NO dividend
 //                  harvesting or yield-sale logic — profit is pure NAV growth.
 //   RE  (Beltone): Equity/RE fund. Performance is NAV market volatility.
 //                  Average cost basis logic applies.
@@ -734,7 +734,7 @@ ${buildUsdRealityCard(p, d, usdReality)}
       </div>
       <div style="margin-top:8px;display:flex;flex-direction:column;gap:6px" id="pnl-rows">
         <div class="pnl-row" data-perf-group="gold"><div><div class="pnl-row-name">🥇 Gold 24K</div><div class="pnl-row-sub" id="pnl-row-sub-gold">${fmt(d.gold.gramsHeld)}g <span data-i18n="pnl.sub.physical">physical</span></div></div><div style="text-align:right">${goldPnlRowRight}</div></div>
-        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub" id="pnl-row-sub-abr"><span data-i18n="pnl.sub.fixed.income">Fixed Income</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.abr.nav)} EGP · ${fmt(d.abr.apyPercent)}% <span data-i18n="pnl.sub.apy">APY</span></div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--pnl-up)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--pnl-up);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
+        <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏦 Bareeq</div><div class="pnl-row-sub" id="pnl-row-sub-abr">Money Market · Emergency Reserve · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.abr.nav)} EGP · ${fmt(d.abr.apyPercent)}% <span data-i18n="pnl.sub.apy">APY</span></div></div><div style="text-align:right"><div class="pnl-row-val" style="color:var(--pnl-up)">${signedFmt(d.abr.pnl)} EGP</div><div style="font-size:9.5px;color:var(--pnl-up);font-weight:600">${pctStr(d.abr.pnlPct)}</div></div></div>
         <div class="pnl-row" data-perf-group="liquid"><div><div class="pnl-row-name">🏢 Real Est.</div><div class="pnl-row-sub" id="pnl-row-sub-re"><span data-i18n="pnl.sub.equity">Equity Fund</span> · <span data-i18n="pnl.sub.nav">NAV</span> ${fmt2(d.re.nav)} EGP</div></div><div style="text-align:right"><div class="pnl-row-val" style="color:${d.re.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${signedFmt(d.re.pnl)} EGP</div><div style="font-size:9.5px;color:${d.re.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"};font-weight:600">${pctStr(d.re.pnlPct)}</div></div></div>
         <div class="pnl-row" data-perf-group="certs"><div><div class="pnl-row-name">📜 Certificates</div><div class="pnl-row-sub" id="pnl-row-sub-certs" data-i18n="pnl.sub.nbe.income">NBE · interest income</div></div><div style="text-align:right"><div class="pnl-row-val" id="cert-pnl-val" style="color:var(--pnl-up)">${signedFmt(d.certTotals.annualYield)} EGP/yr</div><div style="font-size:9.5px;color:var(--pnl-up);font-weight:600" id="cert-pnl-pct">${pctStr(d.certTotals.weightedAvgRate)} APY</div></div></div>
       </div>
@@ -887,13 +887,15 @@ ${buildUsdRealityCard(p, d, usdReality)}
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex:1">
         <div class="dl-row"><span class="dl-dot" style="background:#b8893f"></span><span class="dl-name" data-i18n="seg.gold">Gold 24K</span><span class="dl-pct" id="pct-gold">${d.allocation.pctGold.toFixed(1)}%</span></div>
-        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name">EG Stock</span><span class="dl-pct" id="pct-liquid">${(d.allocation.pctAbr + d.allocation.pctRe).toFixed(1)}%</span></div>
+        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name">Bareeq Reserve</span><span class="dl-pct" id="pct-abr">${d.allocation.pctAbr.toFixed(1)}%</span></div>
+        <div class="dl-row"><span class="dl-dot" style="background:#2a8a70"></span><span class="dl-name">Real Estate Fund</span><span class="dl-pct" id="pct-re">${d.allocation.pctRe.toFixed(1)}%</span></div>
         <div class="dl-row" id="row-cert" style="display:flex"><span class="dl-dot" style="background:#8b6fb0"></span><span class="dl-name" data-i18n="seg.certs">Certificates</span><span class="dl-pct" id="pct-cert">${d.allocation.pctCert.toFixed(1)}%</span></div>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0">
       <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name"><span data-i18n="seg.gold">Gold 24K</span> · ${fmt(d.gold.gramsHeld)}g</div><div class="seg-meta" id="gold-sub"><span data-i18n="seg.avg.cost">Avg cost</span> ${goldSubCost} EGP/g · <span data-i18n="seg.mkt">Mkt</span> ${goldSubMkt}</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--pnl-up)' : 'var(--pnl-down)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' <span data-i18n="seg.vs.cost">vs cost</span>' : ''}</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">💧</div><div class="seg-body"><div class="seg-name">EG Stock</div><div class="seg-meta" id="liquid-sub">Bareeq + Beltone combined</div></div><div class="seg-right"><div class="seg-val" id="seg-liquid-val">${fmt(d.liquid.value)}</div><div class="seg-pct" style="color:${d.liquid.pnlPct >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${pctStr(d.liquid.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">🏦</div><div class="seg-body"><div class="seg-name">Bareeq Emergency Reserve</div><div class="seg-meta" id="liquid-sub">Money market · covers ${d.health.emergencyFundPct.toFixed(0)}% of emergency-fund target</div></div><div class="seg-right"><div class="seg-val" id="seg-liquid-val">${fmt(d.abr.value)}</div><div class="seg-pct" style="color:var(--pnl-up)">${fmt(d.abr.apyPercent)}% APY</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">🏢</div><div class="seg-body"><div class="seg-name">Real Estate Fund</div><div class="seg-meta">Beltone · investment position</div></div><div class="seg-right"><div class="seg-val">${fmt(d.re.value)}</div><div class="seg-pct" style="color:${d.re.pnlPct >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${pctStr(d.re.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
       <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name" data-i18n="seg.nbe.certs">NBE Certificates</div><div class="seg-meta" id="cert-sub">${p.certificates.length} <span data-i18n="seg.nbe.certs.avg">NBE certs · avg</span> ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--pnl-up)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
     </div>
     <div class="math-section" id="alloc-detail" style="margin-top:auto">
@@ -1013,6 +1015,9 @@ ${buildUsdRealityCard(p, d, usdReality)}
 
 <!-- SMART ADVISOR — mounted by App.tsx immediately after the comparison verdict -->
 <div id="smart-advisor-mount" style="display:none;margin-top:var(--gap)"></div>
+
+<!-- TECHNICAL ANALYSIS — mounted by App.tsx after chart analysis completes -->
+<div id="technical-analysis-mount" style="display:none;margin-top:var(--gap)"></div>
 
 <!-- CERTIFICATES DETAIL -->
 <div id="certs-placeholder" style="display:none;margin-top:var(--gap)">

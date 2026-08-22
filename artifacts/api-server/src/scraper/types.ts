@@ -18,6 +18,7 @@ export interface ScrapedSnapshot {
   watchlist_id: number;
   nav_or_price: number | null;
   return_30d_percent: number | null;
+  return_60d_percent?: number | null;
   return_ytd_percent: number | null;
   return_1y_percent: number | null;
   cagr_percent: number | null;

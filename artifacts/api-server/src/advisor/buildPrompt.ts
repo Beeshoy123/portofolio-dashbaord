@@ -36,7 +36,8 @@ STRICT RULES (violating any of these makes your response unusable):
    - If the position value is not provided in the data, or the gap is small/mixed, do NOT suggest a split — just give the qualitative hold/watch/research recommendation from rule 3.
    - This is a suggestion for the person to consider, not an instruction — phrase it as "you could consider" not "you should".
 7. RISK PARITY PROTECTION — NEVER suggest rotating money from a lower-risk asset into a higher-risk asset based on return performance alone. The data below includes a computed risk tier (Low/Medium/High) for the holding and for each comparison entry, calculated from return volatility. FIX (bug #2 from audit): the priority order when data sources disagree was previously ambiguous — it is now explicit: ALWAYS base your risk assessment and any risk-related statements on the COMPUTED risk tier (labeled "computed risk" or "YOUR COMPUTED RISK TIER" in the data below) — this is the authoritative value for this rule. Where a "NOTE: our computed risk disagrees with FoudaLens's own label" appears for an entry, mention that disagreement exists (so the person knows there's uncertainty), but do NOT let FoudaLens's label change your actual recommendation — it is supporting context only, never the deciding input. If a higher-computed-risk asset is beating the holding, explicitly say that the outperformance comes with higher computed risk/volatility, and recommend maintaining the current risk profile unless the person actively wants to increase portfolio risk. Do not silently treat a higher-risk winner as a clean "better choice" — the risk difference is part of the answer, not a footnote.
-8. FUNDAMENTALS CONCERNS — Where an entry beating the holding has a "FUNDAMENTALS CONCERN" note (e.g. high debt, negative free cash flow, dilution), you MUST mention it explicitly when discussing that entry as an alternative — the same way rule 7 requires you to mention higher computed risk. A stock that's beating the holding on price return but carries a flagged fundamentals concern is not a clean "better choice" — say so plainly, the same way you already do for risk tier differences. Do not let a fundamentals concern change the win/lose count or the Strong/Mixed/Weak signal — Comparison Judge already decided that; your job is only to make sure the concern isn't hidden from the person reading the recommendation.`;
+8. FUNDAMENTALS CONCERNS — Where an entry beating the holding has a "FUNDAMENTALS CONCERN" note (e.g. high debt, negative free cash flow, dilution), you MUST mention it explicitly when discussing that entry as an alternative — the same way rule 7 requires you to mention higher computed risk. A stock that's beating the holding on price return but carries a flagged fundamentals concern is not a clean "better choice" — say so plainly, the same way you already do for risk tier differences. Do not let a fundamentals concern change the win/lose count or the Strong/Mixed/Weak signal — Comparison Judge already decided that; your job is only to make sure the concern isn't hidden from the person reading the recommendation.
+9. DATA QUALITY — Treat DATA QUALITY as a hard confidence constraint. If the holding snapshot is missing, failed, or stale, say that the recommendation is limited and do not present the comparison as definitive. If few comparables have usable returns, prefer "watch" or "research" over a confident rotation suggestion. Never invent missing values.`;
 
 function formatGroupForPrompt(group: ComparisonGroup): string {
   const label: Record<string, string> = {
@@ -68,10 +69,38 @@ function formatGroupForPrompt(group: ComparisonGroup): string {
           ? `you are ahead by ${e.gap_percent.toFixed(1)}pp`
           : `you are behind by ${Math.abs(e.gap_percent).toFixed(1)}pp`
         : "";
-    return `  - ${e.name} (${e.ticker}): ${e.return_percent!.toFixed(1)}%${contextStr} — ${gapStr}`;
+    return `  - ${e.name} (${e.ticker}, role: ${e.asset_role}): ${e.return_percent!.toFixed(1)}%${contextStr} — ${gapStr}`;
   });
 
   return `${label[group.group_type]}:\n${lines.join("\n")}`;
+}
+
+function buildAnalysisBasis(verdict: HoldingVerdict): string {
+  const entries = verdict.groups.flatMap((group) => group.entries);
+  const usableEntries = entries.filter((entry) => entry.gap_percent !== null);
+  const largestDeficit = usableEntries.reduce<ComparisonEntry | null>(
+    (worst, entry) => !worst || entry.gap_percent! < worst.gap_percent! ? entry : worst,
+    null,
+  );
+  const largestLead = usableEntries.reduce<ComparisonEntry | null>(
+    (best, entry) => !best || entry.gap_percent! > best.gap_percent! ? entry : best,
+    null,
+  );
+  const riskMismatches = entries.filter((entry) => entry.risk_mismatch).length;
+  const fundamentalsConcerns = entries.filter(
+    (entry) => entry.fundamentals && entry.fundamentals.flags.length > 0,
+  ).length;
+
+  return `
+  DETERMINISTIC ANALYSIS BASIS (calculated by the Comparison Judge; do not recalculate or contradict it):
+  - Comparable entries with usable returns: ${usableEntries.length}/${entries.length}
+  - Judge signal: ${verdict.signal}
+  - Gap range versus comparables: ${largestDeficit ? `${largestDeficit.gap_percent!.toFixed(1)}pp to ${largestLead!.gap_percent!.toFixed(1)}pp` : "unavailable"}
+  - Largest lead: ${largestLead ? `${largestLead.ticker} (${largestLead.gap_percent!.toFixed(1)}pp)` : "unavailable"}
+  - Largest deficit: ${largestDeficit ? `${largestDeficit.ticker} (${largestDeficit.gap_percent!.toFixed(1)}pp)` : "unavailable"}
+  - Risk mismatches: ${riskMismatches}
+  - Comparables with fundamentals concerns: ${fundamentalsConcerns}
+  `.trim();
 }
 
 /**
@@ -123,15 +152,20 @@ export function buildDataBlock(
 
   const dataBlock = `
 HOLDING: ${verdict.holding_name} (${verdict.holding_ticker})
+ASSET ROLE: ${verdict.holding_asset_role}
 RETURN PERIOD: ${periodLabel}
 YOUR RETURN: ${verdict.holding_return_percent !== null ? verdict.holding_return_percent.toFixed(1) + "%" : "no data available"}
 CURRENT POSITION VALUE: ${verdict.holding_current_value_egp !== null ? verdict.holding_current_value_egp.toLocaleString() + " EGP" : "not available — do not suggest a rotation split without this"}
 YOUR COMPUTED RISK TIER: ${verdict.holding_risk_tier ?? "unknown"}
+TECHNICAL ANALYSIS: ${verdict.technical_signal ? `${verdict.technical_signal.trend}; ${verdict.technical_signal.patterns.length > 0 ? verdict.technical_signal.patterns.map((pattern) => `${pattern.direction} ${pattern.name} (${pattern.date})`).join(", ") : "no recent candlestick pattern"}; confidence ${verdict.technical_signal.confidence !== null ? verdict.technical_signal.confidence.toFixed(2) : "unavailable"}` : "unavailable — do not infer chart direction"}
+DATA QUALITY: holding snapshot ${verdict.data_quality.holding_snapshot_status}${verdict.data_quality.holding_snapshot_age_hours !== null ? ` (${verdict.data_quality.holding_snapshot_age_hours.toFixed(1)} hours old)` : ""}; ${verdict.data_quality.comparable_with_return_count}/${verdict.data_quality.comparable_count} comparables have usable returns
 
 COMPARISON JUDGE'S SIGNAL: ${verdict.signal}
 FLAGS RAISED: ${verdict.flags.length > 0 ? verdict.flags.join(", ") : "none"}
 
 ${verdict.groups.map(formatGroupForPrompt).join("\n\n")}
+
+${buildAnalysisBasis(verdict)}
 
 ${verdict.data_completeness_warning ? "NOTE: More than 30% of comparison data is missing this run — mention that the picture is incomplete if it affects your confidence in the recommendation." : ""}${alertsBlock}
 `.trim();

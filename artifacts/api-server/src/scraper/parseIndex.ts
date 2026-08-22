@@ -18,6 +18,7 @@ const INDICES_URL = "https://foudalens.com/en/indices";
 interface IndexTarget {
   watchlistId: number;
   label: string; // exact text to search for, e.g. "EGX30", "EGX70 EWI"
+  analysisSlug?: string;
 }
 
 /**
@@ -120,6 +121,34 @@ function extractChangePercentNear(
   return null;
 }
 
+function extractYtdPercentNear(fullText: string, label: string): number | null {
+  const positions = findAllOccurrences(fullText, label);
+  for (const idx of positions) {
+    const window = fullText.slice(idx + label.length, idx + label.length + 180);
+    const match = window.match(/YTD\s*:?\s*([-+]\d+(?:\.\d+)?)%/i);
+    if (match) return parseFloat(match[1]);
+  }
+  return null;
+}
+
+async function fetchSixtySessionMove(slug: string): Promise<number | null> {
+  try {
+    const response = await fetch(`https://foudalens.com/en/indices/${slug}/analysis`, {
+      headers: { "User-Agent": "Mozilla/5.0" },
+      signal: AbortSignal.timeout(30_000),
+    });
+    if (!response.ok) return null;
+    const $ = cheerio.load(await response.text());
+    $("script, style, noscript").remove();
+    const text = $("body").text().replace(/\s+/g, " ");
+    const match = text.match(/60-session move\s*([-+]\d+(?:\.\d+)?)%/i);
+    return match ? parseFloat(match[1]) : null;
+  } catch (error) {
+    console.warn(`[parseIndexPage] ${slug}: 60-session analysis unavailable`, error);
+    return null;
+  }
+}
+
 /**
  * Fetches the shared indices page once and returns a snapshot per target.
  * @param targets array of {watchlistId, label} — label must match the
@@ -148,9 +177,14 @@ export async function parseIndexPage(
     $("script, style, noscript").remove();
     const bodyText = $("body").text().replace(/\s+/g, " ");
 
-    return targets.map((t) => {
+    const sixtySessionMoves = await Promise.all(
+      targets.map((target) => target.analysisSlug ? fetchSixtySessionMove(target.analysisSlug) : Promise.resolve(null)),
+    );
+
+    return targets.map((t, index) => {
       const points = extractPointsNear(bodyText, t.label);
       const changePercent = extractChangePercentNear(bodyText, t.label);
+      const ytdPercent = extractYtdPercentNear(bodyText, t.label);
       const gotData = points !== null;
 
       if (!gotData) {
@@ -162,8 +196,9 @@ export async function parseIndexPage(
       return {
         watchlist_id: t.watchlistId,
         nav_or_price: points,
-        return_30d_percent: null, // not available on this page — only current level + daily change
-        return_ytd_percent: null,
+        return_30d_percent: null, // FoudaLens exposes no exact 30-day return on this page.
+        return_60d_percent: sixtySessionMoves[index],
+        return_ytd_percent: ytdPercent,
         return_1y_percent: null,
         cagr_percent: null,
         total_score: null,
@@ -187,6 +222,7 @@ function emptySnapshot(watchlistId: number): ScrapedSnapshot {
     watchlist_id: watchlistId,
     nav_or_price: null,
     return_30d_percent: null,
+    return_60d_percent: null,
     return_ytd_percent: null,
     return_1y_percent: null,
     cagr_percent: null,

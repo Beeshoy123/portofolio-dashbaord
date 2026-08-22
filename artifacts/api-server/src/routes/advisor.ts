@@ -17,6 +17,26 @@ import { releaseAdvisoryLock, tryAcquireAdvisoryLock } from "../lib/advisoryLock
 const router = Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++;
+        results[index] = await worker(items[index]);
+      }
+    },
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 // Get latest recommendation for a specific ticker
 router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
   try {
@@ -60,6 +80,9 @@ router.get("/recommendations", async (req: Request, res: Response) => {
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
        WHERE cw.is_held = true
+         AND cw.ticker <> 'ABR'
+         AND COALESCE(cw.funds_table_key, '') <> 'abr'
+         AND lower(cw.name) NOT LIKE '%bareeq%'
          AND ar.recommendation_text NOT LIKE '%STRICT RULES%'
          AND ar.recommendation_text NOT LIKE '%Plain, direct, warm%'
          AND ar.recommendation_text NOT LIKE '%Write the recommendation now%'
@@ -102,7 +125,13 @@ router.post("/generate", async (req: Request, res: Response) => {
       return;
     }
 
-    const verdicts = await judgeAllHoldings("return_1y", runId);
+    const requestedTicker = typeof req.query.ticker === "string"
+      ? req.query.ticker.trim().toUpperCase()
+      : null;
+    const allVerdicts = await judgeAllHoldings("return_1y", runId);
+    const verdicts = requestedTicker
+      ? allVerdicts.filter((verdict) => verdict.holding_ticker === requestedTicker)
+      : allVerdicts;
     const [timeStops, theses, drawdown] = await Promise.all([
       checkAllTimeStops(runId),
       checkAllTheses(runId),
@@ -110,19 +139,21 @@ router.post("/generate", async (req: Request, res: Response) => {
     ]);
 
     if (verdicts.length === 0) {
-      return res.json({ success: true, message: "No holdings to generate recommendations for" });
+      return res.status(requestedTicker ? 404 : 200).json({
+        success: requestedTicker ? false : true,
+        message: requestedTicker
+          ? `No eligible holding found for ${requestedTicker}`
+          : "No holdings to generate recommendations for",
+      });
     }
 
-    const results = [];
-
-    for (const verdict of verdicts) {
+    const results = await mapWithConcurrency(verdicts, 3, async (verdict) => {
       if (verdict.holding_return_percent === null) {
-        results.push({
+        return {
           ticker: verdict.holding_ticker,
           status: "skipped",
           reason: "No return data available",
-        });
-        continue;
+        };
       }
 
       try {
@@ -139,12 +170,11 @@ router.post("/generate", async (req: Request, res: Response) => {
         );
 
         if (watchlistResult.rows.length === 0) {
-          results.push({
+          return {
             ticker: verdict.holding_ticker,
             status: "failed",
             reason: "Watchlist entry not found",
-          });
-          continue;
+          };
         }
 
         // Save recommendation
@@ -158,19 +188,19 @@ router.post("/generate", async (req: Request, res: Response) => {
           [watchlistResult.rows[0].id, recommendation.recommendation_text, recommendation.model_used, runId]
         );
 
-        results.push({
+        return {
           ticker: verdict.holding_ticker,
           status: "success",
           recommendation: recommendation.recommendation_text.substring(0, 200) + "...",
-        });
+        };
       } catch (err) {
-        results.push({
+        return {
           ticker: verdict.holding_ticker,
           status: "failed",
           reason: String(err),
-        });
+        };
       }
-    }
+    });
 
     res.json({ success: true, results });
   } catch (err) {

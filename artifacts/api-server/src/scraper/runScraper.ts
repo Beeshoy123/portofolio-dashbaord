@@ -42,14 +42,15 @@ async function saveSnapshot(snapshot: ScrapedSnapshot, runId: number): Promise<v
   await pool.query(
     `INSERT INTO comparison_snapshots
       (watchlist_id, nav_or_price, return_30d_percent, return_ytd_percent,
-       return_1y_percent, cagr_percent, total_score, risk_level,
+      return_60d_percent, return_1y_percent, cagr_percent, total_score, risk_level,
        signal, pe_ratio, dividend_yield_percent, market_cap, sector_rank,
        raw_fetch_ok, run_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       snapshot.watchlist_id,
       snapshot.nav_or_price,
       snapshot.return_30d_percent,
+      snapshot.return_60d_percent,
       snapshot.return_ytd_percent,
       snapshot.return_1y_percent,
       snapshot.cagr_percent,
@@ -256,11 +257,17 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
     const targets = indices.map((idx) => ({
       watchlistId: idx.id,
       label: idx.name.replace(" Index", ""),
+      analysisSlug: idx.ticker === "EGX30" ? "CASE30" : idx.ticker === "EGX70" ? "EGX70_EWI" : idx.ticker === "EGX100" ? "EGX100_EWI" : undefined,
     }));
     const snapshots = await parseIndexPage(targets);
     for (const snapshot of snapshots) {
-      await saveSnapshot(snapshot, runId);
-      snapshot.raw_fetch_ok ? successCount++ : failCount++;
+      try {
+        await saveSnapshot(snapshot, runId);
+        snapshot.raw_fetch_ok ? successCount++ : failCount++;
+      } catch (error) {
+        failCount++;
+        console.error(`[index] ${snapshot.watchlist_id}: isolated save failure —`, error);
+      }
     }
     console.log(`[index] fetched ${snapshots.length} indices from shared page`);
   }

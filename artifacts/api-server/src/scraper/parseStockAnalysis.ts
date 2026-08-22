@@ -423,15 +423,22 @@ export async function parseStockAnalysis(
   ticker: string,
   watchlistId: number
 ): Promise<StockFundamentals> {
-  const [overview, stats, history] = await Promise.all([
+  const [overview, stats] = await Promise.all([
     fetchOverview(ticker),
     fetchStatistics(ticker),
-    fetchHistory(ticker),
   ]);
 
   if (!overview) {
     return emptyFundamentals(watchlistId, ticker);
   }
+
+  // The overview chart normally contains all required return periods. Only
+  // crawl paginated history when a chart reference is missing, avoiding up to
+  // twelve extra sequential requests for every stock on a normal run.
+  const needsHistory = overview.return_30d_percent === null
+    || overview.return_ytd_percent === null
+    || overview.return_1y_percent === null;
+  const history = needsHistory ? await fetchHistory(ticker) : {};
 
   const result = emptyFundamentals(watchlistId, ticker);
 

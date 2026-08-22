@@ -21,6 +21,7 @@ import { buildDashboardHtml } from './lib/dashboardHtml';
 import { initDashboardBehavior } from './lib/dashboardBehavior';
 import { runUSDRealityCheck } from './lib/usdRealityEngine';
 import { SmartAdvisorPanel } from './components/SmartAdvisorPanel';
+import { TechnicalAnalysisPanel } from './components/TechnicalAnalysisPanel';
 
 // Shown only in place of real data when the database has no rows yet, so the
 // full widget/card/heatmap layout can still be previewed with its real CSS —
@@ -115,6 +116,7 @@ export default function App() {
   const createSnapshotMutation = useCreateGrowthSnapshot();
   const containerRef = useRef<HTMLDivElement>(null);
   const advisorRootRef = useRef<Root | null>(null);
+  const technicalRootRef = useRef<Root | null>(null);
 
   const notSeeded =
     isError &&
@@ -139,6 +141,10 @@ export default function App() {
     advisorRootRef.current?.unmount();
     advisorRootRef.current = advisorMount ? createRoot(advisorMount) : null;
     advisorRootRef.current?.render(<SmartAdvisorPanel />);
+    const technicalMount = containerRef.current.querySelector('#technical-analysis-mount');
+    technicalRootRef.current?.unmount();
+    technicalRootRef.current = technicalMount ? createRoot(technicalMount) : null;
+    technicalRootRef.current?.render(<TechnicalAnalysisPanel />);
 
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: getGetPortfolioQueryKey() });
@@ -162,6 +168,8 @@ export default function App() {
     return () => {
       advisorRootRef.current?.unmount();
       advisorRootRef.current = null;
+      technicalRootRef.current?.unmount();
+      technicalRootRef.current = null;
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -6,6 +6,7 @@ import verdictsRouter from "./verdicts";
 import advisorRouter from "./advisor";
 import alertsRouter from "./alerts";
 import aiBotRouter from "./aiBot";
+import technicalRouter from "./technical";
 import { requireAuth } from "../lib/supabaseAuth";
 
 // The AI bot is one coordinated pipeline across these route groups:
@@ -22,5 +23,6 @@ router.use(verdictsRouter);
 router.use("/advisor", advisorRouter);
 router.use("/alerts", alertsRouter);
 router.use(aiBotRouter);
+router.use(technicalRouter);
 
 export default router;

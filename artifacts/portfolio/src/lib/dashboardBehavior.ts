@@ -277,6 +277,15 @@ export function initDashboardBehavior(
     if (rv) {
       const comparisonReady = rv.getAttribute("data-comparison-ready") === "true";
       rv.style.display = view === "ai" && comparisonReady ? "" : "none";
+      const advisorMount = el("smart-advisor-mount");
+      if (advisorMount) {
+        advisorMount.style.display = view === "ai" && comparisonReady ? "" : "none";
+      }
+      const technicalMount = el("technical-analysis-mount");
+      if (technicalMount) {
+        const technicalReady = technicalMount.getAttribute("data-technical-ready") === "true";
+        technicalMount.style.display = view === "ai" && technicalReady ? "" : "none";
+      }
     }
 
     const ghs = el("gold-hero-stats");
@@ -1124,7 +1133,7 @@ export function initDashboardBehavior(
         <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}${heldTag(s)}</td>
         <td style="padding:6px 8px;color:var(--dim);font-size:10px">${displayName(s)}</td>
         <td style="padding:6px 8px;text-align:right">${fmtNum(s.nav_or_price)}</td>
-        <td style="padding:6px 8px;text-align:right;color:${Number(s.return_30d_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_30d_percent)}</td>
+        <td style="padding:6px 8px;text-align:right;color:${Number(s.entity_type === "index" ? s.return_60d_percent : s.return_30d_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.entity_type === "index" ? s.return_60d_percent : s.return_30d_percent)}</td>
         <td style="padding:6px 8px;text-align:right;color:${Number(s.return_ytd_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_ytd_percent)}</td>
         <td style="padding:6px 8px;text-align:right">${s.total_score != null ? Number(s.total_score).toFixed(0) + "/100" : "—"}</td>
       </tr>`;
@@ -1147,7 +1156,7 @@ export function initDashboardBehavior(
       ${sortableHeader("Ticker", "ticker")}
       ${sortableHeader("Name", "name")}
       ${sortableHeader("NAV/Price", "price", "right")}
-      ${sortableHeader("30d", "return30d", "right")}
+      ${sortableHeader("30d / 60-session", "return30d", "right")}
       ${sortableHeader("YTD", "ytd", "right")}
       ${sortableHeader("Score", "score", "right")}
     </tr></thead>`;
@@ -1155,7 +1164,7 @@ export function initDashboardBehavior(
       if (key === "ticker") return String(snapshot.ticker ?? "").toLowerCase();
       if (key === "name") return String(snapshot.name ?? "").toLowerCase();
       if (key === "price") return Number(snapshot.nav_or_price ?? -Infinity);
-      if (key === "return30d") return Number(snapshot.return_30d_percent ?? -Infinity);
+      if (key === "return30d") return Number((snapshot.entity_type === "index" ? snapshot.return_60d_percent : snapshot.return_30d_percent) ?? -Infinity);
       if (key === "ytd") return Number(snapshot.return_ytd_percent ?? -Infinity);
       return Number(snapshot.total_score ?? -Infinity);
     };
@@ -1191,9 +1200,9 @@ export function initDashboardBehavior(
           <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">Hold</div>
           <div style="font-size:20px;font-weight:800;color:var(--ink);margin-top:3px">${holdCount}</div>
         </div>
-        <div style="padding:10px 12px;border:1px solid color-mix(in srgb,var(--pnl-down) 35%,var(--edge));border-radius:8px;background:color-mix(in srgb,var(--pnl-down) 8%,transparent)">
+        <div style="padding:10px 12px;border:1px solid var(--edge);border-radius:8px;background:var(--edge)">
           <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">Review</div>
-          <div style="font-size:20px;font-weight:800;color:var(--pnl-down);margin-top:3px">${reviewCount}</div>
+          <div style="font-size:20px;font-weight:800;color:var(--dim);margin-top:3px">${reviewCount}</div>
         </div>`;
       summaryEl.style.display = successful.length ? "grid" : "none";
     }
@@ -1245,6 +1254,37 @@ export function initDashboardBehavior(
       }
     } catch {
       // A shelf read is optional; the dashboard remains usable without it.
+    }
+  }
+
+  async function restoreCompletedAiRun(): Promise<void> {
+    try {
+      const response = await authenticatedFetch("/api/ai-bot/status");
+      if (!response.ok) return;
+
+      const runStatus = (await response.json()) as {
+        running: boolean;
+        stages?: Record<string, string>;
+      };
+      if (runStatus.running || !runStatus.stages) return;
+
+      updateAiPipeline(runStatus.stages);
+
+      const judgeCompleted = runStatus.stages.comparisonJudge === "completed";
+      const priceCheckerCompleted = runStatus.stages.priceChecker === "completed";
+      const verdictSection = el("rotation-verdict-section");
+      if (judgeCompleted && verdictSection) {
+        verdictSection.setAttribute("data-comparison-ready", "true");
+        verdictSection.style.display = currentView === "ai" ? "" : "none";
+        await loadRotationVerdicts();
+      }
+
+      const advisorMount = el("smart-advisor-mount");
+      if (priceCheckerCompleted && judgeCompleted && advisorMount) {
+        advisorMount.style.display = currentView === "ai" ? "" : "none";
+      }
+    } catch {
+      // The dashboard remains usable when the optional AI status check fails.
     }
   }
 
@@ -1389,7 +1429,7 @@ export function initDashboardBehavior(
         verdictSection.style.display = currentView === "ai" ? "" : "none";
       }
       const advisorMount = el("smart-advisor-mount");
-      if (advisorMount) advisorMount.style.display = "";
+      if (advisorMount) advisorMount.style.display = currentView === "ai" ? "" : "none";
       await loadRotationVerdicts();
     } catch (err: any) {
       if (scraperController.signal.aborted) return;
@@ -2323,7 +2363,7 @@ export function initDashboardBehavior(
         <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px">
           ${summaryCard("Buy", buyCount, "var(--pnl-up)", "var(--pnl-up-soft)")}
           ${summaryCard("Hold", holdCount, "var(--warning-border)", "var(--warning-bg)")}
-          ${summaryCard("Review", reviewCount, "var(--pnl-down)", "var(--pnl-down-soft)")}
+          ${summaryCard("Review", reviewCount, "var(--edge)", "var(--edge)")}
         </div>
         ${orderedVerdicts.map(buildVerdictCardHtml).join("")}
       `;
@@ -2335,6 +2375,7 @@ export function initDashboardBehavior(
   }
 
   void loadSavedPriceShelf();
+  void restoreCompletedAiRun();
 
   return () => {
     scraperController.abort();

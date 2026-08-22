@@ -13,12 +13,19 @@
 // already uses — using a different key name would mean managing two
 // separate keys for one API, which is unnecessary duplication.
 
-import { buildPrompt, SYSTEM_INSTRUCTIONS, buildDataBlock, type AdvisorAlertContext } from "./buildPrompt";
+import { SYSTEM_INSTRUCTIONS, buildDataBlock, type AdvisorAlertContext } from "./buildPrompt";
 import type { HoldingVerdict } from "../judge/types";
 import type { AdvisorRecommendation } from "./types";
 
-const GEMINI_MODEL = "gemini-3.6-flash";
-const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+function envNumber(name: string, fallback: number, minimum: number, maximum: number): number {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value >= minimum && value <= maximum ? value : fallback;
+}
+
+const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+const GEMINI_TEMPERATURE = envNumber("GEMINI_TEMPERATURE", 0.4, 0, 2);
+const GEMINI_MAX_OUTPUT_TOKENS = envNumber("GEMINI_MAX_OUTPUT_TOKENS", 650, 128, 4096);
+const GEMINI_TIMEOUT_MS = envNumber("GEMINI_TIMEOUT_MS", 45_000, 5_000, 120_000);
 
 interface GeminiResponse {
   candidates?: Array<{
@@ -26,6 +33,52 @@ interface GeminiResponse {
     finishReason?: string;
   }>;
   promptFeedback?: { blockReason?: string };
+}
+
+type StructuredAdvisorResult = AdvisorRecommendation["structured"];
+
+const GEMINI_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    decision: { type: "STRING", enum: ["hold", "watch", "research"] },
+    confidence: { type: "INTEGER", minimum: 0, maximum: 100 },
+    summary: { type: "STRING" },
+    evidence: { type: "ARRAY", items: { type: "STRING" } },
+    risks: { type: "ARRAY", items: { type: "STRING" } },
+    next_review_days: { type: "INTEGER", minimum: 1, maximum: 365 },
+  },
+  required: ["decision", "confidence", "summary", "evidence", "risks", "next_review_days"],
+};
+
+function parseStructuredResponse(text: string): StructuredAdvisorResult {
+  const candidate = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(candidate);
+  } catch (error) {
+    throw new Error("[generateRecommendation] Gemini returned invalid JSON", { cause: error });
+  }
+
+  if (!isStructuredAdvisorResult(parsed)) {
+    throw new Error("[generateRecommendation] Gemini JSON failed schema validation");
+  }
+  return parsed;
+}
+
+function isStructuredAdvisorResult(value: unknown): value is StructuredAdvisorResult {
+  if (!value || typeof value !== "object") return false;
+  const result = value as Record<string, unknown>;
+  const isTextArray = (entry: unknown, maxLength: number) =>
+    Array.isArray(entry) && entry.length <= maxLength
+      && entry.every((item) => typeof item === "string" && item.trim().length > 0 && item.length <= 400);
+  return (result.decision === "hold" || result.decision === "watch" || result.decision === "research")
+    && typeof result.confidence === "number" && Number.isInteger(result.confidence)
+    && result.confidence >= 0 && result.confidence <= 100
+    && typeof result.summary === "string" && result.summary.trim().length > 0 && result.summary.length <= 1200
+    && isTextArray(result.evidence, 6)
+    && isTextArray(result.risks, 6)
+    && typeof result.next_review_days === "number" && Number.isInteger(result.next_review_days)
+    && result.next_review_days >= 1 && result.next_review_days <= 365;
 }
 
 export async function generateRecommendation(
@@ -45,20 +98,29 @@ export async function generateRecommendation(
   // systemInstruction field to separate constraints from data — models
   // generally follow rules more reliably when they aren't mixed into the
   // same content stream as the user-facing data.
-  const dataBlock = buildDataBlock(verdict, alerts);
+  const dataBlock = `${buildDataBlock(verdict, alerts)}
 
-  const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
+{"decision":"hold|watch|research","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30}`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
     method: "POST",
     headers: { "Content-Type": "application/json" },
+    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
       contents: [{ parts: [{ text: dataBlock }] }],
       generationConfig: {
-        temperature: 0.4, // lower temperature — this is a factual/structured task, not creative writing
-        maxOutputTokens: 650, // room for rotation-split EGP breakdowns when rule 6 applies
+        temperature: GEMINI_TEMPERATURE,
+        maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+        responseMimeType: "application/json",
+        responseSchema: GEMINI_RESPONSE_SCHEMA,
       },
     }),
-  });
+    },
+  );
 
   if (!res.ok) {
     const errorBody = await res.text();
@@ -100,24 +162,14 @@ export async function generateRecommendation(
     );
   }
 
-  const recommendationText = text.trim();
-  const promptEchoMarkers = [
-    "STRICT RULES",
-    "Plain, direct, warm",
-    "3-5 sentences when giving",
-    "Write the recommendation now",
-    "SYSTEM_INSTRUCTIONS",
-  ];
-  if (promptEchoMarkers.some((marker) => recommendationText.includes(marker))) {
-    throw new Error(
-      "[generateRecommendation] Gemini returned prompt instructions instead of a recommendation; response was rejected.",
-    );
-  }
+  const structured = parseStructuredResponse(text);
+  const recommendationText = structured.summary;
 
   return {
     holding_ticker: verdict.holding_ticker,
     recommendation_text: recommendationText,
     generated_at: new Date().toISOString(),
     model_used: GEMINI_MODEL,
+    structured,
   };
 }

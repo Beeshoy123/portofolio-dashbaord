@@ -3,7 +3,7 @@
 // Outputs verdicts that the Alert System monitors and Smart Advisor uses
 
 import { Pool } from "pg";
-import type { HoldingVerdict, ComparisonGroup, ComparisonEntry } from "./types";
+import type { AssetRole, HoldingVerdict, ComparisonGroup, ComparisonEntry, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -34,6 +34,7 @@ interface SnapshotRow {
   signal: string | null;
   sector_rank: number | null;
   raw_fetch_ok: boolean;
+  scraped_at: string;
 }
 
 function numeric(value: string | number | null): number | null {
@@ -56,6 +57,27 @@ function riskTier(riskLevel: string | null): "Low" | "Medium" | "High" | null {
   if (normalized.includes("low")) return "Low";
   if (normalized.includes("medium") || normalized.includes("moderate")) return "Medium";
   return null;
+}
+
+// Bareeq (ABR) is the portfolio's money-market emergency reserve. It is
+// measured against the emergency-fund target, not against investment peers.
+function isEmergencyReserveFund(row: WatchlistRow): boolean {
+  if (row.entity_type !== "fund") return false;
+  const identity = `${row.ticker} ${row.name}`.toLowerCase();
+  return row.funds_table_key === "abr"
+    || row.ticker.toUpperCase() === "ABR"
+    || identity.includes("bareeq")
+    || identity.includes("money market");
+}
+
+function assetRole(row: WatchlistRow): AssetRole {
+  if (isEmergencyReserveFund(row)) return "money_market_reserve";
+  if (row.entity_type === "stock") return "stock";
+  if (row.entity_type === "index") return "benchmark";
+  if (row.sector.toLowerCase().includes("real estate")) return "real_estate_fund";
+  if (row.sector.toLowerCase().includes("precious metals")) return "commodity_fund";
+  if (row.sector.toLowerCase().includes("fixed income") || row.sector.toLowerCase().includes("income")) return "income_fund";
+  return "growth_fund";
 }
 
 function groupFor(
@@ -96,13 +118,35 @@ async function getLatestSnapshots(runId?: number): Promise<Map<number, SnapshotR
     `SELECT DISTINCT ON (watchlist_id)
         watchlist_id, nav_or_price, return_30d_percent, return_ytd_percent,
         return_1y_percent, cagr_percent, risk_level, signal, sector_rank, raw_fetch_ok
+      , scraped_at
      FROM comparison_snapshots
-     WHERE raw_fetch_ok = true
+     WHERE 1 = 1
        ${runFilter}
      ORDER BY watchlist_id, scraped_at DESC`,
      runId === undefined ? [] : [runId],
   );
   return new Map(result.rows.map((row) => [row.watchlist_id, row]));
+}
+
+async function getTechnicalSignals(runId?: number): Promise<Map<number, TechnicalSignal>> {
+  if (runId === undefined) return new Map();
+  try {
+    const result = await pool.query<{ watchlist_id: number; candle_date: string | null; trend: TechnicalSignal["trend"]; patterns: unknown; confidence: string | number | null; raw_fetch_ok: boolean }>(
+      `SELECT DISTINCT ON (watchlist_id) watchlist_id, candle_date, trend, patterns, confidence, raw_fetch_ok
+       FROM technical_signals WHERE run_id = $1 ORDER BY watchlist_id, created_at DESC`,
+      [runId],
+    );
+    return new Map(result.rows.map((row) => [row.watchlist_id, {
+      candle_date: row.candle_date,
+      trend: row.trend,
+      patterns: Array.isArray(row.patterns) ? row.patterns as TechnicalSignal["patterns"] : [],
+      confidence: row.confidence === null ? null : Number(row.confidence),
+      raw_fetch_ok: row.raw_fetch_ok,
+    }]));
+  } catch (error) {
+    console.warn("[judge] technical_signals unavailable; continuing without chart evidence", error);
+    return new Map();
+  }
 }
 
 function buildGroup(
@@ -111,6 +155,7 @@ function buildGroup(
   candidates: WatchlistRow[],
   snapshots: Map<number, SnapshotRow>,
   fundamentals: Awaited<ReturnType<typeof getLatestFundamentals>>,
+  technicalSignals: Map<number, TechnicalSignal>,
   period: ReturnPeriod,
   holdingReturn: number | null,
 ): ComparisonGroup | null {
@@ -129,6 +174,7 @@ function buildGroup(
     return {
       name: candidate.name,
       ticker: candidate.ticker,
+      asset_role: assetRole(candidate),
       return_percent: returnPercent,
       sector_rank: snapshot?.sector_rank ?? null,
       stock_signal: snapshot?.signal ?? null,
@@ -160,18 +206,21 @@ async function judgeHolding(
   watchlist: WatchlistRow[],
   snapshots: Map<number, SnapshotRow>,
   fundamentals: Awaited<ReturnType<typeof getLatestFundamentals>>,
+  technicalSignals: Map<number, TechnicalSignal>,
   runId?: number,
 ): Promise<HoldingVerdict> {
   const holdingSnapshot = snapshots.get(holding.id);
   const holdingReturn = returnFor(holdingSnapshot, period);
-  const candidates = watchlist.filter((candidate) => candidate.id !== holding.id);
+  const candidates = watchlist.filter(
+    (candidate) => candidate.id !== holding.id && !isEmergencyReserveFund(candidate),
+  );
   const groups = ([
     ["sector_sibling", groupFor("sector_sibling", holding, candidates)],
     ["manager_sibling", groupFor("manager_sibling", holding, candidates)],
     ["direct_stock", groupFor("direct_stock", holding, candidates)],
     ["benchmark", groupFor("benchmark", holding, candidates)],
   ] as const)
-    .map(([groupType, groupCandidates]) => buildGroup(groupType, holding, groupCandidates, snapshots, fundamentals, period, holdingReturn))
+    .map(([groupType, groupCandidates]) => buildGroup(groupType, holding, groupCandidates, snapshots, fundamentals, technicalSignals, period, holdingReturn))
     .filter((group): group is ComparisonGroup => group !== null);
 
   const comparableEntries = groups.flatMap((group) => group.entries).filter((entry) => entry.gap_percent !== null);
@@ -195,15 +244,35 @@ async function judgeHolding(
       (entry) => entry.gap_percent !== null && entry.gap_percent < 0 && entry.fundamentals && entry.fundamentals.flags.length > 0,
     ),
   );
+  const comparableCount = groups.reduce((count, group) => count + group.entries.length, 0);
+  const comparableWithReturnCount = comparableEntries.length;
+  const snapshotAgeHours = holdingSnapshot?.scraped_at
+    ? Math.max(0, (Date.now() - new Date(holdingSnapshot.scraped_at).getTime()) / 3_600_000)
+    : null;
+  const holdingSnapshotStatus = !holdingSnapshot
+    ? "missing"
+    : !holdingSnapshot.raw_fetch_ok
+      ? "failed"
+      : snapshotAgeHours !== null && snapshotAgeHours > 48
+        ? "stale"
+        : "fresh";
 
   const verdict: HoldingVerdict = {
     holding_ticker: holding.ticker,
     holding_name: holding.name,
+    holding_asset_role: assetRole(holding),
     holding_return_percent: holdingReturn,
     holding_current_value_egp: holding.units_held !== null && holding.fund_nav !== null
       ? numeric(holding.units_held)! * numeric(holding.fund_nav)!
       : null,
     holding_risk_tier: riskTier(holdingSnapshot?.risk_level ?? null),
+    technical_signal: technicalSignals.get(holding.id) ?? null,
+    data_quality: {
+      holding_snapshot_status: holdingSnapshotStatus,
+      holding_snapshot_age_hours: snapshotAgeHours,
+      comparable_count: comparableCount,
+      comparable_with_return_count: comparableWithReturnCount,
+    },
     return_period: period,
     groups,
     signal,
@@ -240,15 +309,16 @@ export async function judgeAllHoldings(
   runId?: number,
 ): Promise<HoldingVerdict[]> {
   try {
-    const [watchlist, snapshots, fundamentals] = await Promise.all([
+    const [watchlist, snapshots, fundamentals, technicalSignals] = await Promise.all([
       getWatchlistRows(),
       getLatestSnapshots(runId),
       getLatestFundamentals(runId),
+      getTechnicalSignals(runId),
     ]);
 
     const verdicts: HoldingVerdict[] = [];
-    for (const holding of watchlist.filter((row) => row.is_held)) {
-      const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, runId);
+    for (const holding of watchlist.filter((row) => row.is_held && !isEmergencyReserveFund(row))) {
+      const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, runId);
       verdicts.push(verdict);
     }
     return verdicts;
@@ -267,14 +337,16 @@ export async function judgeOneHolding(
   runId?: number,
 ): Promise<HoldingVerdict | null> {
   try {
-    const [watchlist, snapshots, fundamentals] = await Promise.all([
+    const [watchlist, snapshots, fundamentals, technicalSignals] = await Promise.all([
       getWatchlistRows(),
       getLatestSnapshots(runId),
       getLatestFundamentals(runId),
+      getTechnicalSignals(runId),
     ]);
     const holding = watchlist.find((row) => row.ticker === ticker.toUpperCase());
     if (!holding) return null;
-    return await judgeHolding(holding, period, watchlist, snapshots, fundamentals, runId);
+    if (isEmergencyReserveFund(holding)) return null;
+    return await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, runId);
   } catch (err) {
     console.error(`[judgeOneHolding] failed for ${ticker}:`, err);
     throw new Error(`Comparison Judge could not evaluate ${ticker}`, { cause: err });

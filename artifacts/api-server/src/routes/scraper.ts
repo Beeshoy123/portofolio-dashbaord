@@ -33,6 +33,7 @@ router.get("/scraper/snapshots", async (req, res) => {
         s.scraped_at,
         s.nav_or_price,
         s.return_30d_percent,
+        s.return_60d_percent,
         s.return_ytd_percent,
         s.return_1y_percent,
         s.cagr_percent,
