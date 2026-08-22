@@ -935,7 +935,7 @@ ${buildUsdRealityCard(p, d, usdReality)}
   <!-- AI INSIGHTS VIEW -->
   <div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="ai-insights">
     <div class="card" style="padding:26px 28px">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:20px">
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:22px">🤖</span>
           <div>
@@ -943,12 +943,27 @@ ${buildUsdRealityCard(p, d, usdReality)}
             <div style="font-size:10.5px;color:var(--dim)" data-i18n="ai.subtitle">Automated analysis of your portfolio health and allocation</div>
           </div>
         </div>
-        <button
-          id="scraper-run-btn"
-          onclick="runPriceChecker()"
-          style="display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
-          🔄 <span id="scraper-btn-label">Refresh prices</span>
-        </button>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto">
+          <div style="display:flex;align-items:center;gap:8px;font-size:10px;color:var(--dim);white-space:nowrap">
+            <span id="ai-engine-state" style="display:inline-flex;align-items:center;gap:5px;color:var(--pnl-up);font-weight:700">
+              <span style="font-size:14px;line-height:0">●</span> Ready
+            </span>
+            <span id="ai-engine-updated">Waiting for first refresh</span>
+          </div>
+          <button
+            id="scraper-run-btn"
+            onclick="runPriceChecker()"
+            style="display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
+            🔄 <span id="scraper-btn-label">Refresh prices</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="ai-engine-pipeline" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:16px">
+        <div id="ai-stage-price" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">1. Prices</b><span>Waiting</span></div>
+        <div id="ai-stage-judge" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">2. Judge</b><span>Waiting</span></div>
+        <div id="ai-stage-alerts" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">3. Alerts</b><span>Waiting</span></div>
+        <div id="ai-stage-advisor" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">4. Advisor</b><span>Waiting</span></div>
       </div>
 
       <!-- Status line shown while scraper runs or after it completes -->
@@ -963,8 +978,10 @@ ${buildUsdRealityCard(p, d, usdReality)}
 
       <!-- Price comparison table — shown after a successful scraper run -->
       <div id="price-checker-results" style="display:none;margin-top:20px">
+        <div id="price-checker-summary" style="display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px"></div>
         <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:10px">📊 Market Comparison</div>
         <div id="price-checker-table"></div>
+        <div id="price-checker-failures" style="display:none;align-items:center;gap:8px;margin-top:12px;padding:9px 11px;border:1px solid var(--warning-border);border-radius:8px;background:var(--warning-bg);color:var(--warning-border);font-size:10.5px"></div>
       </div>
     </div>
   </div>
@@ -972,7 +989,10 @@ ${buildUsdRealityCard(p, d, usdReality)}
 </div><!-- /bento -->
 
 <!-- ROTATION VERDICT — populated async by loadRotationVerdicts() in dashboardBehavior.ts -->
-<div id="rotation-verdict-section" style="margin-top:var(--gap)"></div>
+<div id="rotation-verdict-section" data-comparison-ready="false" style="display:none;margin-top:var(--gap)"></div>
+
+<!-- SMART ADVISOR — mounted by App.tsx immediately after the comparison verdict -->
+<div id="smart-advisor-mount" style="display:none;margin-top:var(--gap)"></div>
 
 <!-- CERTIFICATES DETAIL -->
 <div id="certs-placeholder" style="display:none;margin-top:var(--gap)">

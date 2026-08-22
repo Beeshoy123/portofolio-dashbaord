@@ -8,43 +8,207 @@ import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentals
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+type ReturnPeriod = "return_1y" | "return_6m" | "return_3m";
+
+interface WatchlistRow {
+  id: number;
+  ticker: string;
+  name: string;
+  entity_type: "fund" | "stock" | "index";
+  sector: string;
+  manager: string | null;
+  funds_table_key: string | null;
+  is_held: boolean;
+  units_held: string | number | null;
+  fund_nav: string | number | null;
+}
+
+interface SnapshotRow {
+  watchlist_id: number;
+  nav_or_price: string | number | null;
+  return_30d_percent: string | number | null;
+  return_ytd_percent: string | number | null;
+  return_1y_percent: string | number | null;
+  cagr_percent: string | number | null;
+  risk_level: string | null;
+  signal: string | null;
+  sector_rank: number | null;
+  raw_fetch_ok: boolean;
+}
+
+function numeric(value: string | number | null): number | null {
+  if (value === null) return null;
+  const result = Number(value);
+  return Number.isFinite(result) ? result : null;
+}
+
+function returnFor(snapshot: SnapshotRow | undefined, period: ReturnPeriod): number | null {
+  if (!snapshot) return null;
+  if (period === "return_1y") return numeric(snapshot.return_1y_percent);
+  // The current scraper does not populate 6m/3m yet; do not substitute a different period.
+  return null;
+}
+
+function riskTier(riskLevel: string | null): "Low" | "Medium" | "High" | null {
+  if (!riskLevel) return null;
+  const normalized = riskLevel.toLowerCase();
+  if (normalized.includes("high")) return "High";
+  if (normalized.includes("low")) return "Low";
+  if (normalized.includes("medium") || normalized.includes("moderate")) return "Medium";
+  return null;
+}
+
+function groupFor(
+  groupType: ComparisonGroup["group_type"],
+  holding: WatchlistRow,
+  candidates: WatchlistRow[],
+): WatchlistRow[] {
+  switch (groupType) {
+    case "sector_sibling":
+      return candidates.filter((candidate) => candidate.sector === holding.sector);
+    case "manager_sibling":
+      return candidates.filter(
+        (candidate) => holding.manager !== null && candidate.manager === holding.manager,
+      );
+    case "direct_stock":
+      return candidates.filter(
+        (candidate) => candidate.entity_type === "stock" && candidate.sector === holding.sector,
+      );
+    case "benchmark":
+      return candidates.filter((candidate) => candidate.entity_type === "index");
+  }
+}
+
+async function getWatchlistRows(): Promise<WatchlistRow[]> {
+  const result = await pool.query<WatchlistRow>(
+        `SELECT cw.id, cw.ticker, cw.name, cw.entity_type, cw.sector, cw.manager,
+          cw.funds_table_key, cw.is_held, f.units_held, f.nav AS fund_nav
+     FROM comparison_watchlist cw
+     LEFT JOIN funds f ON f.key = cw.funds_table_key
+     ORDER BY cw.entity_type, cw.ticker`,
+  );
+  return result.rows;
+}
+
+async function getLatestSnapshots(runId?: number): Promise<Map<number, SnapshotRow>> {
+  const runFilter = runId === undefined ? "" : "AND run_id = $1";
+  const result = await pool.query<SnapshotRow>(
+    `SELECT DISTINCT ON (watchlist_id)
+        watchlist_id, nav_or_price, return_30d_percent, return_ytd_percent,
+        return_1y_percent, cagr_percent, risk_level, signal, sector_rank, raw_fetch_ok
+     FROM comparison_snapshots
+     WHERE raw_fetch_ok = true
+       ${runFilter}
+     ORDER BY watchlist_id, scraped_at DESC`,
+     runId === undefined ? [] : [runId],
+  );
+  return new Map(result.rows.map((row) => [row.watchlist_id, row]));
+}
+
+function buildGroup(
+  groupType: ComparisonGroup["group_type"],
+  holding: WatchlistRow,
+  candidates: WatchlistRow[],
+  snapshots: Map<number, SnapshotRow>,
+  fundamentals: Awaited<ReturnType<typeof getLatestFundamentals>>,
+  period: ReturnPeriod,
+  holdingReturn: number | null,
+): ComparisonGroup | null {
+  const entries: ComparisonEntry[] = candidates.map((candidate) => {
+    const snapshot = snapshots.get(candidate.id);
+    const returnPercent = returnFor(snapshot, period);
+    const gapPercent = holdingReturn !== null && returnPercent !== null
+      ? holdingReturn - returnPercent
+      : null;
+    const fundamentalsSnapshot = candidate.entity_type === "stock"
+      ? buildFundamentalsSnapshot(fundamentals.get(candidate.id), candidate.sector)
+      : null;
+    const candidateRisk = riskTier(snapshot?.risk_level ?? null);
+    const holdingRisk = riskTier(snapshots.get(holding.id)?.risk_level ?? null);
+
+    return {
+      name: candidate.name,
+      ticker: candidate.ticker,
+      return_percent: returnPercent,
+      sector_rank: snapshot?.sector_rank ?? null,
+      stock_signal: snapshot?.signal ?? null,
+      computed_risk_tier: candidateRisk,
+      foudalens_risk_level: snapshot?.risk_level ?? null,
+      risk_mismatch: candidateRisk !== null && holdingRisk !== null && candidateRisk !== holdingRisk,
+      gap_percent: gapPercent,
+      fundamentals: fundamentalsSnapshot,
+    };
+  });
+
+  if (entries.length === 0) return null;
+  return {
+    group_type: groupType,
+    entries,
+    you_beat_count: entries.filter((entry) => entry.gap_percent !== null && entry.gap_percent > 0).length,
+    you_lose_count: entries.filter((entry) => entry.gap_percent !== null && entry.gap_percent < 0).length,
+    incomplete_count: entries.filter((entry) => entry.gap_percent === null).length,
+  };
+}
+
 /**
  * judgeHolding - main comparison logic for a single holding
  * Returns a verdict that logs to verdict_history (step 1 of V2 Alert System)
  */
 async function judgeHolding(
-  holding: any,
-  period: "return_1y" | "return_6m" | "return_3m"
+  holding: WatchlistRow,
+  period: ReturnPeriod,
+  watchlist: WatchlistRow[],
+  snapshots: Map<number, SnapshotRow>,
+  fundamentals: Awaited<ReturnType<typeof getLatestFundamentals>>,
+  runId?: number,
 ): Promise<HoldingVerdict> {
-  // Fetch fundamentals data for all holdings
-  const fundamentals = await getLatestFundamentals();
-  
-  // Placeholder: implement based on your actual comparison logic
-  // For now, this returns a minimal valid verdict
-  
-  const signal: "Strong" | "Mixed" | "Weak" = "Mixed";
-  const flags: string[] = [];
-  const groups: ComparisonGroup[] = [];
+  const holdingSnapshot = snapshots.get(holding.id);
+  const holdingReturn = returnFor(holdingSnapshot, period);
+  const candidates = watchlist.filter((candidate) => candidate.id !== holding.id);
+  const groups = ([
+    ["sector_sibling", groupFor("sector_sibling", holding, candidates)],
+    ["manager_sibling", groupFor("manager_sibling", holding, candidates)],
+    ["direct_stock", groupFor("direct_stock", holding, candidates)],
+    ["benchmark", groupFor("benchmark", holding, candidates)],
+  ] as const)
+    .map(([groupType, groupCandidates]) => buildGroup(groupType, holding, groupCandidates, snapshots, fundamentals, period, holdingReturn))
+    .filter((group): group is ComparisonGroup => group !== null);
 
-  // NEW: compute fundamentals_flags_found flag
-  // Only check entities beating you (gap_percent < 0) with fundamentals concerns
-  const fundamentals_flags_found = groups.some((g) =>
-    g.entries.some(
-      (e) => e.gap_percent !== null && e.gap_percent < 0 && e.fundamentals && e.fundamentals.flags.length > 0
-    )
+  const comparableEntries = groups.flatMap((group) => group.entries).filter((entry) => entry.gap_percent !== null);
+  const beats = comparableEntries.filter((entry) => entry.gap_percent! > 0).length;
+  const loses = comparableEntries.filter((entry) => entry.gap_percent! < 0).length;
+  const flags: string[] = [];
+  if (holdingReturn === null) flags.push(`missing_${period}_return`);
+  if (comparableEntries.length === 0) flags.push("no_comparable_return_data");
+  if (loses > beats && comparableEntries.length > 0) flags.push("underperforming_comparables");
+  if (groups.some((group) => group.incomplete_count > 0)) flags.push("incomplete_comparison_data");
+
+  const signal: "Strong" | "Mixed" | "Weak" = comparableEntries.length === 0
+    ? "Weak"
+    : beats / comparableEntries.length >= 0.6
+      ? "Strong"
+      : beats / comparableEntries.length >= 0.4
+        ? "Mixed"
+        : "Weak";
+  const fundamentals_flags_found = groups.some((group) =>
+    group.entries.some(
+      (entry) => entry.gap_percent !== null && entry.gap_percent < 0 && entry.fundamentals && entry.fundamentals.flags.length > 0,
+    ),
   );
 
   const verdict: HoldingVerdict = {
     holding_ticker: holding.ticker,
     holding_name: holding.name,
-    holding_return_percent: null,
-    holding_current_value_egp: null,
-    holding_risk_tier: null,
+    holding_return_percent: holdingReturn,
+    holding_current_value_egp: holding.units_held !== null && holding.fund_nav !== null
+      ? numeric(holding.units_held)! * numeric(holding.fund_nav)!
+      : null,
+    holding_risk_tier: riskTier(holdingSnapshot?.risk_level ?? null),
     return_period: period,
     groups,
     signal,
     flags,
-    data_completeness_warning: false,
+    data_completeness_warning: holdingReturn === null || groups.some((group) => group.incomplete_count > 0),
     fundamentals_flags_found,
   };
 
@@ -54,9 +218,9 @@ async function judgeHolding(
   // actual verdict from returning.
   try {
     await pool.query(
-      `INSERT INTO verdict_history (watchlist_id, signal, flags, return_percent, raw_verdict)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [holding.id, signal, flags, verdict.holding_return_percent, JSON.stringify(verdict)]
+      `INSERT INTO verdict_history (watchlist_id, signal, flags, return_percent, raw_verdict, run_id)
+      VALUES ($1, $2, $3, $4, $5, $6)`,
+          [holding.id, signal, flags, verdict.holding_return_percent, JSON.stringify(verdict), runId]
     );
   } catch (err) {
     console.error(
@@ -72,22 +236,25 @@ async function judgeHolding(
  * judgeAllHoldings - runs comparison judge for all held positions
  */
 export async function judgeAllHoldings(
-  period: "return_1y" | "return_6m" | "return_3m"
+  period: ReturnPeriod,
+  runId?: number,
 ): Promise<HoldingVerdict[]> {
   try {
-    const result = await pool.query(
-      `SELECT id, ticker, name FROM comparison_watchlist WHERE is_held = true`
-    );
+    const [watchlist, snapshots, fundamentals] = await Promise.all([
+      getWatchlistRows(),
+      getLatestSnapshots(runId),
+      getLatestFundamentals(runId),
+    ]);
 
     const verdicts: HoldingVerdict[] = [];
-    for (const holding of result.rows) {
-      const verdict = await judgeHolding(holding, period);
+    for (const holding of watchlist.filter((row) => row.is_held)) {
+      const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, runId);
       verdicts.push(verdict);
     }
     return verdicts;
   } catch (err) {
     console.error("[judgeAllHoldings] failed:", err);
-    return [];
+    throw new Error("Comparison Judge could not load its watchlist or snapshot data", { cause: err });
   }
 }
 
@@ -96,19 +263,20 @@ export async function judgeAllHoldings(
  */
 export async function judgeOneHolding(
   ticker: string,
-  period: "return_1y" | "return_6m" | "return_3m"
+  period: ReturnPeriod,
+  runId?: number,
 ): Promise<HoldingVerdict | null> {
   try {
-    const result = await pool.query(
-      `SELECT id, ticker, name FROM comparison_watchlist WHERE ticker = $1`,
-      [ticker]
-    );
-
-    if (result.rows.length === 0) return null;
-
-    return await judgeHolding(result.rows[0], period);
+    const [watchlist, snapshots, fundamentals] = await Promise.all([
+      getWatchlistRows(),
+      getLatestSnapshots(runId),
+      getLatestFundamentals(runId),
+    ]);
+    const holding = watchlist.find((row) => row.ticker === ticker.toUpperCase());
+    if (!holding) return null;
+    return await judgeHolding(holding, period, watchlist, snapshots, fundamentals, runId);
   } catch (err) {
     console.error(`[judgeOneHolding] failed for ${ticker}:`, err);
-    return null;
+    throw new Error(`Comparison Judge could not evaluate ${ticker}`, { cause: err });
   }
 }

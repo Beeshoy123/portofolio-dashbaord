@@ -1,11 +1,7 @@
 // Comparison Judge — Scraper Orchestrator
 //
-// CHANGED: Yahoo Finance enrichment replaced with stockanalysis.com
-// fundamentals. The old enrichReturnsFromYahoo() was a dead stub — it
-// fetched a current price and then always wrote NULL for
-// return_30d/ytd/1y (see that file's own TODO comment). It never actually
-// enriched anything, so this isn't a like-for-like swap of working code —
-// it's real data replacing a no-op.
+// Fundamentals come from stockanalysis.com and are stored alongside the
+// FoudaLens comparison snapshots for the downstream judge and advisor.
 //
 // Run this on a schedule (weekly, per the original design decision). It:
 //   1. Reads the fixed watchlist from comparison_watchlist
@@ -28,7 +24,6 @@ import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
 import { parseStockAnalysis, type StockFundamentals } from "./parseStockAnalysis";
-import { judgeAllHoldings } from "../../judge/comparisonJudge";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL, // Replit sets this automatically
@@ -43,16 +38,17 @@ async function getWatchlist(): Promise<WatchlistEntity[]> {
   return result.rows;
 }
 
-async function saveSnapshot(snapshot: ScrapedSnapshot): Promise<void> {
+async function saveSnapshot(snapshot: ScrapedSnapshot, runId: number): Promise<void> {
   await pool.query(
     `INSERT INTO comparison_snapshots
       (watchlist_id, nav_or_price, return_30d_percent, return_ytd_percent,
        return_1y_percent, cagr_percent, total_score, risk_level,
        signal, pe_ratio, dividend_yield_percent, market_cap, sector_rank,
-       raw_fetch_ok)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+      import { enrichHistoricalReturns } from "./historicalReturns";
+       raw_fetch_ok, run_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
     [
-      snapshot.watchlist_id,
+          `SELECT id, ticker, name, entity_type, source_code, sector, manager, is_held, yahoo_ticker
       snapshot.nav_or_price,
       snapshot.return_30d_percent,
       snapshot.return_ytd_percent,
@@ -66,11 +62,12 @@ async function saveSnapshot(snapshot: ScrapedSnapshot): Promise<void> {
       snapshot.market_cap,
       snapshot.sector_rank,
       snapshot.raw_fetch_ok,
+      runId,
     ]
   );
 }
 
-async function saveFundamentals(f: StockFundamentals): Promise<void> {
+async function saveFundamentals(f: StockFundamentals, runId: number): Promise<void> {
   await pool.query(
     `INSERT INTO stock_fundamentals
       (watchlist_id, price, price_change_percent, market_cap, revenue_ttm,
@@ -82,13 +79,16 @@ async function saveFundamentals(f: StockFundamentals): Promise<void> {
        current_ratio, roe_percent, roic_percent, cash_on_hand, total_debt,
        net_cash_position, operating_cash_flow, capex, free_cash_flow,
        gross_margin_percent, operating_margin_percent, net_margin_percent,
-       ev_to_ebitda, ev_to_fcf, shares_change_percent, raw_fetch_ok)
+       ev_to_ebitda, ev_to_fcf, shares_change_percent, raw_fetch_ok, run_id)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,
        $19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29,$30,$31,$32,$33,$34,$35,
-       $36,$37,$38,$39,$40)`,
+      $36,$37,$38,$39,$40,$41,$42)`,
     [
       f.watchlist_id,
-      f.price,
+          const snapshot = await enrichHistoricalReturns(
+            await parseStockPage(stock.ticker, stock.id),
+            stock.yahoo_ticker ?? null,
+          );
       f.price_change_percent,
       f.market_cap,
       f.revenue_ttm,
@@ -108,7 +108,7 @@ async function saveFundamentals(f: StockFundamentals): Promise<void> {
       f.week52_high,
       f.beta,
       f.analyst_rating,
-      f.price_target,
+            enrichedSnapshot.raw_fetch_ok ? successCount++ : failCount++;
       f.price_target_upside_percent,
       f.earnings_date,
       f.debt_to_equity,
@@ -128,6 +128,7 @@ async function saveFundamentals(f: StockFundamentals): Promise<void> {
       f.ev_to_fcf,
       f.shares_change_percent,
       f.raw_fetch_ok,
+      runId,
     ]
   );
 }
@@ -139,7 +140,11 @@ function sleep(ms: number): Promise<void> {
 
 export { main as runScraper };
 
-export async function main() {
+export async function main(): Promise<{ runId: number; succeeded: number; failed: number; total: number }> {
+  const runResult = await pool.query<{ id: number }>(
+    `INSERT INTO bot_runs (status) VALUES ('running') RETURNING id`,
+  );
+  const runId = Number(runResult.rows[0].id);
   const watchlist = await getWatchlist();
   console.log(`Loaded ${watchlist.length} entities from comparison_watchlist`);
 
@@ -158,7 +163,7 @@ export async function main() {
       continue;
     }
     const snapshot = await parseFundPage(fund.source_code, fund.id);
-    await saveSnapshot(snapshot);
+    await saveSnapshot(snapshot, runId);
     snapshot.raw_fetch_ok ? successCount++ : failCount++;
     console.log(
       `[fund] ${fund.ticker}: ${snapshot.raw_fetch_ok ? "OK" : "FAILED"} — NAV ${snapshot.nav_or_price}`
@@ -169,7 +174,7 @@ export async function main() {
   // --- Stocks: one request each, unverified pattern, may be slow (browser fallback) ---
   for (const stock of stocks) {
     const snapshot = await parseStockPage(stock.ticker, stock.id);
-    await saveSnapshot(snapshot);
+    await saveSnapshot(snapshot, runId);
     snapshot.raw_fetch_ok ? successCount++ : failCount++;
     console.log(
       `[stock] ${stock.ticker}: ${snapshot.raw_fetch_ok ? "OK" : "FAILED"} — price ${snapshot.nav_or_price}`
@@ -185,7 +190,7 @@ export async function main() {
     }));
     const snapshots = await parseIndexPage(targets);
     for (const snapshot of snapshots) {
-      await saveSnapshot(snapshot);
+      await saveSnapshot(snapshot, runId);
       snapshot.raw_fetch_ok ? successCount++ : failCount++;
     }
     console.log(`[index] fetched ${snapshots.length} indices from shared page`);
@@ -194,8 +199,7 @@ export async function main() {
   console.log(`\nSnapshots done. ${successCount} succeeded, ${failCount} failed out of ${watchlist.length}.`);
 
   // --- NEW: stock fundamentals from stockanalysis.com ---
-  // Replaces enrichReturnsFromYahoo(), which never wrote real data (see
-  // header comment). 2 requests per stock (Overview + Statistics) — not
+  // Uses two requests per stock (Overview + Statistics), not
   // per data point — so ~35 stocks = ~70 requests total.
   let fundamentalsOk = 0;
   let fundamentalsFailed = 0;
@@ -204,7 +208,7 @@ export async function main() {
     console.log(`\nFetching fundamentals for ${stocks.length} stocks from stockanalysis.com...`);
     for (const stock of stocks) {
       const fundamentals = await parseStockAnalysis(stock.ticker, stock.id);
-      await saveFundamentals(fundamentals);
+      await saveFundamentals(fundamentals, runId);
       fundamentals.raw_fetch_ok ? fundamentalsOk++ : fundamentalsFailed++;
       console.log(
         `[fundamentals] ${stock.ticker}: ${fundamentals.raw_fetch_ok ? "OK" : "FAILED"} — ` +
@@ -221,21 +225,14 @@ export async function main() {
           `This is expected on the first run until extractLabeled() patterns are confirmed against real page text.`
       );
     }
-  }
 
-  // --- Comparison Judge (unchanged) ---
-  try {
-    console.log("\nRunning Comparison Judge for held positions...");
-    const verdicts = await judgeAllHoldings("return_1y");
-    console.log(`Comparison Judge produced ${verdicts.length} verdicts.`);
-  } catch (err) {
-    console.error("Comparison Judge failed:", err);
   }
 
   // Pool intentionally stays open — see the original bug-fix comment this
   // file carried before: closing it here breaks every subsequent call in
   // the long-running API server. Close it once in your server's own
   // SIGTERM/SIGINT handler if you want a clean shutdown.
+  return { runId, succeeded: successCount, failed: failCount, total: watchlist.length };
 }
 
 // BUG FIX: removed the auto-invoking `main().catch(...)` block that used to

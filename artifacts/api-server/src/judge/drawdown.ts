@@ -76,13 +76,6 @@ export async function computeDrawdown(): Promise<DrawdownResult> {
     };
   } catch (err) {
     console.error("[computeDrawdown] failed:", err);
-    return {
-      has_enough_history: false,
-      current_value: null,
-      peak_value: null,
-      peak_at: null,
-      current_drawdown_percent: null,
-      max_drawdown_percent: null,
-    };
+    throw new Error("Drawdown could not load portfolio history", { cause: err });
   }
 }

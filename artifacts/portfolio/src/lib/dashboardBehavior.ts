@@ -266,7 +266,10 @@ export function initDashboardBehavior(
     if (cp) cp.style.display = view === "certs" ? "block" : "none";
 
     const rv = el("rotation-verdict-section");
-    if (rv) rv.style.display = view === "ai" ? "" : "none";
+    if (rv) {
+      const comparisonReady = rv.getAttribute("data-comparison-ready") === "true";
+      rv.style.display = view === "ai" && comparisonReady ? "" : "none";
+    }
 
     const ghs = el("gold-hero-stats");
     if (ghs) ghs.style.display = view === "gold" ? "flex" : "none";
@@ -1076,23 +1079,140 @@ export function initDashboardBehavior(
     }
   };
 
+  function renderPriceCheckerTable(snapshots: any[], tableEl: HTMLElement, resultsEl: HTMLElement): number {
+    const funds = snapshots.filter((s: any) => s.entity_type === "fund" && s.raw_fetch_ok);
+    const stocks = snapshots.filter((s: any) => s.entity_type === "stock" && s.raw_fetch_ok);
+    const indices = snapshots.filter((s: any) => s.entity_type === "index" && s.raw_fetch_ok);
+    const successful = [...funds, ...stocks, ...indices];
+    const failed = snapshots.filter((s: any) => s.raw_fetch_ok === false);
+    const buyCount = successful.filter((s: any) => String(s.signal ?? "").toUpperCase().includes("BUY")).length;
+    const holdCount = successful.filter((s: any) => String(s.signal ?? "").toUpperCase().includes("HOLD")).length;
+    const reviewCount = successful.length - buyCount - holdCount;
+
+    const fmtPct = (v: any) => v != null ? `${Number(v) >= 0 ? "+" : ""}${Number(v).toFixed(2)}%` : "—";
+    const fmtNum = (v: any) => v != null ? Number(v).toFixed(2) : "—";
+    const heldTag = (s: any) => s.is_held ? ' <span style="background:var(--pnl-up);color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px">HELD</span>' : "";
+    const tableRow = (s: any) => `
+      <tr style="border-bottom:1px solid var(--edge)">
+        <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}${heldTag(s)}</td>
+        <td style="padding:6px 8px;color:var(--dim);font-size:10px">${s.name}</td>
+        <td style="padding:6px 8px;text-align:right">${fmtNum(s.nav_or_price)}</td>
+        <td style="padding:6px 8px;text-align:right;color:${Number(s.return_30d_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_30d_percent)}</td>
+        <td style="padding:6px 8px;text-align:right;color:${Number(s.return_ytd_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_ytd_percent)}</td>
+        <td style="padding:6px 8px;text-align:right">${s.total_score != null ? Number(s.total_score).toFixed(0) + "/100" : "—"}</td>
+      </tr>`;
+    const failedRow = (s: any) => `
+      <tr style="border-bottom:1px solid var(--edge);color:var(--dim)">
+        <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}</td>
+        <td style="padding:6px 8px;font-size:10px">${s.name}</td>
+        <td colspan="3" style="padding:6px 8px;text-align:center;font-size:10px">Price unavailable</td>
+        <td style="padding:6px 8px;text-align:right;color:var(--pnl-down);font-weight:700">Failed</td>
+      </tr>`;
+    const sectionHeader = (title: string) => `
+      <tr style="background:var(--bg)">
+        <td colspan="6" style="padding:8px 8px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">${title}</td>
+      </tr>`;
+    const thead = `<thead><tr style="border-bottom:2px solid var(--edge)">
+      <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Ticker</th>
+      <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Name</th>
+      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">NAV/Price</th>
+      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">30d</th>
+      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">YTD</th>
+      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">Score</th>
+    </tr></thead>`;
+    const rows = [
+      ...(funds.length ? [sectionHeader("Funds"), ...funds.sort((a: any, b: any) => Number(b.return_30d_percent ?? -999) - Number(a.return_30d_percent ?? -999)).map(tableRow)] : []),
+      ...(stocks.length ? [sectionHeader("Stocks"), ...stocks.sort((a: any, b: any) => Number(b.total_score ?? 0) - Number(a.total_score ?? 0)).map(tableRow)] : []),
+      ...(indices.length ? [sectionHeader("Indices"), ...indices.map(tableRow)] : []),
+      ...(failed.length ? [sectionHeader("Needs review"), ...failed.map(failedRow)] : []),
+    ];
+
+    tableEl.innerHTML = rows.length
+      ? `<table style="width:100%;border-collapse:collapse;font-size:11px">${thead}<tbody>${rows.join("")}</tbody></table>`
+      : `<div style="padding:18px 8px;color:var(--dim);font-size:11px">Waiting for the first price…</div>`;
+    const summaryEl = resultsEl.querySelector<HTMLElement>("#price-checker-summary");
+    if (summaryEl) {
+      summaryEl.innerHTML = `
+        <div style="padding:10px 12px;border:1px solid color-mix(in srgb,var(--pnl-up) 35%,var(--edge));border-radius:8px;background:color-mix(in srgb,var(--pnl-up) 8%,transparent)">
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">Buy</div>
+          <div style="font-size:20px;font-weight:800;color:var(--pnl-up);margin-top:3px">${buyCount}</div>
+        </div>
+        <div style="padding:10px 12px;border:1px solid var(--edge);border-radius:8px;background:var(--bg)">
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">Hold</div>
+          <div style="font-size:20px;font-weight:800;color:var(--ink);margin-top:3px">${holdCount}</div>
+        </div>
+        <div style="padding:10px 12px;border:1px solid color-mix(in srgb,var(--pnl-down) 35%,var(--edge));border-radius:8px;background:color-mix(in srgb,var(--pnl-down) 8%,transparent)">
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">Review</div>
+          <div style="font-size:20px;font-weight:800;color:var(--pnl-down);margin-top:3px">${reviewCount}</div>
+        </div>`;
+      summaryEl.style.display = successful.length ? "grid" : "none";
+    }
+    const failedNotice = resultsEl.querySelector<HTMLElement>("#price-checker-failures");
+    if (failedNotice) {
+      failedNotice.style.display = failed.length ? "flex" : "none";
+      failedNotice.innerHTML = failed.length
+        ? `<span>${failed.length} ${failed.length === 1 ? "entity" : "entities"} could not be fetched.</span><button onclick="runPriceChecker()" style="margin-left:auto;border:1px solid var(--edge);border-radius:6px;background:var(--bg);color:var(--ink);padding:5px 9px;font-size:10px;font-weight:700;cursor:pointer">Retry refresh</button>`
+        : "";
+    }
+    resultsEl.style.display = "block";
+    return funds.length + stocks.length + indices.length;
+  }
+
+  function updateAiPipeline(stages: Record<string, string>): void {
+    const stageMap: Record<string, string> = {
+      priceChecker: "ai-stage-price",
+      comparisonJudge: "ai-stage-judge",
+      alerts: "ai-stage-alerts",
+      smartAdvisor: "ai-stage-advisor",
+    };
+    const colors: Record<string, string> = {
+      waiting: "var(--dim)",
+      running: "var(--warning-border)",
+      completed: "var(--pnl-up)",
+      failed: "var(--pnl-down)",
+    };
+    for (const [stage, elementId] of Object.entries(stageMap)) {
+      const element = el(elementId);
+      if (!element) continue;
+      const state = stages[stage] ?? "waiting";
+      const stateLabel = state.charAt(0).toUpperCase() + state.slice(1);
+      const stateElement = element.querySelector("span");
+      if (stateElement) stateElement.textContent = stateLabel;
+      element.style.borderColor = colors[state] ?? "var(--edge)";
+      if (stateElement) (stateElement as HTMLElement).style.color = colors[state] ?? "var(--dim)";
+    }
+  }
+
   win.runPriceChecker = async () => {
     const btn = el("scraper-run-btn") as HTMLButtonElement | null;
     const label = el("scraper-btn-label");
+    const engineState = el("ai-engine-state");
+    const engineUpdated = el("ai-engine-updated");
     const statusEl = el("scraper-status");
     const resultsEl = el("price-checker-results");
     const tableEl = el("price-checker-table");
 
     if (btn) btn.disabled = true;
     if (label) label.textContent = "Running…";
+    if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Fetching';
+    if (engineState) (engineState as HTMLElement).style.color = "var(--warning-border)";
+    if (engineUpdated) engineUpdated.textContent = "Price checker is running";
+    updateAiPipeline({ priceChecker: "running", comparisonJudge: "waiting", alerts: "waiting", smartAdvisor: "waiting" });
     if (statusEl) { statusEl.style.display = "block"; statusEl.textContent = "⏳ Fetching prices from FoudaLens — this takes 1–2 minutes…"; }
+    if (resultsEl && tableEl) {
+      resultsEl.style.display = "block";
+      tableEl.innerHTML = `<div style="padding:18px 8px;color:var(--dim);font-size:11px">Connecting to the price checker…</div>`;
+    }
 
     try {
-      const runResp = await authenticatedFetch("/api/scraper/run", { method: "POST" });
+      const runResp = await authenticatedFetch("/api/ai-bot/run", { method: "POST" });
       if (!runResp.ok) {
         const err = await runResp.json().catch(() => ({ error: "Unknown error" }));
         if (runResp.status !== 409) {
           if (statusEl) statusEl.textContent = `❌ Run failed: ${(err as any).error ?? runResp.statusText}`;
+          if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
+          if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
+          if (engineUpdated) engineUpdated.textContent = "Refresh failed";
           return;
         }
         if (statusEl) statusEl.textContent = "⏳ A price refresh is already running — waiting for it to finish…";
@@ -1101,82 +1221,71 @@ export function initDashboardBehavior(
       // The scraper runs in the API background because the full watchlist can
       // exceed the preview proxy's request timeout. Poll until it completes.
       const startedAt = Date.now();
-      let runStatus: { running: boolean; lastRunAt: string | null; lastRunSummary: string | null };
+      let runStatus: { running: boolean; runId: number | null; startedAt: string | null; error: string | null; stages: Record<string, string> };
       do {
         await new Promise((resolve) => setTimeout(resolve, 2000));
-        const statusResp = await authenticatedFetch("/api/scraper/status");
+        const statusResp = await authenticatedFetch("/api/ai-bot/status");
         if (!statusResp.ok) throw new Error("Could not check scraper status.");
         runStatus = (await statusResp.json()) as typeof runStatus;
+        updateAiPipeline(runStatus.stages);
+        let fetchedCount = 0;
+        if (tableEl && resultsEl && runStatus.startedAt) {
+          const liveSnapResp = await authenticatedFetch(`/api/scraper/snapshots?since=${encodeURIComponent(runStatus.startedAt)}`);
+          if (liveSnapResp.ok) {
+            const liveData = (await liveSnapResp.json()) as { snapshots: any[] };
+            fetchedCount = renderPriceCheckerTable(liveData.snapshots, tableEl, resultsEl);
+          }
+        }
         if (statusEl && runStatus.running) {
           const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000);
-          statusEl.textContent = `⏳ Fetching prices from FoudaLens… ${elapsedMinutes} min elapsed`;
+          statusEl.textContent = `⏳ Fetching prices from FoudaLens… ${fetchedCount} fetched · ${elapsedMinutes} min elapsed`;
         }
         if (Date.now() - startedAt > 10 * 60 * 1000) {
           throw new Error("Scraper status polling timed out. Check again shortly.");
         }
       } while (runStatus.running);
 
-      if (runStatus.lastRunSummary !== "OK") {
-        if (statusEl) statusEl.textContent = `❌ Run failed: ${runStatus.lastRunSummary ?? "Unknown error"}`;
+      if (runStatus.error || runStatus.stages.priceChecker === "failed") {
+        if (statusEl) statusEl.textContent = `❌ Run failed: ${runStatus.error ?? "Price Checker failed"}`;
+        if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
+        if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
+        if (engineUpdated) engineUpdated.textContent = "Refresh failed";
         return;
       }
 
-      // Fetch the snapshots now that the run succeeded
-      const snapResp = await authenticatedFetch("/api/scraper/snapshots");
+      // Fetch the final snapshots now that the run succeeded
+      const snapshotsUrl = runStatus.startedAt
+        ? `/api/scraper/snapshots?since=${encodeURIComponent(runStatus.startedAt)}`
+        : "/api/scraper/snapshots";
+      const snapResp = await authenticatedFetch(snapshotsUrl);
       if (!snapResp.ok) { if (statusEl) statusEl.textContent = "❌ Could not load snapshots after run."; return; }
       const { snapshots, lastRunAt } = (await snapResp.json()) as { snapshots: any[]; lastRunAt: string | null };
 
       if (statusEl) {
         const ts = lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now";
         const ok = snapshots.filter((s: any) => s.raw_fetch_ok).length;
-        statusEl.textContent = `✅ Done at ${ts} · ${ok}/${snapshots.length} entities fetched successfully`;
+        const outcome = runStatus.stages.priceChecker === "completed" && runStatus.stages.comparisonJudge === "completed" && runStatus.stages.alerts === "completed" && runStatus.stages.smartAdvisor === "completed" ? "✅ Done" : "⚠️ Partial";
+        statusEl.textContent = `${outcome} at ${ts} · ${ok}/${snapshots.length} entities fetched successfully`;
       }
+      if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Completed';
+      if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-up)";
+      if (engineUpdated) engineUpdated.textContent = `Updated ${lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now"}`;
 
-      // Build comparison table grouped by entity_type
-      if (tableEl && resultsEl) {
-        const funds = snapshots.filter((s: any) => s.entity_type === "fund" && s.raw_fetch_ok);
-        const stocks = snapshots.filter((s: any) => s.entity_type === "stock" && s.raw_fetch_ok);
-        const indices = snapshots.filter((s: any) => s.entity_type === "index" && s.raw_fetch_ok);
+      if (tableEl && resultsEl) renderPriceCheckerTable(snapshots, tableEl, resultsEl);
 
-        const fmtPct = (v: any) => v != null ? `${Number(v) >= 0 ? "+" : ""}${Number(v).toFixed(2)}%` : "—";
-        const fmtNum = (v: any) => v != null ? Number(v).toFixed(2) : "—";
-        const heldTag = (s: any) => s.is_held ? ' <span style="background:var(--pnl-up);color:#fff;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;margin-left:4px">HELD</span>' : "";
-
-        const tableRow = (s: any) => `
-          <tr style="border-bottom:1px solid var(--edge)">
-            <td style="padding:6px 8px;font-weight:600;white-space:nowrap">${s.ticker}${heldTag(s)}</td>
-            <td style="padding:6px 8px;color:var(--dim);font-size:10px">${s.name}</td>
-            <td style="padding:6px 8px;text-align:right">${fmtNum(s.nav_or_price)}</td>
-            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_30d_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_30d_percent)}</td>
-            <td style="padding:6px 8px;text-align:right;color:${Number(s.return_ytd_percent) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${fmtPct(s.return_ytd_percent)}</td>
-            <td style="padding:6px 8px;text-align:right">${s.total_score != null ? Number(s.total_score).toFixed(0) + "/100" : "—"}</td>
-          </tr>`;
-
-        const sectionHeader = (title: string) => `
-          <tr style="background:var(--bg)">
-            <td colspan="6" style="padding:8px 8px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">${title}</td>
-          </tr>`;
-
-        const thead = `<thead><tr style="border-bottom:2px solid var(--edge)">
-          <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Ticker</th>
-          <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Name</th>
-          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">NAV/Price</th>
-          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">30d</th>
-          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">YTD</th>
-          <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">Score</th>
-        </tr></thead>`;
-
-        const rows = [
-          ...(funds.length ? [sectionHeader("Funds"), ...funds.sort((a: any, b: any) => Number(b.return_30d_percent ?? -999) - Number(a.return_30d_percent ?? -999)).map(tableRow)] : []),
-          ...(stocks.length ? [sectionHeader("Stocks"), ...stocks.sort((a: any, b: any) => Number(b.total_score ?? 0) - Number(a.total_score ?? 0)).map(tableRow)] : []),
-          ...(indices.length ? [sectionHeader("Indices"), ...indices.map(tableRow)] : []),
-        ];
-
-        tableEl.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:11px">${thead}<tbody>${rows.join("")}</tbody></table>`;
-        resultsEl.style.display = "block";
+      const verdictSection = el("rotation-verdict-section");
+      if (verdictSection) {
+        verdictSection.setAttribute("data-comparison-ready", "true");
+        verdictSection.style.display = currentView === "ai" ? "" : "none";
       }
+      const advisorMount = el("smart-advisor-mount");
+      if (advisorMount) advisorMount.style.display = "";
+      await loadRotationVerdicts();
     } catch (err: any) {
       if (statusEl) statusEl.textContent = `❌ Network error: ${err?.message ?? "Unknown"}`;
+      if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
+      if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
+      if (engineUpdated) engineUpdated.textContent = "Connection failed";
     } finally {
       if (btn) btn.disabled = false;
       if (label) label.textContent = "Refresh prices";
@@ -1999,6 +2108,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     const totalBeat = (v.groups as any[]).reduce((s: number, g: any) => s + g.you_beat_count, 0);
     const totalLose = (v.groups as any[]).reduce((s: number, g: any) => s + g.you_lose_count, 0);
     const totalPending = (v.groups as any[]).reduce((s: number, g: any) => s + g.incomplete_count, 0);
+    const confidence = v.data_completeness_warning ? "Limited" : totalPending > 0 ? "Moderate" : "High";
 
     const flagsHtml = (v.flags as string[]).length > 0
       ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:10px">
@@ -2032,6 +2142,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
           <div style="font-size:9.5px;color:var(--dim);margin-top:6px;text-align:right">
             ${beatPill(totalBeat, totalLose, totalPending)}
           </div>
+          <div style="font-size:9px;color:var(--dim);margin-top:5px;text-align:right">Confidence: ${confidence}</div>
         </div>
       </div>
 
@@ -2077,9 +2188,30 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
         return;
       }
 
+      const rank: Record<string, number> = { Strong: 0, Mixed: 1, Weak: 2 };
+      const orderedVerdicts = [...verdicts].sort((a: any, b: any) =>
+        (rank[a.signal] ?? 2) - (rank[b.signal] ?? 2),
+      );
+      const buyCount = verdicts.filter((v: any) => v.signal === "Strong").length;
+      const holdCount = verdicts.filter((v: any) => v.signal === "Mixed").length;
+      const reviewCount = verdicts.length - buyCount - holdCount;
+      const summaryCard = (label: string, count: number, color: string, background: string) => `
+        <div style="padding:10px 12px;border:1px solid ${color};border-radius:8px;background:${background}">
+          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">${label}</div>
+          <div style="font-size:20px;font-weight:800;color:${color};margin-top:3px">${count}</div>
+        </div>`;
+
       section.innerHTML = `
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:14px">🔄 Rotation Verdict</div>
-        ${verdicts.map(buildVerdictCardHtml).join("")}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)">🔄 Rotation Verdict</div>
+          <div style="font-size:9.5px;color:var(--dim)">Based on latest price run</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px">
+          ${summaryCard("Buy", buyCount, "var(--pnl-up)", "var(--pnl-up-soft)")}
+          ${summaryCard("Hold", holdCount, "var(--warning-border)", "var(--warning-bg)")}
+          ${summaryCard("Review", reviewCount, "var(--pnl-down)", "var(--pnl-down-soft)")}
+        </div>
+        ${orderedVerdicts.map(buildVerdictCardHtml).join("")}
       `;
     } catch (err: any) {
       section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:var(--pnl-down);display:flex;gap:8px;align-items:center">
@@ -2087,8 +2219,6 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
       </div>`;
     }
   }
-
-  void loadRotationVerdicts();
 
   return () => {
     clearInterval(timeInterval);

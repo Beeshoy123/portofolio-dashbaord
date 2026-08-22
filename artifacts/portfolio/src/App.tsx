@@ -1,4 +1,10 @@
+// AI bot architecture: these are four cooperating engines, not four separate
+// features. Price Checker collects the current market data, Comparison Judge
+// evaluates each holding against peers, Smart Advisor turns those verdicts
+// into recommendations, and Alerts monitors verdict/history changes. The
+// dashboard coordinates their order and presents them as one bot workflow.
 import { useEffect, useRef } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useGetPortfolio,
@@ -108,6 +114,7 @@ export default function App() {
   const updateFundMutation = useUpdateFund();
   const createSnapshotMutation = useCreateGrowthSnapshot();
   const containerRef = useRef<HTMLDivElement>(null);
+  const advisorRootRef = useRef<Root | null>(null);
 
   const notSeeded =
     isError &&
@@ -128,6 +135,11 @@ export default function App() {
     const derived = computeDerived(dataToRender);
     containerRef.current.innerHTML = buildDashboardHtml(dataToRender, derived, usdReality);
 
+    const advisorMount = containerRef.current.querySelector('#smart-advisor-mount');
+    advisorRootRef.current?.unmount();
+    advisorRootRef.current = advisorMount ? createRoot(advisorMount) : null;
+    advisorRootRef.current?.render(<SmartAdvisorPanel />);
+
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: getGetPortfolioQueryKey() });
 
@@ -144,7 +156,11 @@ export default function App() {
       },
     });
 
-    return cleanup;
+    return () => {
+      advisorRootRef.current?.unmount();
+      advisorRootRef.current = null;
+      cleanup();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataToRender]);
 
@@ -179,8 +195,6 @@ export default function App() {
       )}
       <div className="flex flex-col gap-6">
         <div ref={containerRef} className="w-full" />
-        {/* SmartAdvisorPanel disabled due to Groq API token limit issue - see instructions.md */}
-        {/* <SmartAdvisorPanel /> */}
       </div>
     </>
   );

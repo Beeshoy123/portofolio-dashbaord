@@ -8,7 +8,7 @@
 // ─────────────────────────────────────────────────────────────────────────
 
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { getGoldPrices } from "../lib/goldPriceCache";
 import { getGlobalGoldPrice } from "../lib/globalGoldCache";
 import { getUsdEgpRate } from "../lib/usdEgpCache";
@@ -219,6 +219,35 @@ router.get("/portfolio", async (_req, res) => {
             new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime(),
         ),
       snapshots: snapshotRows.map(toGrowthSnapshot),
+
+      // Drawdown needs a time series, not just the current portfolio response.
+      // Record only complete valuations and suppress refresh noise within a
+      // short window so opening the dashboard does not create fake volatility.
+      if (data.gold.currentValue !== null) {
+        const fundMarketValue = data.funds.reduce(
+          (sum, fund) => sum + fund.nav * fund.unitsHeld,
+          0,
+        );
+        const fundCostBasis = data.funds.reduce(
+          (sum, fund) => sum + fund.costBasisTotal,
+          0,
+        );
+        const totalMarketValue = data.gold.currentValue + fundMarketValue;
+        const totalCostBasis = data.gold.costBasis + fundCostBasis;
+
+        try {
+          await db.execute(sql`
+            INSERT INTO portfolio_value_history (total_cost_basis, total_market_value)
+            SELECT ${totalCostBasis}, ${totalMarketValue}
+            WHERE NOT EXISTS (
+              SELECT 1 FROM portfolio_value_history
+              WHERE recorded_at > now() - interval '15 minutes'
+            )
+          `);
+        } catch (historyError) {
+          logger.warn({ err: historyError }, "Could not record portfolio history for alerts");
+        }
+      }
       settings: (() => {
         // Prefer the live server-side rate; fall back to the DB value if
         // the first fetch hasn't completed yet (cold start race window).

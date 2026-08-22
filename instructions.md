@@ -29,6 +29,7 @@ To export data: ask the agent to generate a temporary SQL dump, download it, the
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from `lib/api-spec/openapi.yaml` after editing the spec
 - `pnpm --filter @workspace/db run push` — push Drizzle schema changes to the dev DB
 - Required env: `DATABASE_URL` — Postgres connection string (managed by Replit's built-in DB, never exposed to the frontend)
+- Required env: `PORTFOLIO_OWNER_USER_ID` — Supabase user UUID allowed to access this personal portfolio; the API fails closed when it is missing and rejects other authenticated users
 
 ## Stack
 
@@ -51,6 +52,20 @@ To export data: ask the agent to generate a temporary SQL dump, download it, the
 - `artifacts/portfolio/src/App.tsx` — fetches `useGetPortfolio()`, renders the above, owns the mutation callbacks + query invalidation, and shows a "No portfolio data found" empty state when the DB has no rows yet
 
 ## Architecture decisions
+
+### AI bot engine contract
+
+The Price Checker, Comparison Judge, Smart Advisor, and Alert System are four
+engines of one AI investing bot. They must work as a coordinated pipeline:
+
+1. **Price Checker** fetches and persists current market data.
+2. **Comparison Judge** reads that data and produces holding-versus-peer verdicts.
+3. **Smart Advisor** reads the verdicts and produces recommendations.
+4. **Alert System** reads verdict and portfolio history to detect stagnation, thesis changes, and drawdown.
+
+The frontend should present these engines as one workflow, and backend changes
+must preserve the shared authenticated data contracts between them. A later
+engine should not run against missing or stale output from an earlier engine.
 
 - **Hard rule: no hardcoded/placeholder financial numbers, anywhere, ever — not in routes, the frontend, schema defaults, or a seed script (there is intentionally no seed script).** Every number the user sees must come from a live query against Postgres. If the database isn't connected yet or a value is missing, surface an explicit error/"unavailable" state and wait for the real data — never substitute a sample value, even temporarily. This is enforced with policy comments at the top of `lib/db/src/index.ts`, `artifacts/api-server/src/routes/portfolio.ts`, `artifacts/portfolio/src/lib/portfolioMath.ts`, and `artifacts/portfolio/src/lib/dashboardHtml.ts`.
 - Only gold, funds, and growth snapshots have write endpoints — certificates and transactions are read-only via the aggregate `GET /portfolio` since there's no write UI for them yet.

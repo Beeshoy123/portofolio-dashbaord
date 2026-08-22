@@ -197,6 +197,7 @@ async function fetchOverview(ticker: string): Promise<Partial<StockFundamentals>
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     },
+      signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) {
     console.error(`[parseStockAnalysis/overview] ${ticker}: HTTP ${res.status}`);
@@ -281,10 +282,11 @@ async function fetchStatistics(ticker: string): Promise<Partial<StockFundamental
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) {
-    console.warn(`[parseStockAnalysis/statistics] ${ticker}: HTTP ${res.status} — fundamentals will be partial`);
-    return {};
+    console.warn(`[parseStockAnalysis/statistics] ${ticker}: HTTP ${res.status} — fundamentals fetch failed`);
+    return null;
   }
 
   const html = await res.text();

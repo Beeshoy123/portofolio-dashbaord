@@ -10,6 +10,12 @@
 
 import type { HoldingVerdict, ComparisonGroup } from "../judge/types";
 
+export interface AdvisorAlertContext {
+  timeStop?: { is_stagnant: boolean; stagnant_days?: number | null };
+  thesis?: { has_reversal: boolean; newly_appeared_flags?: string[] };
+  drawdown?: { current_drawdown_percent?: number | null };
+}
+
 export const SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are NOT a licensed financial advisor, and you must say so is implicit — never use language implying guaranteed outcomes.
 
 STRICT RULES (violating any of these makes your response unusable):
@@ -79,11 +85,7 @@ function formatGroupForPrompt(group: ComparisonGroup): string {
  */
 export function buildDataBlock(
   verdict: HoldingVerdict,
-  alerts?: {
-    timeStop?: { is_stagnant: boolean; stagnant_days?: number | null };
-    thesis?: { has_reversal: boolean; newly_appeared_flags?: string[] };
-    drawdown?: { current_drawdown_percent?: number | null };
-  }
+  alerts?: AdvisorAlertContext,
 ): string {
   const periodLabel = verdict.return_period.replace("return_", "").toUpperCase();
 

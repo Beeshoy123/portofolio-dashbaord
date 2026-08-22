@@ -1,53 +1,23 @@
 import { Router } from "express";
 import { Pool } from "pg";
-import { runScraper } from "../scraper/runScraper";
 
 const router = Router();
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-// Track whether a scraper run is already in progress so we don't
-// run two at once if the button is tapped twice.
-let scraperRunning = false;
-let lastRunAt: string | null = null;
-let lastRunSummary: string | null = null;
-
-// POST /api/scraper/run — starts the scraper in the background.
-// The scraper can take longer than the preview proxy request timeout, so
-// callers must poll GET /api/scraper/status for completion.
+// Price Checker is owned by /api/ai-bot/run. Keeping a standalone start route
+// would let callers bypass the Judge, Alert System, and Smart Advisor stages.
 router.post("/scraper/run", async (req, res) => {
-  if (scraperRunning) {
-    res.status(409).json({ error: "Scraper already running. Please wait." });
-    return;
-  }
-
-  scraperRunning = true;
-  lastRunSummary = "RUNNING";
-
-  void runScraper()
-    .then(() => {
-      lastRunAt = new Date().toISOString();
-      lastRunSummary = "OK";
-    })
-    .catch((err: any) => {
-      lastRunSummary = err?.message ?? "Unknown error";
-      console.error("[/api/scraper/run]", err);
-    })
-    .finally(() => {
-      scraperRunning = false;
-    });
-
-  res.status(202).json({ ok: true, running: true });
-});
-
-// GET /api/scraper/status — returns whether a run is in progress + last result
-router.get("/scraper/status", (_req, res) => {
-  res.json({ running: scraperRunning, lastRunAt, lastRunSummary });
+  res.status(410).json({
+    error: "STANDALONE_SCRAPER_DEPRECATED",
+    message: "Use POST /api/ai-bot/run to execute the complete AI Bot workflow.",
+  });
 });
 
 // GET /api/scraper/snapshots — returns the latest snapshot per watchlist entity
 router.get("/scraper/snapshots", async (_req, res) => {
   try {
+    const since = typeof _req.query.since === "string" ? _req.query.since : null;
     const result = await pool.query(`
       SELECT
         w.id,
@@ -75,12 +45,14 @@ router.get("/scraper/snapshots", async (_req, res) => {
       LEFT JOIN LATERAL (
         SELECT * FROM comparison_snapshots cs
         WHERE cs.watchlist_id = w.id
+          AND ($1::timestamptz IS NULL OR cs.scraped_at >= $1::timestamptz)
+          AND ($1::timestamptz IS NOT NULL OR cs.raw_fetch_ok = true)
         ORDER BY cs.scraped_at DESC
         LIMIT 1
       ) s ON true
       ORDER BY w.entity_type, w.sector, w.ticker
-    `);
-    res.json({ snapshots: result.rows, lastRunAt });
+    `, [since]);
+    res.json({ snapshots: result.rows });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "DB query failed" });
   }

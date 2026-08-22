@@ -4,12 +4,14 @@
 // GET /api/advisor/alerts-context/:ticker - Get recommendation with alert context
 
 import { Router, Request, Response } from "express";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { judgeAllHoldings } from "../judge/comparisonJudge";
 import { generateRecommendation } from "../advisor/generateRecommendation";
 import { checkTimeStop } from "../judge/timeStop";
 import { checkThesis } from "../judge/thesisCheck";
 import { computeDrawdown } from "../judge/drawdown";
+import { checkAllTimeStops } from "../judge/timeStop";
+import { checkAllTheses } from "../judge/thesisCheck";
 
 const router = Router();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -43,13 +45,17 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
 // Get all latest recommendations
 router.get("/recommendations", async (req: Request, res: Response) => {
   try {
+    const runId = typeof req.query.runId === "string" ? Number(req.query.runId) : null;
+    const runFilter = runId !== null && Number.isInteger(runId) ? "AND ar.run_id = $1" : "";
+    const params = runFilter ? [runId] : [];
     const result = await pool.query(
       `SELECT DISTINCT ON (cw.ticker) 
               cw.ticker, ar.recommendation_text, ar.model_used, ar.generated_at
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
-       WHERE cw.is_held = true
+       WHERE cw.is_held = true ${runFilter}
        ORDER BY cw.ticker, ar.generated_at DESC`
+      , params
     );
 
     res.json(result.rows);
@@ -61,8 +67,36 @@ router.get("/recommendations", async (req: Request, res: Response) => {
 
 // Generate recommendations for all holdings (can be called manually)
 router.post("/generate", async (req: Request, res: Response) => {
+  let lockClient: PoolClient | null = null;
   try {
-    const verdicts = await judgeAllHoldings("return_1y");
+    lockClient = await pool.connect();
+    const lockResult = await lockClient.query<{ locked: boolean }>(
+      "SELECT pg_try_advisory_lock(1844674408) AS locked",
+    );
+    if (!lockResult.rows[0]?.locked) {
+      lockClient.release();
+      res.status(409).json({ error: "Recommendation generation already running. Please wait." });
+      return;
+    }
+
+    const runResult = await pool.query<{ id: number }>(
+      `SELECT id FROM bot_runs
+       WHERE status IN ('completed', 'partial')
+       ORDER BY completed_at DESC NULLS LAST, started_at DESC
+       LIMIT 1`,
+    );
+    if (runResult.rows.length === 0) {
+      res.status(409).json({ error: "Run the AI Bot price workflow before generating recommendations." });
+      return;
+    }
+
+    const runId = Number(runResult.rows[0].id);
+    const verdicts = await judgeAllHoldings("return_1y", runId);
+    const [timeStops, theses, drawdown] = await Promise.all([
+      checkAllTimeStops(runId),
+      checkAllTheses(runId),
+      computeDrawdown(),
+    ]);
 
     if (verdicts.length === 0) {
       return res.json({ success: true, message: "No holdings to generate recommendations for" });
@@ -81,7 +115,11 @@ router.post("/generate", async (req: Request, res: Response) => {
       }
 
       try {
-        const recommendation = await generateRecommendation(verdict);
+        const recommendation = await generateRecommendation(verdict, {
+          timeStop: timeStops.find((alert) => alert.ticker === verdict.holding_ticker),
+          thesis: theses.find((alert) => alert.ticker === verdict.holding_ticker),
+          drawdown,
+        });
 
         // Get watchlist ID
         const watchlistResult = await pool.query<{ id: number }>(
@@ -100,9 +138,10 @@ router.post("/generate", async (req: Request, res: Response) => {
 
         // Save recommendation
         await pool.query(
-          `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used)
-           VALUES ($1, $2, $3)`,
-          [watchlistResult.rows[0].id, recommendation.recommendation_text, recommendation.model_used]
+          `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL DO NOTHING`,
+          [watchlistResult.rows[0].id, recommendation.recommendation_text, recommendation.model_used, runId]
         );
 
         results.push({
@@ -123,6 +162,13 @@ router.post("/generate", async (req: Request, res: Response) => {
   } catch (err) {
     console.error("[advisor] POST generate failed:", err);
     res.status(500).json({ error: "Failed to generate recommendations" });
+  } finally {
+    if (lockClient) {
+      await lockClient.query("SELECT pg_advisory_unlock(1844674408)").catch((err) => {
+        console.error("[advisor] could not release generation lock", err);
+      });
+      lockClient.release();
+    }
   }
 });
 

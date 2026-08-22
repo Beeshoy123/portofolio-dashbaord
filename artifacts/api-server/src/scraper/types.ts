@@ -11,6 +11,7 @@ export interface WatchlistEntity {
   sector: string;
   manager: string | null;
   is_held: boolean;
+  yahoo_ticker?: string | null;
 }
 
 export interface ScrapedSnapshot {

@@ -19,6 +19,9 @@ export interface ComparisonEntry {
 export interface ComparisonGroup {
   group_type: "sector_sibling" | "manager_sibling" | "direct_stock" | "benchmark";
   entries: ComparisonEntry[];
+  you_beat_count: number;
+  you_lose_count: number;
+  incomplete_count: number;
 }
 
 export interface HoldingVerdict {

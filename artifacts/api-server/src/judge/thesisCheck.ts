@@ -27,6 +27,7 @@ interface VerdictHistoryRow {
   signal: string;
   flags: string[];
   recorded_at: string;
+  run_id: number | null;
 }
 
 export interface ThesisCheckResult {
@@ -44,7 +45,7 @@ export interface ThesisCheckResult {
 }
 
 /** Checks one holding's verdict_history for a thesis reversal. */
-export async function checkThesis(watchlistId: number): Promise<ThesisCheckResult | null> {
+export async function checkThesis(watchlistId: number, runId?: number): Promise<ThesisCheckResult | null> {
   try {
     const tickerResult = await pool.query<{ ticker: string }>(
       `SELECT ticker FROM comparison_watchlist WHERE id = $1`,
@@ -56,7 +57,7 @@ export async function checkThesis(watchlistId: number): Promise<ThesisCheckResul
     const ticker = tickerResult.rows[0].ticker;
 
     const result = await pool.query<VerdictHistoryRow>(
-      `SELECT signal, flags, recorded_at
+      `SELECT signal, flags, recorded_at, run_id
        FROM verdict_history
        WHERE watchlist_id = $1
        ORDER BY recorded_at DESC`,
@@ -80,7 +81,9 @@ export async function checkThesis(watchlistId: number): Promise<ThesisCheckResul
       };
     }
 
-    const latest = rows[0];
+    const latest = runId === undefined
+      ? rows[0]
+      : rows.find((row) => row.run_id === runId) ?? rows[0];
 
     // Walk from newest to oldest; the first row that's already at least
     // LOOKBACK_DAYS old is the closest available stand-in for "a month ago."
@@ -135,12 +138,12 @@ export async function checkThesis(watchlistId: number): Promise<ThesisCheckResul
     };
   } catch (err) {
     console.error(`[checkThesis] failed for watchlist ${watchlistId}:`, err);
-    return null;
+    throw new Error(`Thesis Check could not evaluate watchlist ${watchlistId}`, { cause: err });
   }
 }
 
 /** Runs checkThesis() for every held entity in the watchlist. */
-export async function checkAllTheses(): Promise<ThesisCheckResult[]> {
+export async function checkAllTheses(runId?: number): Promise<ThesisCheckResult[]> {
   try {
     const result = await pool.query<{ id: number }>(
       `SELECT id FROM comparison_watchlist WHERE is_held = true`
@@ -148,12 +151,12 @@ export async function checkAllTheses(): Promise<ThesisCheckResult[]> {
 
     const results: ThesisCheckResult[] = [];
     for (const row of result.rows) {
-      const thesis = await checkThesis(row.id);
+      const thesis = await checkThesis(row.id, runId);
       if (thesis) results.push(thesis);
     }
     return results;
   } catch (err) {
     console.error("[checkAllTheses] failed:", err);
-    return [];
+    throw new Error("Thesis Check could not load alert history", { cause: err });
   }
 }

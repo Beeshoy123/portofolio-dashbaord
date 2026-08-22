@@ -170,6 +170,7 @@ async function tryNextData(
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     },
+    signal: AbortSignal.timeout(30_000),
   });
   if (!res.ok) return null;
 
@@ -381,7 +382,12 @@ export async function parseStockPage(
 ): Promise<ScrapedSnapshot> {
   try {
     // Tier 1
-    const nextDataResult = await tryNextData(ticker, watchlistId);
+    let nextDataResult: ScrapedSnapshot | null = null;
+    try {
+      nextDataResult = await tryNextData(ticker, watchlistId);
+    } catch (err) {
+      console.warn(`[parseStockPage] ${ticker}: __NEXT_DATA__ tier failed, continuing to plain fetch`, err);
+    }
     if (nextDataResult) {
       console.log(`[parseStockPage] ${ticker}: resolved via __NEXT_DATA__`);
       return nextDataResult;

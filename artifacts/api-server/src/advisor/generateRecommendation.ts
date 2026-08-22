@@ -13,7 +13,7 @@
 // already uses — using a different key name would mean managing two
 // separate keys for one API, which is unnecessary duplication.
 
-import { buildPrompt, SYSTEM_INSTRUCTIONS, buildDataBlock } from "./buildPrompt";
+import { buildPrompt, SYSTEM_INSTRUCTIONS, buildDataBlock, type AdvisorAlertContext } from "./buildPrompt";
 import type { HoldingVerdict } from "../judge/types";
 import type { AdvisorRecommendation } from "./types";
 
@@ -21,7 +21,8 @@ const GEMINI_MODEL = "gemini-2.0-flash"; // adjust to match whatever model your 
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 export async function generateRecommendation(
-  verdict: HoldingVerdict
+  verdict: HoldingVerdict,
+  alerts?: AdvisorAlertContext,
 ): Promise<AdvisorRecommendation> {
   const apiKey = process.env.GEMINI_API_KEY; // ⚠️ confirm this matches your existing env var name
 
@@ -36,7 +37,7 @@ export async function generateRecommendation(
   // systemInstruction field to separate constraints from data — models
   // generally follow rules more reliably when they aren't mixed into the
   // same content stream as the user-facing data.
-  const dataBlock = buildDataBlock(verdict);
+  const dataBlock = buildDataBlock(verdict, alerts);
 
   const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
     method: "POST",

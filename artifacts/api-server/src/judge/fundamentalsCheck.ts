@@ -40,7 +40,8 @@ interface FundamentalsRow {
 }
 
 /** Pulls the latest stock_fundamentals row per watchlist entity. */
-export async function getLatestFundamentals(): Promise<Map<number, FundamentalsRow>> {
+export async function getLatestFundamentals(runId?: number): Promise<Map<number, FundamentalsRow>> {
+  const runFilter = runId === undefined ? "" : "AND run_id = $1";
   const result = await pool.query<FundamentalsRow>(
     `SELECT DISTINCT ON (watchlist_id)
         watchlist_id, pe_ratio, forward_pe, debt_to_equity, current_ratio,
@@ -49,7 +50,10 @@ export async function getLatestFundamentals(): Promise<Map<number, FundamentalsR
         analyst_rating, price_target_upside_percent, shares_change_percent
      FROM stock_fundamentals
      WHERE raw_fetch_ok = true
+       AND fetched_at >= now() - interval '30 days'
+       ${runFilter}
      ORDER BY watchlist_id, fetched_at DESC`
+    , runId === undefined ? [] : [runId]
   );
   const map = new Map<number, FundamentalsRow>();
   for (const row of result.rows) {

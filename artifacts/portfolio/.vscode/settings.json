@@ -140,6 +140,30 @@
         "/^powershell -NoProfile -Command \"\\$p = Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue; if \\(\\$p\\) \\{ \\$p \\| ForEach-Object \\{ Stop-Process -Id \\$_\\.OwningProcess -Force \\} \\}\"$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^node --input-type=module -e \"import dotenv from 'dotenv'; import \\{ Pool \\} from 'pg'; dotenv\\.config\\(\\{ path: '\\.env' \\}\\); const pool = new Pool\\(\\{ connectionString: process\\.env\\.DATABASE_URL \\}\\); try \\{ const result = await pool\\.query\\('SELECT table_name FROM information_schema\\.tables WHERE table_schema = \\$1 ORDER BY table_name', \\['public'\\]\\); console\\.log\\(result\\.rows\\.map\\(row => row\\.table_name\\)\\.join\\(', '\\) ; '\\(no public tables\\)'\\); \\} finally \\{ await pool\\.end\\(\\); \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^node --input-type=module -e \"import fs from 'node:fs'; import dotenv from 'dotenv'; import \\{ Pool \\} from 'pg'; dotenv\\.config\\(\\{ path: '\\.env' \\}\\); const pool = new Pool\\(\\{ connectionString: process\\.env\\.DATABASE_URL \\}\\); try \\{ await pool\\.query\\(fs\\.readFileSync\\('\\.\\./\\.\\./migrations/001_create_comparison_snapshots\\.sql', 'utf8'\\)\\); console\\.log\\('Migration 001 applied\\.'\\); await pool\\.query\\(fs\\.readFileSync\\('\\.\\./\\.\\./migrations/008_alert_history\\.sql', 'utf8'\\)\\); console\\.log\\('Migration 008 applied\\.'\\); \\} finally \\{ await pool\\.end\\(\\); \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location \"G:\\\\tp\\\\ai\\\\portofolio-dashbaord\\\\artifacts\\\\api-server\"; node --input-type=module -e \"import fs from 'node:fs'; import dotenv from 'dotenv'; import \\{ Pool \\} from 'pg'; dotenv\\.config\\(\\{ path: '\\.env' \\}\\); const pool = new Pool\\(\\{ connectionString: process\\.env\\.DATABASE_URL \\}\\); try \\{ const files = fs\\.readdirSync\\('\\.\\./\\.\\./migrations'\\)\\.filter\\(file => file\\.endsWith\\('\\.sql'\\)\\)\\.sort\\(\\); for \\(const file of files\\) \\{ console\\.log\\('Applying ' \\+ file \\+ '\\.\\.\\.'\\); await pool\\.query\\(fs\\.readFileSync\\('\\.\\./\\.\\./migrations/' \\+ file, 'utf8'\\)\\); console\\.log\\('Applied ' \\+ file\\); \\} \\} finally \\{ await pool\\.end\\(\\); \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location \"G:\\\\tp\\\\ai\\\\portofolio-dashbaord\\\\artifacts\\\\api-server\"; node --input-type=module -e \"import fs from 'node:fs'; import dotenv from 'dotenv'; import \\{ Pool \\} from 'pg'; dotenv\\.config\\(\\{ path: '\\.env' \\}\\); const pool = new Pool\\(\\{ connectionString: process\\.env\\.DATABASE_URL \\}\\); try \\{ await pool\\.query\\(fs\\.readFileSync\\('\\.\\./\\.\\./migrations/010_engine_run_links\\.sql', 'utf8'\\)\\); console\\.log\\('Migration 010 reapplied successfully\\.'\\); \\} finally \\{ await pool\\.end\\(\\); \\}\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location \"G:\\\\tp\\\\ai\\\\portofolio-dashbaord\"; node --test scripts/ai-bot-contracts\\.test\\.mjs$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Set-Location \"G:\\\\tp\\\\ai\\\\portofolio-dashbaord\"; node --test scripts/\\*\\.test\\.mjs$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

@@ -27,6 +27,7 @@ interface VerdictHistoryRow {
   signal: string;
   flags: string[];
   recorded_at: string;
+  run_id: number | null;
 }
 
 export interface TimeStopResult {
@@ -51,7 +52,7 @@ function sameVerdict(
 }
 
 /** Checks one holding's verdict_history for stagnation. */
-export async function checkTimeStop(watchlistId: number): Promise<TimeStopResult | null> {
+export async function checkTimeStop(watchlistId: number, runId?: number): Promise<TimeStopResult | null> {
   try {
     const tickerResult = await pool.query<{ ticker: string }>(
       `SELECT ticker FROM comparison_watchlist WHERE id = $1`,
@@ -63,7 +64,7 @@ export async function checkTimeStop(watchlistId: number): Promise<TimeStopResult
     const ticker = tickerResult.rows[0].ticker;
 
     const result = await pool.query<VerdictHistoryRow>(
-      `SELECT signal, flags, recorded_at
+      `SELECT signal, flags, recorded_at, run_id
        FROM verdict_history
        WHERE watchlist_id = $1
        ORDER BY recorded_at DESC`,
@@ -84,7 +85,9 @@ export async function checkTimeStop(watchlistId: number): Promise<TimeStopResult
       };
     }
 
-    const latest = rows[0];
+    const latest = runId === undefined
+      ? rows[0]
+      : rows.find((row) => row.run_id === runId) ?? rows[0];
     let stagnantSince = latest.recorded_at;
 
     // Walk backward from the most recent row while the verdict keeps matching.
@@ -113,12 +116,12 @@ export async function checkTimeStop(watchlistId: number): Promise<TimeStopResult
     };
   } catch (err) {
     console.error(`[checkTimeStop] failed for watchlist ${watchlistId}:`, err);
-    return null;
+    throw new Error(`Time Stop could not evaluate watchlist ${watchlistId}`, { cause: err });
   }
 }
 
 /** Runs checkTimeStop() for every held entity in the watchlist. */
-export async function checkAllTimeStops(): Promise<TimeStopResult[]> {
+export async function checkAllTimeStops(runId?: number): Promise<TimeStopResult[]> {
   try {
     const result = await pool.query<{ id: number }>(
       `SELECT id FROM comparison_watchlist WHERE is_held = true`
@@ -126,12 +129,12 @@ export async function checkAllTimeStops(): Promise<TimeStopResult[]> {
 
     const results: TimeStopResult[] = [];
     for (const row of result.rows) {
-      const timeStop = await checkTimeStop(row.id);
+      const timeStop = await checkTimeStop(row.id, runId);
       if (timeStop) results.push(timeStop);
     }
     return results;
   } catch (err) {
     console.error("[checkAllTimeStops] failed:", err);
-    return [];
+    throw new Error("Time Stop could not load alert history", { cause: err });
   }
 }
