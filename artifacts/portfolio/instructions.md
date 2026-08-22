@@ -331,7 +331,36 @@ This is a **monorepo** (multiple packages in one repo) managed by **pnpm** with 
 | "@esbuild/win32-x64 could not be found" | Using `--ignore-scripts` skips postinstall compilation | After `--ignore-scripts` install, run `pnpm rebuild` to compile platform-specific binaries |
 | EPERM on esbuild rename | File locks / antivirus blocking file operations | Use `--prefer-offline` flag or close other terminals |
 | PowerShell "execution policy" error | Windows security policy blocks npm scripts | Use `cmd.exe`, `pnpm.cmd`, or Git Bash |
+| Git Bash unavailable in VS Code environment | This machine exposes PowerShell terminals only | Use `pnpm.cmd` from PowerShell; set `$env:PORT` before starting each service |
 | "Cannot find package" errors | Missing `--shamefully-hoist` flag | Always add this flag when installing |
+
+### Startup Verification (2026-08-22)
+- Node.js `v24.18.0` and pnpm `v11.17.0` satisfy the documented requirements.
+- Git Bash was not available, and PowerShell blocked the `pnpm.ps1` shim. `pnpm.cmd` worked correctly.
+- Backend started successfully on port `8080` with live EUR/EGP, USD/EGP, XAU/USD, and gold-price cache updates.
+- Frontend started successfully on port `3001` at http://localhost:3001/.
+- Backend reachability was verified through `/api/portfolio`, which returned the expected `401` without a Supabase session; this build does not register `/healthz`.
+- After rebuilding with host-aware SSL normalization, the backend no longer reports the SSL connection error. `PORTFOLIO_OWNER_USER_ID` was set to the Supabase user UUID, and unauthenticated portfolio probes now correctly return `401` instead of `503`.
+- The dashboard showed zeros because an inherited `DATABASE_URL` selected an empty local database. The backend was restarted with the Supabase URL from `artifacts/api-server/.env`, and `start-backend.bat` now clears the inherited value so dotenv loads the configured Supabase database.
+- The direct Supabase host then failed with `getaddrinfo ENOTFOUND`: this Windows network exposes only an IPv6 record for the direct database host, while PostgreSQL port `5432` is unreachable. Use the IPv4-compatible Supabase pooler URL from the project Connect dialog, preferably port `6543`, instead of changing SSL flags.
+- The Supabase Session pooler connection was applied and verified on 2026-08-22: host `aws-1-eu-west-1.pooler.supabase.com`, port `5432`, database `postgres`, user `postgres.gcyuahzdvaodrqijjqba`. The API now starts with this host and an unauthenticated `/api/portfolio` probe returns `401` rather than DNS/SSL `500`.
+- For this project, use the Session pooler URI format `postgresql://postgres.gcyuahzdvaodrqijjqba:<encoded-password>@aws-1-eu-west-1.pooler.supabase.com:5432/postgres`. Never commit or paste the password; percent-encode special characters.
+- The pooler then returned `EADDRNOTALLOWED address not in tenant allow_list: {41, 234, 244, 139}`. This means Supabase Network Restrictions are blocking the current public IP, not that the URI or SSL is wrong. In Supabase, open **Project Settings -> Database -> Network Restrictions**, add the current public IPv4 as an allowed address (or temporarily allow all IPv4 addresses for testing), save, then restart the API.
+- After the IPv4 restriction was added, the pooler reached Supabase but rejected the database credentials with `ECIRCUITBREAKER: too many authentication failures, new connections are temporarily blocked`. The allow-list is therefore fixed; reset the database password in Supabase, copy the new Session pooler URI, percent-encode special characters, update `artifacts/api-server/.env`, and restart the API.
+- The reset Session pooler credential was applied locally and verified with `SELECT 1`; the API now starts successfully against the pooler. Keep the credential in ignored local environment files only, never in GitHub.
+- AI Insights previously showed `Run failed (503)` because Supabase lacked `bot_runs` and `portfolio_value_history`. The existing schema migrations were applied in dependency order without the watchlist seed, so the AI route now has its required tables without adding portfolio data.
+- The next AI run also required comparison entities: `comparison_watchlist` was empty, so Price Checker had zero entities and displayed a misleading all-failed state. Public watchlist migrations `002` and `004` were applied; Supabase now has 60 comparison entities and no personal portfolio values were added.
+- Migration audit completed: the authoritative root migration set passed twice in dependency order, all required tables exist, and no duplicate advisor run keys block migration `011`. The legacy overlapping migration directory under `artifacts/api-server/src/lib/migrations` should not be applied to this database.
+- Scraper source map: StockAnalysis provides stock prices, fundamentals, and available historical returns; FoudaLens provides fund NAVs and index levels, plus comparison-only stock fields not exposed by StockAnalysis.
+- Stock history retrieval checks multiple StockAnalysis history pages for 30-day, YTD, and one-year comparison dates. A dash means StockAnalysis did not provide sufficient history; Yahoo Finance is not used as a fallback.
+- StockAnalysis currently has no supported pages for `EGX30`, `EGX70 EWI`, or `EGX100 EWI`; those indices remain on the FoudaLens index page. Do not invent StockAnalysis index URLs or substitute company prices for index levels.
+- The AI Bot requires the server-side `GEMINI_API_KEY` environment variable. Put it in ignored `.secrets/api-server.env`; a browser/localStorage key does not configure the backend.
+- The backend secret file must be at repository root `.secrets/api-server.env`, not `artifacts/portfolio/.secrets/api-server.env`; after correcting this location the API loaded the secrets and `/api/portfolio` returned `200`.
+- If Smart Advisor reports Gemini API `404` for `gemini-2.0-flash`, the model is retired; the backend now uses `gemini-3.6-flash`.
+- A page error `ERR_CONNECTION_REFUSED` on port `3001` means the local dev server is stopped. Restart the API on `8080` and frontend on `3001`; the sorting change itself did not cause this error.
+- After the password reset, direct authenticated database access was verified with `SELECT 1`. The portfolio tables in the selected Supabase database currently contain no rows (`gold_transactions`, `gold_settings`, `portfolio_settings`, `funds`, `certificates`, `transactions`, and `growth_snapshots` all returned zero), so the remaining empty dashboard is missing data rather than a connection failure. Do not create placeholder values; import the real portfolio backup into this same Supabase database or select the database that contains the records.
+- Privacy check: no portfolio balances or transactions are stored in browser `localStorage`, `sessionStorage`, or IndexedDB. Browser storage is limited to non-financial preferences/advisor timestamps and an optional Gemini key; financial figures are fetched from the API database. Do not restore real values from local files or add client-side financial fallbacks.
+- Start the backend first, then the frontend. Keep both terminals running together.
 
 ### Performance Tips
 - First install takes 5-10 minutes (downloading/compiling native modules)

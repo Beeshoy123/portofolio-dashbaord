@@ -15,6 +15,13 @@ const pool = new Pool({ connectionString: databaseUrl });
 async function runMigration() {
   try {
     const migrationNames = [
+      '001_create_comparison_snapshots.sql',
+      '002_seed_watchlist.sql',
+      '004_add_egx30_expansion.sql',
+      '005_yahoo_ticker_mapping.sql',
+      '006_advisor_recommendations.sql',
+      '007_stockanalysis_fundamentals.sql',
+      '008_alert_history.sql',
       '009_bot_runs.sql',
       '010_engine_run_links.sql',
       '011_advisor_run_idempotency.sql',

@@ -6,6 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dotenvPathCandidates = [
+  path.resolve(process.cwd(), "../../.secrets/api-server.env"),
   path.resolve(process.cwd(), ".env"),
   path.resolve(__dirname, "../.env"),
   path.resolve(__dirname, ".env"),

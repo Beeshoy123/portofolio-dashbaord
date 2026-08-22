@@ -37,6 +37,12 @@ export function initDashboardBehavior(
   let currentPerf = "pnl";
   let currentSortKey: string | null = null;
   let sortDesc = false;
+  type ComparisonSortKey = "ticker" | "name" | "price" | "return30d" | "ytd" | "score";
+  let comparisonSortKey: ComparisonSortKey | null = null;
+  let comparisonSortDesc = false;
+  let comparisonSnapshots: any[] = [];
+  let comparisonTableEl: HTMLElement | null = null;
+  let comparisonResultsEl: HTMLElement | null = null;
   let currentLang: Lang = getSavedLang();
   let segmentRowOpen = false;
 
@@ -1081,6 +1087,9 @@ export function initDashboardBehavior(
   };
 
   function renderPriceCheckerTable(snapshots: any[], tableEl: HTMLElement, resultsEl: HTMLElement): number {
+    comparisonSnapshots = snapshots;
+    comparisonTableEl = tableEl;
+    comparisonResultsEl = resultsEl;
     const funds = snapshots.filter((s: any) => s.entity_type === "fund" && s.raw_fetch_ok);
     const stocks = snapshots.filter((s: any) => s.entity_type === "stock" && s.raw_fetch_ok);
     const indices = snapshots.filter((s: any) => s.entity_type === "index" && s.raw_fetch_ok);
@@ -1113,20 +1122,43 @@ export function initDashboardBehavior(
       <tr style="background:var(--bg)">
         <td colspan="6" style="padding:8px 8px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)">${title}</td>
       </tr>`;
+    const comparisonArrow = (key: ComparisonSortKey) =>
+      comparisonSortKey === key ? (comparisonSortDesc ? " ↓" : " ↑") : " ↕";
+    const sortableHeader = (label: string, key: ComparisonSortKey, align = "left") =>
+      `<th onclick="sortComparison('${key}')" title="Sort ${label}" style="padding:6px 8px;text-align:${align};font-size:10px;color:var(--dim);cursor:pointer;user-select:none">${label}<span style="color:var(--accent)">${comparisonArrow(key)}</span></th>`;
     const thead = `<thead><tr style="border-bottom:2px solid var(--edge)">
-      <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Ticker</th>
-      <th style="padding:6px 8px;text-align:left;font-size:10px;color:var(--dim)">Name</th>
-      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">NAV/Price</th>
-      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">30d</th>
-      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">YTD</th>
-      <th style="padding:6px 8px;text-align:right;font-size:10px;color:var(--dim)">Score</th>
+      ${sortableHeader("Ticker", "ticker")}
+      ${sortableHeader("Name", "name")}
+      ${sortableHeader("NAV/Price", "price", "right")}
+      ${sortableHeader("30d", "return30d", "right")}
+      ${sortableHeader("YTD", "ytd", "right")}
+      ${sortableHeader("Score", "score", "right")}
     </tr></thead>`;
-    const rows = [
-      ...(funds.length ? [sectionHeader("Funds"), ...funds.sort((a: any, b: any) => Number(b.return_30d_percent ?? -999) - Number(a.return_30d_percent ?? -999)).map(tableRow)] : []),
-      ...(stocks.length ? [sectionHeader("Stocks"), ...stocks.sort((a: any, b: any) => Number(b.total_score ?? 0) - Number(a.total_score ?? 0)).map(tableRow)] : []),
-      ...(indices.length ? [sectionHeader("Indices"), ...indices.map(tableRow)] : []),
-      ...(failed.length ? [sectionHeader("Needs review"), ...failed.map(failedRow)] : []),
-    ];
+    const sortValue = (snapshot: any, key: ComparisonSortKey): string | number => {
+      if (key === "ticker") return String(snapshot.ticker ?? "").toLowerCase();
+      if (key === "name") return String(snapshot.name ?? "").toLowerCase();
+      if (key === "price") return Number(snapshot.nav_or_price ?? -Infinity);
+      if (key === "return30d") return Number(snapshot.return_30d_percent ?? -Infinity);
+      if (key === "ytd") return Number(snapshot.return_ytd_percent ?? -Infinity);
+      return Number(snapshot.total_score ?? -Infinity);
+    };
+    const compareSnapshots = (a: any, b: any) => {
+      if (!comparisonSortKey) return 0;
+      const left = sortValue(a, comparisonSortKey);
+      const right = sortValue(b, comparisonSortKey);
+      const comparison = typeof left === "string" && typeof right === "string"
+        ? left.localeCompare(right, undefined, { numeric: true })
+        : Number(left) - Number(right);
+      return comparisonSortDesc ? -comparison : comparison;
+    };
+    const rows = comparisonSortKey
+      ? snapshots.slice().sort(compareSnapshots).map((snapshot: any) => snapshot.raw_fetch_ok ? tableRow(snapshot) : failedRow(snapshot))
+      : [
+          ...(funds.length ? [sectionHeader("Funds"), ...funds.sort((a: any, b: any) => Number(b.return_30d_percent ?? -999) - Number(a.return_30d_percent ?? -999)).map(tableRow)] : []),
+          ...(stocks.length ? [sectionHeader("Stocks"), ...stocks.sort((a: any, b: any) => Number(b.total_score ?? 0) - Number(a.total_score ?? 0)).map(tableRow)] : []),
+          ...(indices.length ? [sectionHeader("Indices"), ...indices.map(tableRow)] : []),
+          ...(failed.length ? [sectionHeader("Needs review"), ...failed.map(failedRow)] : []),
+        ];
 
     tableEl.innerHTML = rows.length
       ? `<table style="width:100%;border-collapse:collapse;font-size:11px">${thead}<tbody>${rows.join("")}</tbody></table>`
@@ -1158,6 +1190,18 @@ export function initDashboardBehavior(
     resultsEl.style.display = "block";
     return funds.length + stocks.length + indices.length;
   }
+
+  win.sortComparison = (key: string) => {
+    if (!["ticker", "name", "price", "return30d", "ytd", "score"].includes(key)) return;
+    if (comparisonSortKey === key) comparisonSortDesc = !comparisonSortDesc;
+    else {
+      comparisonSortKey = key as ComparisonSortKey;
+      comparisonSortDesc = false;
+    }
+    if (comparisonTableEl && comparisonResultsEl) {
+      renderPriceCheckerTable(comparisonSnapshots, comparisonTableEl, comparisonResultsEl);
+    }
+  };
 
   function updateAiPipeline(stages: Record<string, string>): void {
     const stageMap: Record<string, string> = {

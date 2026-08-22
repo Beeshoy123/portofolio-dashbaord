@@ -17,7 +17,7 @@ import { buildPrompt, SYSTEM_INSTRUCTIONS, buildDataBlock, type AdvisorAlertCont
 import type { HoldingVerdict } from "../judge/types";
 import type { AdvisorRecommendation } from "./types";
 
-const GEMINI_MODEL = "gemini-2.0-flash"; // adjust to match whatever model your existing integration uses
+const GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 interface GeminiResponse {

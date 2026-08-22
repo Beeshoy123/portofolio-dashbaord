@@ -36,6 +36,10 @@ export interface StockFundamentals {
   watchlist_id: number;
   ticker: string;
 
+  return_30d_percent: number | null;
+  return_ytd_percent: number | null;
+  return_1y_percent: number | null;
+
   // --- Overview page ---
   price: number | null;
   price_change_percent: number | null;
@@ -89,6 +93,9 @@ function emptyFundamentals(
   return {
     watchlist_id: watchlistId,
     ticker,
+    return_30d_percent: null,
+    return_ytd_percent: null,
+    return_1y_percent: null,
     price: null,
     price_change_percent: null,
     market_cap: null,
@@ -130,6 +137,75 @@ function emptyFundamentals(
     shares_change_percent: null,
     raw_fetch_ok: false,
   };
+}
+
+interface HistoricalClose {
+  date: Date;
+  close: number;
+}
+
+function percentageChange(current: number, previous: number | null): number | null {
+  if (previous === null || previous === 0) return null;
+  return ((current - previous) / previous) * 100;
+}
+
+async function fetchHistory(ticker: string): Promise<Partial<StockFundamentals>> {
+  try {
+    const headers = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36",
+    };
+    const closes: HistoricalClose[] = [];
+    const oldestRequiredDate = new Date();
+    oldestRequiredDate.setUTCFullYear(oldestRequiredDate.getUTCFullYear() - 1);
+
+    // StockAnalysis paginates history at roughly 50 rows per page. Fetch only
+    // as many pages as needed to cover the one-year comparison window.
+    for (let page = 1; page <= 12; page++) {
+      const url = `${BASE_URL}${ticker}/history/${page > 1 ? `?p=${page}` : ""}`;
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
+      if (!res.ok) break;
+
+      const html = await res.text();
+      const $ = cheerio.load(html);
+      let pageRows = 0;
+      $("table tbody tr").each((_index, row) => {
+        const cells = $(row)
+          .find("td")
+          .map((_cellIndex, cell) => $(cell).text().trim())
+          .get();
+        const date = new Date(cells[0] ?? "");
+        const close = parsePlainNumber(cells[4]);
+        if (!Number.isNaN(date.getTime()) && close !== null) {
+          closes.push({ date, close });
+          pageRows++;
+        }
+      });
+
+      const oldestOnPage = closes[closes.length - 1]?.date;
+      if (pageRows === 0 || (oldestOnPage && oldestOnPage <= oldestRequiredDate)) break;
+    }
+
+    if (closes.length === 0) return {};
+    closes.sort((a, b) => b.date.getTime() - a.date.getTime());
+    const latest = closes[0];
+    const closeOnOrBefore = (target: Date): number | null =>
+      closes.find((entry) => entry.date.getTime() <= target.getTime())?.close ?? null;
+    const thirtyDaysAgo = new Date(latest.date);
+    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+    const yearStart = new Date(Date.UTC(latest.date.getUTCFullYear(), 0, 1));
+    const oneYearAgo = new Date(latest.date);
+    oneYearAgo.setUTCFullYear(oneYearAgo.getUTCFullYear() - 1);
+
+    return {
+      return_30d_percent: percentageChange(latest.close, closeOnOrBefore(thirtyDaysAgo)),
+      return_ytd_percent: percentageChange(latest.close, closeOnOrBefore(yearStart)),
+      return_1y_percent: percentageChange(latest.close, closeOnOrBefore(oneYearAgo)),
+    };
+  } catch (error) {
+    console.warn(`[parseStockAnalysis/history] ${ticker}: request failed`, error);
+    return {};
+  }
 }
 
 // --- Number parsing helpers ---
@@ -336,8 +412,11 @@ export async function parseStockAnalysis(
   ticker: string,
   watchlistId: number
 ): Promise<StockFundamentals> {
-  const overview = await fetchOverview(ticker);
-  const stats = await fetchStatistics(ticker);
+  const [overview, stats, history] = await Promise.all([
+    fetchOverview(ticker),
+    fetchStatistics(ticker),
+    fetchHistory(ticker),
+  ]);
 
   if (!overview) {
     return emptyFundamentals(watchlistId, ticker);
@@ -346,7 +425,7 @@ export async function parseStockAnalysis(
   const result = emptyFundamentals(watchlistId, ticker);
 
   // Merge overview and stats
-  const merged = { ...result, ...overview, ...stats };
+  const merged = { ...result, ...overview, ...stats, ...history };
 
   // Verify raw_fetch_ok: true only if both pages fetched successfully
   merged.raw_fetch_ok = overview !== null && stats !== null && stats !== undefined;

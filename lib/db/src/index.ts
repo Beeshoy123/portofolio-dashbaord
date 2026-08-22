@@ -68,8 +68,14 @@ try {
   );
 }
 
+// Let the host-based policy below control SSL instead of allowing a stale
+// sslmode query parameter to override it.
+parsedDbUrl.searchParams.delete("sslmode");
+const normalizedDatabaseUrl = parsedDbUrl.toString();
+
 const isLocalDatabase = ["localhost", "127.0.0.1", "::1"].includes(parsedDbUrl.hostname);
-const sslConfig = isLocalDatabase
+const isSupabasePooler = parsedDbUrl.hostname.endsWith(".pooler.supabase.com");
+const sslConfig = isLocalDatabase || isSupabasePooler
   ? undefined
   : parsedDbUrl.hostname
   ? {
@@ -83,7 +89,7 @@ const sslConfig = isLocalDatabase
 console.info({ chosenDatabaseUrl: parsedDbUrl.hostname }, "Using database host");
 
 export const pool = new Pool({
-  connectionString: chosenDatabaseUrl,
+  connectionString: normalizedDatabaseUrl,
   ssl: sslConfig,
 });
 

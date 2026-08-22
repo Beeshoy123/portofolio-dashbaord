@@ -24,7 +24,6 @@ import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
 import { parseStockAnalysis, type StockFundamentals } from "./parseStockAnalysis";
-import { enrichHistoricalReturns } from "./historicalReturns";
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL, // Replit sets this automatically
@@ -147,6 +146,7 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
   const funds = watchlist.filter((e) => e.entity_type === "fund");
   const stocks = watchlist.filter((e) => e.entity_type === "stock");
   const indices = watchlist.filter((e) => e.entity_type === "index");
+  const stockAnalysisByTicker = new Map<string, StockFundamentals>();
 
   let successCount = 0;
   let failCount = 0;
@@ -169,10 +169,16 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
 
   // --- Stocks: one request each, unverified pattern, may be slow (browser fallback) ---
   for (const stock of stocks) {
-    const snapshot = await enrichHistoricalReturns(
-      await parseStockPage(stock.ticker, stock.id),
-      stock.yahoo_ticker ?? null,
-    );
+    const fundamentals = await parseStockAnalysis(stock.ticker, stock.id);
+    stockAnalysisByTicker.set(stock.ticker, fundamentals);
+    await saveFundamentals(fundamentals, runId);
+    const snapshot = {
+      ...(await parseStockPage(stock.ticker, stock.id)),
+      nav_or_price: fundamentals.price,
+      return_30d_percent: fundamentals.return_30d_percent,
+      return_ytd_percent: fundamentals.return_ytd_percent,
+      return_1y_percent: fundamentals.return_1y_percent,
+    };
     await saveSnapshot(snapshot, runId);
     snapshot.raw_fetch_ok ? successCount++ : failCount++;
     console.log(
@@ -206,8 +212,8 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
   if (stocks.length > 0) {
     console.log(`\nFetching fundamentals for ${stocks.length} stocks from stockanalysis.com...`);
     for (const stock of stocks) {
-      const fundamentals = await parseStockAnalysis(stock.ticker, stock.id);
-      await saveFundamentals(fundamentals, runId);
+      const fundamentals = stockAnalysisByTicker.get(stock.ticker);
+      if (!fundamentals) continue;
       fundamentals.raw_fetch_ok ? fundamentalsOk++ : fundamentalsFailed++;
       console.log(
         `[fundamentals] ${stock.ticker}: ${fundamentals.raw_fetch_ok ? "OK" : "FAILED"} — ` +
