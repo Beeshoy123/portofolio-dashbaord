@@ -29,6 +29,13 @@ To export data: ask the agent to generate a temporary SQL dump, download it, the
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from `lib/api-spec/openapi.yaml` after editing the spec
 - `pnpm --filter @workspace/db run push` — push Drizzle schema changes to the dev DB
 - `pnpm --filter @workspace/api-server run build` — rebuild the API bundle before restarting its workflow
+- `pnpm --filter @workspace/api-server run typecheck` — typecheck the API server
+- `pnpm --filter @workspace/portfolio run typecheck` — typecheck the frontend
+- `node --test scripts/ai-bot-pipeline.test.mjs` — test pipeline ordering and all-fetch failure behavior
+- `node --test scripts/ai-bot-contracts.test.mjs` — test API/frontend contract expectations
+- `node --test scripts/parser-alert.test.mjs` — test parser fixtures and drawdown calculations
+- `node --test scripts/concurrency.test.mjs` — test bot/advisor lock behavior
+- `pnpm run typecheck:libs` — build generated workspace library declarations before package typechecks
 - Required env: `DATABASE_URL` — Postgres connection string (managed by Replit's built-in DB, never exposed to the frontend)
 - Required env: `PORTFOLIO_OWNER_USER_ID` — Supabase user UUID allowed to access this personal portfolio; the API fails closed when it is missing and rejects other authenticated users
 
@@ -62,6 +69,32 @@ tests, GitHub, or permanent Replit files. Real financial data belongs only in
 the user's Supabase/Postgres database. Scanner imports must be reviewed by the
 user and written through authenticated API endpoints. Temporary user-provided
 imports or exports must be deleted immediately after use.
+
+## Work-session protocol
+
+Keep this file updated while working whenever a new setup fact, runtime
+failure, recovery step, or verified command is discovered. Add the smallest
+useful note under the relevant section rather than relying on chat history.
+
+- Record the actual command, working directory, port, and result for important checks.
+- Record blockers with their root cause and next safe action.
+- Mark whether a problem is local-only, Replit-only, or shared by both.
+- Never record passwords, API keys, Supabase tokens, credential-bearing database URLs, or real financial values.
+- Before finishing, verify no temporary financial export, uploaded file, duplicate server, or unnecessary background process was left behind.
+- When an instruction becomes outdated, correct it in place instead of adding contradictory advice elsewhere.
+
+## Current work log
+
+Update this section during an active task after each meaningful discovery or
+change. Keep entries short and safe; describe files, commands, symptoms, and
+results without recording secrets or real portfolio values.
+
+- 2026-08-22: Local frontend was reachable on port `3001`.
+- 2026-08-22: Local API was moved from an accidental port `3000` to port `8080` so the frontend proxy could reach it.
+- 2026-08-22: Local API startup was verified after rebuilding the API bundle; `/api/healthz` responded successfully.
+- 2026-08-22: Local PostgreSQL SSL mismatch was identified from `The server does not support SSL connections`; local hosts now disable SSL while remote database hosts retain SSL.
+- 2026-08-22: Replit API troubleshooting identified duplicate port ownership as `EADDRINUSE`; only one API workflow may listen on port `8080`.
+- 2026-08-22: Future agents must append the next verified result here while working, then move durable setup guidance into the relevant section above.
 
 ## Stack
 
@@ -130,13 +163,66 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Windows Local Setup Notes (added after manual debugging session)
 
-- Use Git Bash, not PowerShell — PowerShell blocks npm scripts by default and this project uses Linux-only shell commands.
-- Use pnpm, not npm.
-- Frontend: from artifacts/portfolio, run: PORT=3000 BASE_PATH=// pnpm run dev
-- Backend: from artifacts/api-server, run: pnpm run build once, then PORT=8080 DATABASE_URL="postgresql://postgres@localhost:5432/portfolio_dev" pnpm run start
+- PowerShell is supported when using `pnpm.cmd`; Git Bash is also supported.
+- Use pnpm, not npm. On Windows, use `pnpm.cmd` if `pnpm` is blocked by execution policy.
+- Replit live view is the authoritative full app: it supplies the managed PostgreSQL database, Supabase server secrets, API on 8080, and frontend on 21113.
+- Windows local frontend: from `artifacts/portfolio`, run `pnpm.cmd run dev` (default port 3001). It proxies `/api` to `http://localhost:8080`.
+- Windows local backend requires PostgreSQL 16 and a local `DATABASE_URL`; it cannot use Replit's private database automatically. Start it with `PORT=8080` only after local PostgreSQL and required server secrets are configured.
+- Do not use VPN instructions for this repository. A VPN is not a normal prerequisite; connectivity failures usually mean the local database/server is unavailable or the Replit workflow is not running.
+- For Replit: stop duplicate workflows, rebuild the API, then restart exactly one API workflow on 8080. Never run a second process on the same port.
+- For local Windows API tests, set `PORT=8080` explicitly in the same command; the API `.env` may otherwise select port 3000.
+- For a live Replit view, use the `artifacts/portfolio: web` workflow URL, not `localhost`.
+
+## Testing protocol
+
+Run these checks from the repository root after backend or scanner changes:
+
+1. `pnpm run typecheck:libs`
+2. `pnpm --filter @workspace/api-server run typecheck`
+3. `pnpm --filter @workspace/portfolio run typecheck`
+4. `node --test scripts/ai-bot-pipeline.test.mjs`
+5. `node --test scripts/ai-bot-contracts.test.mjs`
+6. `node --test scripts/parser-alert.test.mjs`
+7. `node --test scripts/concurrency.test.mjs`
+
+For a local API smoke test, start it with an explicit port and then check:
+
+```bash
+PORT=8080 pnpm --filter @workspace/api-server run start
+curl -i http://localhost:8080/api/healthz
+curl -i -X POST http://localhost:8080/api/ai-bot/run
+```
+
+The health check should return `200`. The protected AI Bot route should return
+`401` without authentication, or `202`/`409` with valid authentication. A
+`404` means the wrong process or stale bundle is serving the port. A startup
+failure with `EADDRINUSE` means another process already owns the port; stop it
+before restarting the API.
 - PostgreSQL 16 must be running locally. Service name: postgresql-x64-16. Set to auto-start via: Set-Service -Name postgresql-x64-16 -StartupType Automatic (run as Administrator).
+- Local PostgreSQL uses no SSL; the DB client now disables SSL automatically for `localhost`, `127.0.0.1`, and `::1`. Remote Supabase/Replit database connections continue to use SSL.
+- If the local app says "connectivity issue", "VPN required", or the API returns HTTP 500 with `The server does not support SSL connections`, this is usually not a VPN problem. It means a local PostgreSQL URL is being used with SSL enabled. Confirm the database host is local, use the current DB client that disables SSL for local hosts, rebuild the API, and restart it.
+- If the error changes to `ECONNREFUSED`, PostgreSQL is not running locally. Start the PostgreSQL service or use the Replit workflow, which provides its own managed database. Do not invent data or change database values to work around the connection error.
+- If the frontend remains on `Loading your portfolio...`, check the API first: `curl -i http://localhost:8080/api/healthz`, then inspect the API console for database/auth errors. The frontend proxy cannot load portfolio data while the API is stopped or listening on another port.
 - Local passwordless access enabled via pg_hba.conf (C:\Program Files\PostgreSQL\16\data\pg_hba.conf), changing scram-sha-256 to trust on the two 127.0.0.1/32 and ::1/128 lines, then restarting the service.
 - Database created via: psql -U postgres -c "CREATE DATABASE portfolio_dev;"
 - Tables created via drizzle-kit from lib/db folder: DATABASE_URL="postgresql://postgres@localhost:5432/portfolio_dev" pnpm run push
 - Known bug: lib/db/drizzle.config.ts originally failed to find the schema file on Windows due to backslash paths. Fixed by appending .replace(/\\/g, '/') to the schemaPath line.
 - Known typo: the actual folder name is portofolio-dashbaord (not "dashboard") — this typo is consistent throughout the project, do not "fix" it.
+
+## Standalone operation
+
+This application does not require Replit. Replit workflows and metadata are
+optional convenience wrappers only. The standalone runtime is:
+
+1. Set `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
+   `PORTFOLIO_OWNER_USER_ID` in the process environment or an ignored local
+   `.env` file. Never commit these values.
+2. From the repository root, run `pnpm install`.
+3. Start the API with `start-backend.bat` or `PORT=8080 pnpm --filter @workspace/api-server run start`.
+4. Start the frontend with `start-frontend.bat` or `PORT=3001 pnpm --filter @workspace/portfolio run dev`.
+5. Open `http://localhost:3001/`. The frontend proxies `/api` to the API on
+   `http://localhost:8080`.
+
+The standalone API uses SSL for remote Supabase/Postgres hosts and disables
+SSL automatically for local PostgreSQL hosts. A local database is optional if
+you use a remote Supabase Postgres connection through `DATABASE_URL`.

@@ -68,7 +68,10 @@ try {
   );
 }
 
-const sslConfig = parsedDbUrl.hostname
+const isLocalDatabase = ["localhost", "127.0.0.1", "::1"].includes(parsedDbUrl.hostname);
+const sslConfig = isLocalDatabase
+  ? undefined
+  : parsedDbUrl.hostname
   ? {
       rejectUnauthorized: false,
       servername: parsedDbUrl.hostname,
