@@ -11,9 +11,7 @@
 //     reason to worry that didn't exist before)
 //   - whether the overall signal got worse (Strong -> Mixed/Weak, etc.)
 
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { pool } from "../lib/dbPool";
 
 // How far back to look for "what did this look like before." 30 days is
 // a starting point matching the doc's own "beating its sector last

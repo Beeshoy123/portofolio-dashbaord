@@ -205,11 +205,13 @@ export function SmartAdvisorPanel() {
             { signal: controller.signal },
             'Failed to fetch alerts',
           ).catch((): AlertSummaryResponse => ({ alerts: {} }));
-        const verdictsRequest = requestJson<ComparisonVerdict[]>(
-          '/api/rotation-verdicts',
-          { signal: controller.signal },
-          'Failed to fetch comparison evidence',
-        ).catch(() => []);
+        const verdictsRequest = botStatus.runId === null
+          ? Promise.resolve<ComparisonVerdict[]>([])
+          : requestJson<ComparisonVerdict[]>(
+            `/api/rotation-verdicts?runId=${encodeURIComponent(botStatus.runId)}`,
+            { signal: controller.signal },
+            'Failed to fetch comparison evidence',
+          ).catch(() => []);
         const [recRes, alertRes, verdictRes] = await Promise.all([
           recommendationsRequest,
           alertsRequest,

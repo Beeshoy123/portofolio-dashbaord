@@ -4,18 +4,18 @@
 // GET /api/advisor/alerts-context/:ticker - Get recommendation with alert context
 
 import { Router, Request, Response } from "express";
-import { Pool, type PoolClient } from "pg";
+import { type PoolClient } from "pg";
+import { pool } from "../lib/dbPool";
 import { judgeAllHoldings } from "../judge/comparisonJudge";
 import { generateRecommendation } from "../advisor/generateRecommendation";
 import { checkTimeStop } from "../judge/timeStop";
 import { checkThesis } from "../judge/thesisCheck";
-import { computeDrawdown } from "../judge/drawdown";
+import { computeDrawdown } from "../judge/drawdownDb";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
 import { releaseAdvisoryLock, tryAcquireAdvisoryLock } from "../lib/advisoryLock";
 
 const router = Router();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function mapWithConcurrency<T, R>(
   items: T[],

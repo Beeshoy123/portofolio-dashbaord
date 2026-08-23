@@ -8,7 +8,7 @@
 // prompt small (cost) and reduces the chance Gemini misreads a number
 // buried in a long table.
 
-import type { HoldingVerdict, ComparisonGroup } from "../judge/types";
+import type { HoldingVerdict, ComparisonGroup, ComparisonEntry } from "../judge/types";
 import type { SignalHistoryRow } from "../judge/signalTrend";
 
 export interface AdvisorAlertContext {
@@ -40,8 +40,25 @@ STRICT RULES (violating any of these makes your response unusable):
 7. RISK PARITY PROTECTION — NEVER suggest rotating money from a lower-risk asset into a higher-risk asset based on return performance alone. The data below includes a computed risk tier (Low/Medium/High) for the holding and for each comparison entry, calculated from return volatility. FIX (bug #2 from audit): the priority order when data sources disagree was previously ambiguous — it is now explicit: ALWAYS base your risk assessment and any risk-related statements on the COMPUTED risk tier (labeled "computed risk" or "YOUR COMPUTED RISK TIER" in the data below) — this is the authoritative value for this rule. Where a "NOTE: our computed risk disagrees with FoudaLens's own label" appears for an entry, mention that disagreement exists (so the person knows there's uncertainty), but do NOT let FoudaLens's label change your actual recommendation — it is supporting context only, never the deciding input. If a higher-computed-risk asset is beating the holding, explicitly say that the outperformance comes with higher computed risk/volatility, and recommend maintaining the current risk profile unless the person actively wants to increase portfolio risk. Do not silently treat a higher-risk winner as a clean "better choice" — the risk difference is part of the answer, not a footnote.
 8. FUNDAMENTALS CONCERNS — Where an entry beating the holding has a "FUNDAMENTALS CONCERN" note (e.g. high debt, negative free cash flow, dilution), you MUST mention it explicitly when discussing that entry as an alternative — the same way rule 7 requires you to mention higher computed risk. A stock that's beating the holding on price return but carries a flagged fundamentals concern is not a clean "better choice" — say so plainly, the same way you already do for risk tier differences. Do not let a fundamentals concern change the win/lose count or the Strong/Mixed/Weak signal — Comparison Judge already decided that; your job is only to make sure the concern isn't hidden from the person reading the recommendation.
 9. THIN SAMPLE CAUTION — When you see a "thin_comparable_sample" flag in the FLAGS RAISED section, the Judge's "Strong" signal was capped at "Mixed" because there were fewer than 4 comparable entries with usable returns. Treat this the same way you treat risk mismatches (rule 7) and fundamentals concerns (rule 8): mention it explicitly in your recommendation. A holding that appears "Strong" on a thin sample should not receive the same confident recommendation as one backed by 6+ solid comparables. Lower your confidence score accordingly, and phrase the recommendation as "worth watching" rather than "hold with confidence".
-10. DATA QUALITY — Treat DATA QUALITY as a hard confidence constraint. If the holding snapshot is missing, failed, or stale, say that the recommendation is limited and do not present the comparison as definitive. If few comparables have usable returns, prefer "watch" or "research" over a confident rotation suggestion. If a SIGNAL TREND shows a declining pattern (e.g. Strong, Strong, Mixed, Weak), lower your confidence score and mention this deterioration in your summary — a worsening trend is a meaningful context shift. Never invent missing values.
-11. CONFIDENCE CALIBRATION — Your confidence score (0-100) must reflect the amount of comparison data available, not just how clear the direction looks. If 'Comparable entries with usable returns' (from the DETERMINISTIC ANALYSIS BASIS section) is 0-2, confidence must be 40 or below. If it is 3-5, confidence must be 65 or below. Only use a confidence above 65 when 6 or more comparable entries have usable returns. This is a hard ceiling, not a suggestion — a confident-sounding summary with thin backing data must still report a low confidence number.
+10. TECHNICAL DIVERGENCE — When "technical_divergence" appears in FLAGS RAISED, you MUST explicitly mention the conflict between the strong comparison result and the recent downtrend. Lean toward "watch" rather than a confident "hold" because the recent chart direction conflicts with the Strong comparison signal.
+11. DATA QUALITY — Treat DATA QUALITY as a hard confidence constraint. If the holding snapshot is missing, failed, or stale, say that the recommendation is limited and do not present the comparison as definitive. If few comparables have usable returns, prefer "watch" or "research" over a confident rotation suggestion. If a SIGNAL TREND shows a declining pattern (e.g. Strong, Strong, Mixed, Weak), lower your confidence score and mention this deterioration in your summary — a worsening trend is a meaningful context shift. Never invent missing values.
+12. CONFIDENCE CALIBRATION — Your confidence score (0-100) must reflect the amount of comparison data available, not just how clear the direction looks. If 'Comparable entries with usable returns' (from the DETERMINISTIC ANALYSIS BASIS section) is 0-2, confidence must be 40 or below. If it is 3-5, confidence must be 65 or below. Only use a confidence above 65 when 6 or more comparable entries have usable returns. This is a hard ceiling, not a suggestion — a confident-sounding summary with thin backing data must still report a low confidence number.
+`;
+
+export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are not a licensed financial advisor.
+
+Write ONE concise overall portfolio read in 4-6 sentences. Use only the verdict-level data provided. State the counts of Strong, Mixed, Weak, and Insufficient Data holdings. Name holdings that clearly carry the portfolio or drag it down when their signal is notably different from the rest. Do not repeat every holding's details; this is an overall conclusion, not a re-listing of evidence. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now. If data is missing, say so plainly.
+`;
+
+export function buildPortfolioSummaryPrompt(verdicts: HoldingVerdict[]): string {
+  const lines = verdicts.length > 0
+    ? verdicts.map((verdict) =>
+      `- ${verdict.holding_ticker} (${verdict.holding_name}): ${verdict.signal}; return ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "unavailable"}`,
+    )
+    : ["- No holding verdicts were produced for this run."];
+
+  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
+}
 
 function formatGroupForPrompt(group: ComparisonGroup): string {
   const label: Record<string, string> = {

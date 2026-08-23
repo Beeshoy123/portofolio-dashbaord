@@ -271,6 +271,26 @@ function extractLabeled(text: string, label: string): string | null {
   return match?.[1]?.trim() ?? null;
 }
 
+function extractLabeledAny(text: string, labels: string[]): string | null {
+  for (const label of labels) {
+    const value = extractLabeled(text, label);
+    if (value !== null) return value;
+  }
+  return null;
+}
+
+function extractPeRatio(text: string): string | null {
+  const match = text.match(
+    /(?<!Forward )(?:P\/E Ratio|PE Ratio|P\/E|PE)\s*:?\s*(--|—|n\/?a|[-+]?\d[\d,.]*(?:\.\d+)?%?(?:[BMK])?)/i,
+  );
+  return match?.[1]?.trim() ?? null;
+}
+
+function extractPercentageAfter(text: string, pattern: RegExp): string | null {
+  const match = text.match(pattern);
+  return match?.[1]?.trim() ?? null;
+}
+
 // ---------- Overview page ----------
 
 async function fetchOverview(ticker: string): Promise<Partial<StockFundamentals> | null> {
@@ -292,12 +312,7 @@ async function fetchOverview(ticker: string): Promise<Partial<StockFundamentals>
   $("script, style, noscript").remove();
   const text = $("body").text().replace(/\s+/g, " ");
 
-  // First real run: dump a slice so field-name/regex guesses can be
-  // corrected against the actual rendered text.
-  console.log(
-    `[parseStockAnalysis/overview] ${ticker}: fetched ${text.length} chars. ` +
-      `First 500: ${text.slice(0, 500)}`
-  );
+  console.log(`[parseStockAnalysis/overview] ${ticker}: fetched ${text.length} chars.`);
 
   const priceMatch = text.match(/([\d,]+\.\d+)\s*[-+]\s*[\d.]+\s*\(([-+]?[\d.]+)%\)/);
   const price = priceMatch ? parsePlainNumber(priceMatch[1]) : null;
@@ -314,15 +329,18 @@ async function fetchOverview(ticker: string): Promise<Partial<StockFundamentals>
     return_1y_percent: price !== null ? percentageChange(price, chart1y) : null,
     market_cap: parseSuffixedNumber(extractLabeled(text, "Market Cap")),
     revenue_ttm: parseSuffixedNumber(extractLabeled(text, "Revenue")),
-    revenue_growth_percent: parsePercent(extractLabeled(text, "Revenue Growth")),
+    revenue_growth_percent: parsePercent(
+      extractPercentageAfter(text, /Revenue\s*\(ttm\)\s*[-+]?\d[\d,.]*(?:\.\d+)?[BMK]?\s*([-+]?\d[\d,.]*(?:\.\d+)?%)/i)
+        ?? extractLabeledAny(text, ["Revenue Growth", "Revenue growth"]),
+    ),
     net_income: parseSuffixedNumber(extractLabeled(text, "Net Income")),
     net_income_growth_percent: parsePercent(extractLabeled(text, "Net Income Growth")),
     eps: parsePlainNumber(extractLabeled(text, "EPS")),
     eps_growth_percent: parsePercent(extractLabeled(text, "EPS Growth")),
     shares_out: parseSuffixedNumber(extractLabeled(text, "Shares Outstanding")),
-    pe_ratio: parsePlainNumber(extractLabeled(text, "P/E Ratio")),
-    forward_pe: parsePlainNumber(extractLabeled(text, "Forward P/E")),
-    dividend_yield_percent: parsePercent(extractLabeled(text, "Dividend Yield")),
+    pe_ratio: parsePlainNumber(extractPeRatio(text)),
+    forward_pe: parsePlainNumber(extractLabeledAny(text, ["Forward P/E", "Forward PE"])),
+    dividend_yield_percent: parsePercent(extractLabeledAny(text, ["Dividend Yield", "Dividend yield"])),
     dividend_per_share: parsePlainNumber(extractLabeled(text, "Dividend Per Share")),
     ex_dividend_date: extractLabeled(text, "Ex-Dividend Date"),
     volume: parseSuffixedNumber(extractLabeled(text, "Volume")),
@@ -383,15 +401,18 @@ async function fetchStatistics(ticker: string): Promise<Partial<StockFundamental
   $("script, style, noscript").remove();
   const text = $("body").text().replace(/\s+/g, " ");
 
-  console.log(
-    `[parseStockAnalysis/statistics] ${ticker}: fetched ${text.length} chars. ` +
-      `First 500: ${text.slice(0, 500)}`
-  );
+  console.log(`[parseStockAnalysis/statistics] ${ticker}: fetched ${text.length} chars.`);
+
+  const dividendYield = extractPercentageAfter(text, /dividend\s+yield\s+of\s+([-+]?\d[\d,.]*(?:\.\d+)?%)/i)
+    ?? extractLabeledAny(text, ["Dividend Yield", "Dividend yield"]);
+  const revenueGrowth = extractLabeledAny(text, ["Revenue Growth Forecast (3Y)", "Revenue Growth"]);
 
   const result: Partial<StockFundamentals> = {
-    debt_to_equity: parsePlainNumber(extractLabeled(text, "Debt to Equity")),
+    ...(dividendYield !== null ? { dividend_yield_percent: parsePercent(dividendYield) } : {}),
+    ...(revenueGrowth !== null ? { revenue_growth_percent: parsePercent(revenueGrowth) } : {}),
+    debt_to_equity: parsePlainNumber(extractLabeledAny(text, ["Debt to Equity", "Debt / Equity", "Debt/Equity"])),
     current_ratio: parsePlainNumber(extractLabeled(text, "Current Ratio")),
-    roe_percent: parsePercent(extractLabeled(text, "Return on Equity")),
+    roe_percent: parsePercent(extractLabeledAny(text, ["Return on Equity (ROE)", "Return on Equity", "ROE"])),
     roic_percent: parsePercent(extractLabeled(text, "ROIC")),
     cash_on_hand: parseSuffixedNumber(extractLabeled(text, "Cash")),
     total_debt: parseSuffixedNumber(extractLabeled(text, "Total Debt")),

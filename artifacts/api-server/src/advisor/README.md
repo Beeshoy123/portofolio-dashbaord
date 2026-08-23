@@ -31,19 +31,12 @@ Scraper → Comparison Snapshots → Comparison Judge → Smart Advisor (NEW)
 - Handles API errors with diagnostic info (safety filters, token limits, etc.)
 - Returns clean `AdvisorRecommendation` object with text + metadata
 
-### 3. **runAdvisor.ts** — Orchestrator
-- Iterates over all held positions
-- Gets verdict from Comparison Judge for each
-- Generates recommendation via Gemini
-- Saves to database
-- Exported function (not auto-invoked on import) — safe for server routes
-
-### 4. **advisor.ts** — API Routes (NEW)
+### 3. **advisor.ts** — API Routes (NEW)
 - `GET /api/advisor/recommendations/:ticker` — Latest recommendation for a holding
 - `GET /api/advisor/recommendations` — All latest recommendations for held positions
 - `POST /api/advisor/generate` — Manually trigger recommendation generation for all holdings
 
-### 5. **003_create_advisor_recommendations.sql** — Database Schema
+### 4. **003_create_advisor_recommendations.sql** — Database Schema
 - Stores generated recommendations
 - Indexes on `watchlist_id` and `generated_at` for fast lookup
 
@@ -79,22 +72,6 @@ node build.mjs
 Then restart your API server.
 
 ## Usage
-
-### CLI — Generate All Recommendations
-
-```bash
-npx tsx advisor/runAdvisor.ts
-```
-
-This:
-1. Fetches all verdicts from Comparison Judge
-2. Sends each to Gemini
-3. Saves recommendations to database
-4. Logs success/failure for each
-
-Run this after:
-- You've scraped fresh market data (`runScraper.ts`)
-- You have at least one verdict from Comparison Judge
 
 ### API — Fetch Recommendations
 

@@ -16,10 +16,8 @@
 // thresholds already carry elsewhere in this file. Adjust once you see
 // this against real data, same as those.
 
-import { Pool } from "pg";
+import { pool } from "../lib/dbPool";
 import type { FundamentalsFlag, FundamentalsSnapshot } from "./fundamentalsTypes";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 interface FundamentalsRow {
   watchlist_id: number;

@@ -2,11 +2,9 @@
 // Compares each holding against peers, benchmarks, and direct stocks
 // Outputs verdicts that the Alert System monitors and Smart Advisor uses
 
-import { Pool } from "pg";
+import { pool } from "../lib/dbPool";
 import type { AssetRole, HoldingVerdict, ComparisonGroup, ComparisonEntry, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Minimum number of comparable entries (with usable returns) needed to issue a "Strong" signal.
 // Below this threshold, signals are capped at "Mixed" even if win rate would qualify as "Strong".
@@ -254,6 +252,9 @@ async function judgeHolding(
   if (signal === "Strong" && comparableEntries.length < MIN_RELIABLE_COMPARABLES) {
     signal = "Mixed";
     flags.push("thin_comparable_sample");
+  }
+  if (signal === "Strong" && technicalSignals.get(holding.id)?.trend === "downtrend") {
+    flags.push("technical_divergence");
   }
   const fundamentals_flags_found = groups.some((group) =>
     group.entries.some(

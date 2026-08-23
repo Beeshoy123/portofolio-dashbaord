@@ -1,9 +1,7 @@
 import { Router } from "express";
-import { Pool } from "pg";
+import { pool } from "../lib/dbPool";
 
 const router = Router();
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Price Checker is owned by /api/ai-bot/run. Keeping a standalone start route
 // would let callers bypass the Judge, Alert System, and Smart Advisor stages.

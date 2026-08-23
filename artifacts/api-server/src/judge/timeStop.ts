@@ -13,9 +13,7 @@
 // depending on how often it happens to run. Using elapsed CALENDAR TIME
 // since the verdict last changed is robust to irregular triggering.
 
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { pool } from "../lib/dbPool";
 
 // 3 weeks -- long enough that normal week-to-week noise doesn't trip it,
 // short enough to still be a useful nudge. Not verified against real

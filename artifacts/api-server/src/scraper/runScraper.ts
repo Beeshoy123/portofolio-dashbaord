@@ -18,16 +18,12 @@
 // (playwright: run `npx playwright install chromium` once after install)
 // Run migrations/007_stockanalysis_fundamentals.sql once before first use.
 
-import { Pool } from "pg";
+import { pool } from "../lib/dbPool";
 import { emptySnapshot, parseFundPage } from "./parseFund";
 import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
 import { parseStockAnalysis, type StockFundamentals } from "./parseStockAnalysis";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL, // Replit sets this automatically
-});
 
 async function getWatchlist(): Promise<WatchlistEntity[]> {
   const result = await pool.query<WatchlistEntity>(
@@ -50,8 +46,8 @@ async function saveSnapshot(snapshot: ScrapedSnapshot, runId: number): Promise<v
       snapshot.watchlist_id,
       snapshot.nav_or_price,
       snapshot.return_30d_percent,
-      snapshot.return_60d_percent,
       snapshot.return_ytd_percent,
+      snapshot.return_60d_percent,
       snapshot.return_1y_percent,
       snapshot.cagr_percent,
       snapshot.total_score,

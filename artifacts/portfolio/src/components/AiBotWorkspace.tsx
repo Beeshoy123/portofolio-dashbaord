@@ -31,6 +31,7 @@ type Candle = { date: string; open: number; high: number; low: number; close: nu
 type TechnicalSignal = { ticker: string; trend: string; confidence: number | string | null; candle_date: string | null; patterns: Array<{ name: string; direction: string }>; candles: Candle[] };
 type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
 type Recommendation = { ticker: string; recommendation_text: string; generated_at: string; model_used: string };
+type PortfolioSummary = { summary_text: string; strong_count: number; mixed_count: number; weak_count: number; insufficient_data_count: number; model_used: string; generated_at: string };
 
 async function json<T>(url: string): Promise<T> {
   const headers = new Headers();
@@ -101,6 +102,7 @@ export function AiBotWorkspace() {
   const [signals, setSignals] = useState<TechnicalSignal[]>([]);
   const [verdicts, setVerdicts] = useState<Verdict[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
   const [runId, setRunId] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -113,6 +115,8 @@ export function AiBotWorkspace() {
       const incoming = (detail?.snapshots ?? []).filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock');
       if (detail?.runId !== undefined) setRunId(detail.runId ?? null);
       if (incoming.length === 0) return;
+      setError(null);
+      setLoading(false);
       setSnapshots((current) => {
         const byTicker = new Map(current.map((snapshot) => [snapshot.ticker, snapshot]));
         incoming.forEach((snapshot) => byTicker.set(snapshot.ticker, snapshot));
@@ -127,16 +131,18 @@ export function AiBotWorkspace() {
         const status = await json<{ runId: number | null }>('/api/ai-bot/status');
         setRunId(status.runId);
         const suffix = status.runId === null ? '' : `?runId=${encodeURIComponent(status.runId)}`;
-        const [snapshotData, signalData, verdictData, recommendationData] = await Promise.all([
+        const [snapshotData, signalData, verdictData, recommendationData, summaryData] = await Promise.all([
           json<{ snapshots: Snapshot[] }>(`/api/scraper/snapshots${suffix}`),
           json<{ signals: TechnicalSignal[] }>(`/api/technical-signals${suffix}`).catch(() => ({ signals: [] })),
           json<Verdict[]>(`/api/rotation-verdicts${suffix}${suffix ? '&' : '?'}all=true`).catch(() => []),
           status.runId === null ? Promise.resolve([] as Recommendation[]) : json<Recommendation[]>(`/api/advisor/recommendations${suffix}`).catch(() => []),
+          status.runId === null ? Promise.resolve(null) : json<PortfolioSummary>(`/api/portfolio-summary${suffix}`).catch(() => null),
         ]);
         setSnapshots(snapshotData.snapshots.filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock'));
         setSignals(signalData.signals);
         setVerdicts(verdictData);
         setRecommendations(recommendationData);
+        setPortfolioSummary(summaryData);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : 'AI Bot workspace unavailable');
       } finally {
@@ -188,9 +194,31 @@ export function AiBotWorkspace() {
 
   const move = (direction: number) => setSelectedIndex((index) => Math.min(Math.max(index + direction, 0), Math.max(entities.length - 1, 0)));
 
-  if (loading) return <div className="ai-bot-workspace ai-bot-workspace-loading"><RefreshCw className="animate-spin" /> Loading entity intelligence...</div>;
-  if (error) return <div className="ai-bot-workspace ai-bot-workspace-error">{error}</div>;
-  if (!entity) return <div className="ai-bot-workspace ai-bot-workspace-error">No fund or stock results are available for this AI Bot run.</div>;
+  if (loading || error || !entity) {
+    const stateMessage = loading
+      ? "Loading entity intelligence..."
+      : error ?? "No fund or stock results are available for this AI Bot run.";
+    return (
+      <section className="ai-bot-workspace">
+        <header className="ai-bot-workspace-header">
+          <div className="ai-bot-workspace-brand"><span className="ai-bot-workspace-icon"><Brain /></span><div><span className="ai-bot-eyebrow">AI Bot / entity intelligence</span><h2>Focused recommendation desk</h2><p>Price, chart, comparison, and advice for one entity at a time.</p></div></div>
+          <div className="ai-bot-run-state"><span /><span>Run {runId ?? 'latest'}</span></div>
+        </header>
+        <section className="ai-bot-engine ai-bot-market-engine">
+          <div className="ai-bot-engine-header"><div><h3>Market Intelligence</h3></div><Gauge /></div>
+          <div className="ai-bot-workspace-state">{loading && <RefreshCw className="animate-spin" />}<span>{stateMessage}</span></div>
+        </section>
+        <section className="ai-bot-engine ai-bot-comparison-engine">
+          <div className="ai-bot-engine-header"><div><h3>Comparison Judge</h3><p>Relative position against peers and benchmarks.</p></div><Activity /></div>
+          <article className="ai-bot-panel ai-bot-verdict-panel"><p>Comparison results will appear here when this run provides usable market data.</p></article>
+        </section>
+        <section className="ai-bot-engine ai-bot-advisor-engine">
+          <div className="ai-bot-engine-header"><div><h3>Smart Advisor</h3><p>Final recommendation based on the completed analysis.</p></div><Brain /></div>
+          <article className="ai-bot-panel ai-bot-advice-panel"><p>Recommendations will appear after the Comparison Judge completes.</p></article>
+        </section>
+      </section>
+    );
+  }
 
   return (
     <section className="ai-bot-workspace">
@@ -213,18 +241,22 @@ export function AiBotWorkspace() {
       </div>
 
       <section className="ai-bot-engine ai-bot-market-engine">
-        <div className="ai-bot-engine-header"><div><h3>Price Checker + Chart Reader Focus</h3><p>Market data and candlestick context for {entity.ticker}.</p></div><div className="ai-bot-engine-actions"><button type="button" className="ai-bot-market-button" onClick={() => setShowMarketComparison((visible) => !visible)}>{showMarketComparison ? <X /> : <List />} {showMarketComparison ? 'Close comparison' : 'Market comparison'}</button><Gauge /></div></div>
+        <div className="ai-bot-engine-header"><div><h3>Market Intelligence</h3></div><div className="ai-bot-engine-actions"><button type="button" className="ai-bot-market-button" onClick={() => setShowMarketComparison((visible) => !visible)}>{showMarketComparison ? <X /> : <List />} {showMarketComparison ? 'Close comparison' : 'Market comparison'}</button><Gauge /></div></div>
         {fundamentals.length > 0 && <section className="ai-bot-fundamentals"><div className="ai-bot-fundamentals-heading"><div><span>Fundamentals</span><strong>StockAnalysis snapshot</strong></div><small>Latest available filing data</small></div><div className="ai-bot-fundamentals-grid">{fundamentals.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div></section>}
         <div className="ai-bot-analysis-grid">
           <article className="ai-bot-panel ai-bot-price-panel"><div className="ai-bot-panel-heading"><div><h3>Price Checker</h3><span>Market snapshot</span></div><Gauge /></div><div className="ai-bot-price-main"><strong>{pct(entity.return_1y_percent)}</strong><span>1 year return</span></div><div className="ai-bot-price-details"><span>Sector <b>{entity.sector ?? 'Unclassified'}</b></span><span>Score <b>{entity.total_score === null ? '—' : `${Number(entity.total_score).toFixed(0)}/100`}</b></span><span>Updated <b>{entity.scraped_at ? new Date(entity.scraped_at).toLocaleDateString() : '—'}</b></span></div></article>
           <article className="ai-bot-panel ai-bot-chart-panel"><div className="ai-bot-panel-heading"><div><h3>Chart Reader</h3><span>Candlestick context</span></div>{trendDown ? <TrendingDown /> : <TrendingUp />}</div><MiniCandleChart candles={signal?.candles ?? []} /><div className="ai-bot-chart-footer"><span className={trendDown ? 'ai-negative' : 'ai-positive'}>{signal?.trend ?? 'No trend'}</span><span>{signal?.candle_date ?? 'No candle date'}</span></div></article>
         </div>
         {showMarketComparison && <MarketComparison snapshots={snapshots} />}
+        <article className="ai-bot-panel ai-bot-verdict-panel">
+          <div className="ai-bot-panel-heading"><div><h3>Comparison Judge</h3><span>Selected entity</span></div><Activity /></div>
+          {verdict ? <><div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>{verdict.signal}{verdict.coverage_percent !== null ? ` (${verdict.coverage_percent.toFixed(1)}% coverage)` : ''}</div><p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>{verdict.technical_signal && <div className="ai-bot-inline-signal">Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}</div>}</> : <p>No comparison result is available for this entity yet.</p>}
+        </article>
       </section>
 
       <section className="ai-bot-engine ai-bot-comparison-engine">
-        <div className="ai-bot-engine-header"><div><h3>Comparison Judge</h3><p>Relative position against peers and benchmarks.</p></div><Activity /></div>
-        <article className="ai-bot-panel ai-bot-verdict-panel">{verdict ? <><div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>{verdict.signal}{verdict.coverage_percent !== null ? ` (${verdict.coverage_percent.toFixed(1)}% coverage)` : ''}</div><p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>{verdict.technical_signal && <div className="ai-bot-inline-signal">Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}</div>}</> : <p>No comparison result is available for this entity yet.</p>}</article>
+        <div className="ai-bot-engine-header"><div><h3>Comparison Judge</h3><p>Portfolio-wide view across all holdings.</p></div><Activity /></div>
+        <article className="ai-bot-panel ai-bot-verdict-panel">{portfolioSummary ? <><div className="ai-bot-summary-counts"><span>Strong <b>{portfolioSummary.strong_count}</b></span><span>Mixed <b>{portfolioSummary.mixed_count}</b></span><span>Weak <b>{portfolioSummary.weak_count}</b></span><span>Insufficient <b>{portfolioSummary.insufficient_data_count}</b></span></div><p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p><small>{portfolioSummary.model_used} / {new Date(portfolioSummary.generated_at).toLocaleDateString()}</small></> : <p>Portfolio summary will appear after the latest Comparison Judge and Smart Advisor run completes.</p>}</article>
       </section>
       <section className="ai-bot-engine ai-bot-advisor-engine">
         <div className="ai-bot-engine-header"><div><h3>Smart Advisor</h3><p>Final recommendation based on the completed analysis.</p></div><Brain /></div>

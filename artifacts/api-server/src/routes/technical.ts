@@ -1,9 +1,7 @@
 import { Router } from "express";
-import { Pool } from "pg";
+import { pool } from "../lib/dbPool";
 
 const router = Router();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
 router.get("/technical-signals", async (req, res) => {
   const runId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
     ? Number(req.query.runId)

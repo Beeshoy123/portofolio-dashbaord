@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { Pool, type PoolClient } from "pg";
+import { type PoolClient } from "pg";
+import { pool } from "../lib/dbPool";
 import { runScraper } from "../scraper/runScraper";
 import { judgeAllHoldings } from "../judge/comparisonJudge";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
 import { getRecentSignalTrend } from "../judge/signalTrend";
-import { capturePortfolioValue, computeDrawdown } from "../judge/drawdown";
-import { generateRecommendation } from "../advisor/generateRecommendation";
+import { capturePortfolioValue, computeDrawdown } from "../judge/drawdownDb";
+import { generatePortfolioSummary, generateRecommendation } from "../advisor/generateRecommendation";
 import { runBotPipeline } from "../aiBot/pipeline";
 import { runTechnicalAnalysis } from "../technical/technicalAnalysis";
 import { releaseAdvisoryLock, tryAcquireAdvisoryLock } from "../lib/advisoryLock";
 
 const router = Router();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const BOT_LOCK_ID = 1844674410;
 
 type StageState = "waiting" | "running" | "completed" | "failed";
@@ -181,6 +181,36 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               console.error(`[ai-bot] Smart Advisor failed for ${verdict.holding_ticker}`, error);
             }
           });
+          try {
+            const portfolioSummary = await generatePortfolioSummary(verdicts);
+            const counts = verdicts.reduce(
+              (result, verdict) => {
+                if (verdict.signal === "Strong") result.strong++;
+                else if (verdict.signal === "Mixed") result.mixed++;
+                else if (verdict.signal === "Weak") result.weak++;
+                else if (verdict.signal === "Insufficient Data") result.insufficientData++;
+                return result;
+              },
+              { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
+            );
+            await pool.query(
+              `INSERT INTO portfolio_summaries
+                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               ON CONFLICT (run_id) DO NOTHING`,
+              [
+                runId,
+                portfolioSummary.summary_text,
+                counts.strong,
+                counts.mixed,
+                counts.weak,
+                counts.insufficientData,
+                portfolioSummary.model_used,
+              ],
+            );
+          } catch (error) {
+            console.error("[ai-bot] Portfolio summary failed; per-entity recommendations are preserved", error);
+          }
           status.stages.smartAdvisor = "completed";
         } catch (error) {
           status.stages.smartAdvisor = "failed";

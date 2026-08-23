@@ -13,7 +13,13 @@
 // already uses — using a different key name would mean managing two
 // separate keys for one API, which is unnecessary duplication.
 
-import { SYSTEM_INSTRUCTIONS, buildDataBlock, type AdvisorAlertContext } from "./buildPrompt";
+import {
+  SYSTEM_INSTRUCTIONS,
+  PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS,
+  buildDataBlock,
+  buildPortfolioSummaryPrompt,
+  type AdvisorAlertContext,
+} from "./buildPrompt";
 import type { HoldingVerdict } from "../judge/types";
 import type { AdvisorRecommendation } from "./types";
 
@@ -58,6 +64,14 @@ const GEMINI_RESPONSE_SCHEMA = {
     next_review_days: { type: "INTEGER", minimum: 1, maximum: 365 },
   },
   required: ["decision", "confidence", "summary", "evidence", "risks", "next_review_days"],
+};
+
+const PORTFOLIO_SUMMARY_RESPONSE_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    summary: { type: "STRING" },
+  },
+  required: ["summary"],
 };
 
 /**
@@ -260,4 +274,55 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
     model_used: GEMINI_MODEL,
     structured,
   };
+}
+
+export async function generatePortfolioSummary(verdicts: HoldingVerdict[]): Promise<{ summary_text: string; model_used: string }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("[generatePortfolioSummary] GEMINI_API_KEY not found in environment");
+  }
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS }] },
+        contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts) }] }],
+        generationConfig: {
+          temperature: GEMINI_TEMPERATURE,
+          maxOutputTokens: 400,
+          responseMimeType: "application/json",
+          responseSchema: PORTFOLIO_SUMMARY_RESPONSE_SCHEMA,
+        },
+      }),
+    },
+  );
+
+  if (!res.ok) {
+    const errorBody = await res.text();
+    throw new Error(`[generatePortfolioSummary] Gemini API error ${res.status}: ${errorBody}`);
+  }
+
+  const data = (await res.json()) as GeminiResponse;
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("[generatePortfolioSummary] Gemini returned no summary text");
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, ""));
+  } catch (error) {
+    throw new Error("[generatePortfolioSummary] Gemini returned invalid JSON", { cause: error });
+  }
+
+  const summary = parsed && typeof parsed === "object" && "summary" in parsed
+    ? (parsed as { summary?: unknown }).summary
+    : null;
+  if (typeof summary !== "string" || summary.trim().length === 0) {
+    throw new Error("[generatePortfolioSummary] Gemini JSON did not contain a summary");
+  }
+
+  return { summary_text: summary.trim(), model_used: GEMINI_MODEL };
 }

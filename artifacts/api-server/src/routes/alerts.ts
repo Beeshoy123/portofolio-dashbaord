@@ -5,7 +5,7 @@
 import { Router, Request, Response } from "express";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
-import { computeDrawdown } from "../judge/drawdown";
+import { computeDrawdown } from "../judge/drawdownDb";
 
 const router = Router();
 

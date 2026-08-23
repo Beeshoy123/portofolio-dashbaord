@@ -5,9 +5,7 @@
 // This is read-only and additive — does not change what timeStop or
 // thesisCheck do with verdict_history, only adds a new read path.
 
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { pool } from "../lib/dbPool";
 
 export interface SignalHistoryRow {
   signal: string;
