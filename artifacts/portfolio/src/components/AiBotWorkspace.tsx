@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowLeft, ArrowRight, Brain, Gauge, List, RefreshCw, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 
@@ -108,6 +108,7 @@ export function AiBotWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMarketComparison, setShowMarketComparison] = useState(false);
+  const hasEntityDataRef = useRef(false);
 
   useEffect(() => {
     const handleSnapshotUpdate = (event: Event) => {
@@ -115,6 +116,7 @@ export function AiBotWorkspace() {
       const incoming = (detail?.snapshots ?? []).filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock');
       if (detail?.runId !== undefined) setRunId(detail.runId ?? null);
       if (incoming.length === 0) return;
+      hasEntityDataRef.current = true;
       setError(null);
       setLoading(false);
       setSnapshots((current) => {
@@ -127,7 +129,7 @@ export function AiBotWorkspace() {
 
     const load = async () => {
       try {
-        setLoading(true);
+        if (!hasEntityDataRef.current) setLoading(true);
         const status = await json<{ runId: number | null }>('/api/ai-bot/status');
         setRunId(status.runId);
         const suffix = status.runId === null ? '' : `?runId=${encodeURIComponent(status.runId)}`;
@@ -138,13 +140,17 @@ export function AiBotWorkspace() {
           status.runId === null ? Promise.resolve([] as Recommendation[]) : json<Recommendation[]>(`/api/advisor/recommendations${suffix}`).catch(() => []),
           status.runId === null ? Promise.resolve(null) : json<PortfolioSummary>(`/api/portfolio-summary${suffix}`).catch(() => null),
         ]);
-        setSnapshots(snapshotData.snapshots.filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock'));
+        const entitySnapshots = snapshotData.snapshots.filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock');
+        if (entitySnapshots.length > 0) hasEntityDataRef.current = true;
+        setSnapshots(entitySnapshots);
         setSignals(signalData.signals);
         setVerdicts(verdictData);
         setRecommendations(recommendationData);
         setPortfolioSummary(summaryData);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'AI Bot workspace unavailable');
+        if (!hasEntityDataRef.current) {
+          setError(loadError instanceof Error ? loadError.message : 'AI Bot workspace unavailable');
+        }
       } finally {
         setLoading(false);
       }
@@ -256,11 +262,11 @@ export function AiBotWorkspace() {
 
       <section className="ai-bot-engine ai-bot-comparison-engine">
         <div className="ai-bot-engine-header"><div><h3>Comparison Judge</h3><p>Portfolio-wide view across all holdings.</p></div><Activity /></div>
-        <article className="ai-bot-panel ai-bot-verdict-panel">{portfolioSummary ? <><div className="ai-bot-summary-counts"><span>Strong <b>{portfolioSummary.strong_count}</b></span><span>Mixed <b>{portfolioSummary.mixed_count}</b></span><span>Weak <b>{portfolioSummary.weak_count}</b></span><span>Insufficient <b>{portfolioSummary.insufficient_data_count}</b></span></div><p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p><small>{portfolioSummary.model_used} / {new Date(portfolioSummary.generated_at).toLocaleDateString()}</small></> : <p>Portfolio summary will appear after the latest Comparison Judge and Smart Advisor run completes.</p>}</article>
+        <article className="ai-bot-panel ai-bot-verdict-panel">{portfolioSummary ? <><div className="ai-bot-summary-counts"><span>Strong <b>{portfolioSummary.strong_count}</b></span><span>Mixed <b>{portfolioSummary.mixed_count}</b></span><span>Weak <b>{portfolioSummary.weak_count}</b></span><span>Insufficient <b>{portfolioSummary.insufficient_data_count}</b></span></div><p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p><small>{portfolioSummary.model_used} / {new Date(portfolioSummary.generated_at).toLocaleDateString()}</small></> : <p>Portfolio summary will appear after Comparison Judge completes for this run.</p>}</article>
       </section>
       <section className="ai-bot-engine ai-bot-advisor-engine">
         <div className="ai-bot-engine-header"><div><h3>Smart Advisor</h3><p>Final recommendation based on the completed analysis.</p></div><Brain /></div>
-        <article className="ai-bot-panel ai-bot-advice-panel">{recommendation ? <><p className="ai-bot-recommendation">{recommendation.recommendation_text}</p><small>{recommendation.model_used} / {new Date(recommendation.generated_at).toLocaleDateString()}</small></> : <p>Generate recommendations after the latest AI Bot run.</p>}</article>
+        <article className="ai-bot-panel ai-bot-advice-panel">{recommendation ? <><p className="ai-bot-recommendation">{recommendation.recommendation_text}</p><small>{recommendation.model_used} / {new Date(recommendation.generated_at).toLocaleDateString()}</small></> : <p>{entity.is_held ? 'Recommendation is not available for this run yet.' : 'Smart Advisor recommendations are generated for held positions only.'}</p>}</article>
       </section>
     </section>
   );

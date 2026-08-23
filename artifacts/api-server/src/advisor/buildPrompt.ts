@@ -16,6 +16,13 @@ export interface AdvisorAlertContext {
   thesis?: { has_reversal: boolean; newly_appeared_flags?: string[] };
   drawdown?: { current_drawdown_percent?: number | null };
   signalTrend?: SignalHistoryRow[] | null;
+  portfolioSummary?: {
+    summary_text: string;
+    strong_count: number;
+    mixed_count: number;
+    weak_count: number;
+    insufficient_data_count: number;
+  };
 }
 
 export const SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are NOT a licensed financial advisor, and you must say so is implicit — never use language implying guaranteed outcomes.
@@ -184,6 +191,13 @@ DATA QUALITY: holding snapshot ${verdict.data_quality.holding_snapshot_status}${
 
 COMPARISON JUDGE'S SIGNAL: ${verdict.signal}
 FLAGS RAISED: ${verdict.flags.length > 0 ? verdict.flags.join(", ") : "none"}${alerts?.signalTrend && alerts.signalTrend.length >= 2 ? `\nSIGNAL TREND (last ${alerts.signalTrend.length} runs, oldest to newest): ${alerts.signalTrend.map((row) => row.signal).join(", ")}` : ""}
+${alerts?.portfolioSummary ? `
+PORTFOLIO-WIDE COMPARISON JUDGE SUMMARY (same run; use as context, do not repeat every detail):
+- Strong holdings: ${alerts.portfolioSummary.strong_count}
+- Mixed holdings: ${alerts.portfolioSummary.mixed_count}
+- Weak holdings: ${alerts.portfolioSummary.weak_count}
+- Insufficient Data holdings: ${alerts.portfolioSummary.insufficient_data_count}
+- Overall read: ${alerts.portfolioSummary.summary_text}` : ""}
 
 ${verdict.groups.map(formatGroupForPrompt).join("\n\n")}
 

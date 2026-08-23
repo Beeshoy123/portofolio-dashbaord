@@ -134,6 +134,50 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             Array<{ ticker: string; has_reversal: boolean; newly_appeared_flags?: string[] }>,
             { current_drawdown_percent?: number | null } | undefined,
           ];
+          let portfolioSummaryContext: {
+            summary_text: string;
+            strong_count: number;
+            mixed_count: number;
+            weak_count: number;
+            insufficient_data_count: number;
+          } | undefined;
+          try {
+            const counts = verdicts.reduce(
+              (result, verdict) => {
+                if (verdict.signal === "Strong") result.strong++;
+                else if (verdict.signal === "Mixed") result.mixed++;
+                else if (verdict.signal === "Weak") result.weak++;
+                else if (verdict.signal === "Insufficient Data") result.insufficientData++;
+                return result;
+              },
+              { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
+            );
+            const portfolioSummary = await generatePortfolioSummary(verdicts);
+            portfolioSummaryContext = {
+              summary_text: portfolioSummary.summary_text,
+              strong_count: counts.strong,
+              mixed_count: counts.mixed,
+              weak_count: counts.weak,
+              insufficient_data_count: counts.insufficientData,
+            };
+            await pool.query(
+              `INSERT INTO portfolio_summaries
+                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used)
+               VALUES ($1, $2, $3, $4, $5, $6, $7)
+               ON CONFLICT (run_id) DO NOTHING`,
+              [
+                runId,
+                portfolioSummary.summary_text,
+                counts.strong,
+                counts.mixed,
+                counts.weak,
+                counts.insufficientData,
+                portfolioSummary.model_used,
+              ],
+            );
+          } catch (error) {
+            console.error("[ai-bot] Portfolio summary failed before per-entity Advisor; continuing", error);
+          }
           await runWithConcurrency(verdicts, 3, async (verdict) => {
             if (verdict.holding_return_percent === null) return;
             try {
@@ -160,6 +204,7 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 thesis: theses.find((alert) => alert.ticker === verdict.holding_ticker),
                 drawdown,
                 signalTrend,
+                portfolioSummary: portfolioSummaryContext,
               });
               await pool.query(
                 `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days)
@@ -181,36 +226,6 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               console.error(`[ai-bot] Smart Advisor failed for ${verdict.holding_ticker}`, error);
             }
           });
-          try {
-            const portfolioSummary = await generatePortfolioSummary(verdicts);
-            const counts = verdicts.reduce(
-              (result, verdict) => {
-                if (verdict.signal === "Strong") result.strong++;
-                else if (verdict.signal === "Mixed") result.mixed++;
-                else if (verdict.signal === "Weak") result.weak++;
-                else if (verdict.signal === "Insufficient Data") result.insufficientData++;
-                return result;
-              },
-              { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
-            );
-            await pool.query(
-              `INSERT INTO portfolio_summaries
-                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
-               ON CONFLICT (run_id) DO NOTHING`,
-              [
-                runId,
-                portfolioSummary.summary_text,
-                counts.strong,
-                counts.mixed,
-                counts.weak,
-                counts.insufficientData,
-                portfolioSummary.model_used,
-              ],
-            );
-          } catch (error) {
-            console.error("[ai-bot] Portfolio summary failed; per-entity recommendations are preserved", error);
-          }
           status.stages.smartAdvisor = "completed";
         } catch (error) {
           status.stages.smartAdvisor = "failed";
