@@ -7,6 +7,7 @@ import { startGoldPriceScheduler } from "./lib/goldPriceCache";
 import { startUsdEgpScheduler } from "./lib/usdEgpCache";
 import { startEurEgpScheduler } from "./lib/eurEgpCache";
 import { startGlobalGoldScheduler } from "./lib/globalGoldCache";
+import { verifyGeminiModel } from "./advisor/generateRecommendation";
 
 const app: Express = express();
 
@@ -41,5 +42,10 @@ startGoldPriceScheduler();    // goldbullioneg.com — every 5 min
 startUsdEgpScheduler();       // open.er-api.com USD/EGP — every 30 min
 startEurEgpScheduler();       // open.er-api.com EUR/EGP — every 30 min
 startGlobalGoldScheduler();   // swissquote XAU/USD — every 5 min
+
+// Verify Gemini model availability at startup (non-blocking warning if invalid)
+verifyGeminiModel().catch((err) => {
+  logger.warn({ err }, "[Smart Advisor] Model verification threw unexpectedly (proceeding anyway)");
+});
 
 export default app;

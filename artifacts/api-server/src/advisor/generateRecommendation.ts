@@ -27,6 +27,16 @@ const GEMINI_TEMPERATURE = envNumber("GEMINI_TEMPERATURE", 0.4, 0, 2);
 const GEMINI_MAX_OUTPUT_TOKENS = envNumber("GEMINI_MAX_OUTPUT_TOKENS", 650, 128, 4096);
 const GEMINI_TIMEOUT_MS = envNumber("GEMINI_TIMEOUT_MS", 45_000, 5_000, 120_000);
 
+interface ModelsListResponse {
+  models?: Array<{
+    name: string;
+    displayName?: string;
+    description?: string;
+    inputTokenLimit?: number;
+    outputTokenLimit?: number;
+  }>;
+}
+
 interface GeminiResponse {
   candidates?: Array<{
     content?: { parts?: Array<{ text?: string }> };
@@ -50,6 +60,79 @@ const GEMINI_RESPONSE_SCHEMA = {
   required: ["decision", "confidence", "summary", "evidence", "risks", "next_review_days"],
 };
 
+/**
+ * Startup validation: verify that GEMINI_MODEL is available via the Google Generative AI API.
+ * Makes a lightweight call to list available models and checks if the configured model exists.
+ * Logs a warning (but doesn't crash) if the model is not found, listing 2-3 alternatives.
+ * 
+ * Call this function once when the server boots: await verifyGeminiModel()
+ */
+export async function verifyGeminiModel(): Promise<void> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn(
+      "[Smart Advisor] ⚠️  GEMINI_API_KEY not found in environment. Model validation skipped. " +
+      "If Gemini calls fail at runtime, check that GEMINI_API_KEY is set and valid."
+    );
+    return;
+  }
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+      { signal: AbortSignal.timeout(10_000) }
+    );
+
+    if (!res.ok) {
+      console.warn(
+        `[Smart Advisor] ⚠️  Failed to validate Gemini model (HTTP ${res.status}). ` +
+        `Continuing with GEMINI_MODEL="${GEMINI_MODEL}". If Gemini calls fail, ` +
+        `check that GEMINI_API_KEY is valid.`
+      );
+      return;
+    }
+
+    const data = (await res.json()) as ModelsListResponse;
+    const availableModels = data.models ?? [];
+    
+    // Models in the response have names like "models/gemini-2.0-flash", so we check
+    // against the full "models/" prefix name and also without it.
+    const configuredModelFullName = `models/${GEMINI_MODEL}`;
+    const modelExists = availableModels.some(
+      (model) => model.name === configuredModelFullName || model.name === GEMINI_MODEL
+    );
+
+    if (!modelExists) {
+      // Extract 2-3 valid alternatives: prefer ones with "gemini" in the name, newest first
+      const geminiModels = availableModels
+        .filter((m) => m.name.includes("gemini") || m.displayName?.includes("gemini"))
+        .slice(0, 3);
+      
+      const alternatives = geminiModels
+        .map((m) => {
+          const modelId = m.name.replace(/^models\//, "");
+          return m.displayName ? `${modelId} (${m.displayName})` : modelId;
+        })
+        .join(", ");
+
+      console.warn(
+        `[Smart Advisor] ⚠️  GEMINI_MODEL="${GEMINI_MODEL}" not found in available models. ` +
+        `This model may be retired, unavailable in your region, or the name may be incorrect. ` +
+        `Available alternatives: ${alternatives || "[no Gemini models found]"}. ` +
+        `To fix, set GEMINI_MODEL to one of the valid model IDs above.`
+      );
+    } else {
+      console.log(`[Smart Advisor] ✓ Gemini model "${GEMINI_MODEL}" verified and available.`);
+    }
+  } catch (error) {
+    console.warn(
+      `[Smart Advisor] ⚠️  Could not validate Gemini model (${error instanceof Error ? error.message : String(error)}). ` +
+      `Continuing with GEMINI_MODEL="${GEMINI_MODEL}". ` +
+      `If Gemini calls fail at runtime, check your GEMINI_API_KEY and internet connection.`
+    );
+  }
+}
+
 function parseStructuredResponse(text: string): StructuredAdvisorResult {
   const candidate = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   let parsed: unknown;
@@ -66,6 +149,11 @@ function parseStructuredResponse(text: string): StructuredAdvisorResult {
 }
 
 function isStructuredAdvisorResult(value: unknown): value is StructuredAdvisorResult {
+  // NOTE: The confidence field has a prompt-enforced ceiling based on data quality
+  // (see rule 10 in SYSTEM_INSTRUCTIONS: 0-2 comparables => ≤40, 3-5 comparables => ≤65,
+  // 6+ comparables => no ceiling). This validation only checks the schema range (0-100).
+  // Gemini may still violate the confidence ceiling — consider adding a post-parse clamp
+  // if ceiling violations become a problem, but for now we rely on prompt enforcement.
   if (!value || typeof value !== "object") return false;
   const result = value as Record<string, unknown>;
   const isTextArray = (entry: unknown, maxLength: number) =>

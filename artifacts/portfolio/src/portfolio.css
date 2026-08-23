@@ -640,6 +640,7 @@ html[lang="ar"] .sort-popover {
 .ai-bot-verdict-strong { background: rgba(85, 209, 155, .14); color: #62d9a4; }
 .ai-bot-verdict-mixed { background: rgba(217, 154, 43, .14); color: #e7b85b; }
 .ai-bot-verdict-weak { background: rgba(224, 90, 80, .14); color: #f08078; }
+.ai-bot-verdict-insufficient-data { background: rgba(100, 150, 180, .14); color: #7aa3c4; }
 .ai-bot-panel p { color: #9ab3ad; font-size: 11px; line-height: 1.6; }
 .ai-bot-inline-signal { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); color: #78948f; font-size: 10px; }
 .ai-bot-inline-signal b { color: #d5e5e0; }

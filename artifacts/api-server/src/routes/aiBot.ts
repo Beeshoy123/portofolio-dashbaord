@@ -4,6 +4,7 @@ import { runScraper } from "../scraper/runScraper";
 import { judgeAllHoldings } from "../judge/comparisonJudge";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
+import { getRecentSignalTrend } from "../judge/signalTrend";
 import { capturePortfolioValue, computeDrawdown } from "../judge/drawdown";
 import { generateRecommendation } from "../advisor/generateRecommendation";
 import { runBotPipeline } from "../aiBot/pipeline";
@@ -136,16 +137,45 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           await runWithConcurrency(verdicts, 3, async (verdict) => {
             if (verdict.holding_return_percent === null) return;
             try {
+              // Skip Gemini call if there's insufficient comparison data; insert fixed record instead
+              if (verdict.signal === "Insufficient Data") {
+                await pool.query(
+                  `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days)
+                   SELECT id, $1, $2, $4, NULL, NULL, NULL, NULL, NULL FROM comparison_watchlist WHERE ticker = $3
+                   ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL DO NOTHING`,
+                  ["Not enough comparison data was available this run to generate a recommendation.", "none", verdict.holding_ticker, runId],
+                );
+                return;
+              }
+              // Fetch signal trend for context
+              const watchlistIdResult = await pool.query<{ id: number }>(
+                `SELECT id FROM comparison_watchlist WHERE ticker = $1`,
+                [verdict.holding_ticker]
+              );
+              const watchlistId = watchlistIdResult.rows[0]?.id;
+              const signalTrend = watchlistId ? await getRecentSignalTrend(watchlistId) : null;
+              
               const recommendation = await generateRecommendation(verdict, {
                 timeStop: timeStops.find((alert) => alert.ticker === verdict.holding_ticker),
                 thesis: theses.find((alert) => alert.ticker === verdict.holding_ticker),
                 drawdown,
+                signalTrend,
               });
               await pool.query(
-                `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id)
-                 SELECT id, $1, $2, $4 FROM comparison_watchlist WHERE ticker = $3
+                `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days)
+                 SELECT id, $1, $2, $4, $5, $6, $7, $8, $9 FROM comparison_watchlist WHERE ticker = $3
                  ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL DO NOTHING`,
-                [recommendation.recommendation_text, recommendation.model_used, verdict.holding_ticker, runId],
+                [
+                  recommendation.recommendation_text,
+                  recommendation.model_used,
+                  verdict.holding_ticker,
+                  runId,
+                  recommendation.structured.decision,
+                  recommendation.structured.confidence,
+                  JSON.stringify(recommendation.structured.evidence),
+                  JSON.stringify(recommendation.structured.risks),
+                  recommendation.structured.next_review_days,
+                ],
               );
             } catch (error) {
               console.error(`[ai-bot] Smart Advisor failed for ${verdict.holding_ticker}`, error);

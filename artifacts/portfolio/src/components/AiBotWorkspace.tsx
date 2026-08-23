@@ -29,7 +29,7 @@ type Snapshot = {
 
 type Candle = { date: string; open: number; high: number; low: number; close: number };
 type TechnicalSignal = { ticker: string; trend: string; confidence: number | string | null; candle_date: string | null; patterns: Array<{ name: string; direction: string }>; candles: Candle[] };
-type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
+type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
 type Recommendation = { ticker: string; recommendation_text: string; generated_at: string; model_used: string };
 
 async function json<T>(url: string): Promise<T> {
@@ -53,6 +53,10 @@ function metric(value: number | string | null | undefined, suffix = '') {
   if (value === null || value === undefined || value === '') return '—';
   const number = Number(value);
   return `${Number.isFinite(number) ? number.toFixed(2) : '—'}${suffix}`;
+}
+
+function slugify(text: string): string {
+  return text.toLowerCase().replace(/\s+/g, '-');
 }
 
 function MiniCandleChart({ candles }: { candles: Candle[] }) {
@@ -220,7 +224,7 @@ export function AiBotWorkspace() {
 
       <section className="ai-bot-engine ai-bot-comparison-engine">
         <div className="ai-bot-engine-header"><div><h3>Comparison Judge</h3><p>Relative position against peers and benchmarks.</p></div><Activity /></div>
-        <article className="ai-bot-panel ai-bot-verdict-panel">{verdict ? <><div className={`ai-bot-verdict-pill ai-bot-verdict-${verdict.signal.toLowerCase()}`}>{verdict.signal}</div><p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>{verdict.technical_signal && <div className="ai-bot-inline-signal">Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}</div>}</> : <p>No comparison result is available for this entity yet.</p>}</article>
+        <article className="ai-bot-panel ai-bot-verdict-panel">{verdict ? <><div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>{verdict.signal}{verdict.coverage_percent !== null ? ` (${verdict.coverage_percent.toFixed(1)}% coverage)` : ''}</div><p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>{verdict.technical_signal && <div className="ai-bot-inline-signal">Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}</div>}</> : <p>No comparison result is available for this entity yet.</p>}</article>
       </section>
       <section className="ai-bot-engine ai-bot-advisor-engine">
         <div className="ai-bot-engine-header"><div><h3>Smart Advisor</h3><p>Final recommendation based on the completed analysis.</p></div><Brain /></div>

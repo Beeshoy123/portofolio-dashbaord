@@ -8,6 +8,12 @@ import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentals
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
+// Minimum number of comparable entries (with usable returns) needed to issue a "Strong" signal.
+// Below this threshold, signals are capped at "Mixed" even if win rate would qualify as "Strong".
+// This prevents thin-sample false confidence (e.g., beating 3 of 5 thin comparables shouldn't
+// warrant the same conviction as beating 6 of 10 solid ones).
+const MIN_RELIABLE_COMPARABLES = 4;
+
 type ReturnPeriod = "return_1y" | "return_6m" | "return_3m";
 
 interface WatchlistRow {
@@ -232,13 +238,23 @@ async function judgeHolding(
   if (loses > beats && comparableEntries.length > 0) flags.push("underperforming_comparables");
   if (groups.some((group) => group.incomplete_count > 0)) flags.push("incomplete_comparison_data");
 
-  const signal: "Strong" | "Mixed" | "Weak" = comparableEntries.length === 0
-    ? "Weak"
+  // Calculate raw signal based on win rate, then apply minimum sample size threshold.
+  // This prevents thin-sample false confidence: a "Strong" from 3-of-5 thin comparables
+  // is capped at "Mixed" to reflect the reduced reliability.
+  // Note: we only cap upward ("Strong" → "Mixed"), never downgrade "Mixed" or "Weak".
+  let signal: "Strong" | "Mixed" | "Weak" | "Insufficient Data" = comparableEntries.length === 0
+    ? "Insufficient Data"
     : beats / comparableEntries.length >= 0.6
       ? "Strong"
       : beats / comparableEntries.length >= 0.4
         ? "Mixed"
         : "Weak";
+
+  // Cap "Strong" signal at "Mixed" if the comparable sample is below the minimum threshold.
+  if (signal === "Strong" && comparableEntries.length < MIN_RELIABLE_COMPARABLES) {
+    signal = "Mixed";
+    flags.push("thin_comparable_sample");
+  }
   const fundamentals_flags_found = groups.some((group) =>
     group.entries.some(
       (entry) => entry.gap_percent !== null && entry.gap_percent < 0 && entry.fundamentals && entry.fundamentals.flags.length > 0,
@@ -246,6 +262,9 @@ async function judgeHolding(
   );
   const comparableCount = groups.reduce((count, group) => count + group.entries.length, 0);
   const comparableWithReturnCount = comparableEntries.length;
+  const coveragePercent = comparableCount === 0
+    ? null
+    : Math.round((comparableWithReturnCount / comparableCount) * 1000) / 10;
   const snapshotAgeHours = holdingSnapshot?.scraped_at
     ? Math.max(0, (Date.now() - new Date(holdingSnapshot.scraped_at).getTime()) / 3_600_000)
     : null;
@@ -276,6 +295,7 @@ async function judgeHolding(
     return_period: period,
     groups,
     signal,
+    coverage_percent: coveragePercent,
     flags,
     data_completeness_warning: holdingReturn === null || groups.some((group) => group.incomplete_count > 0),
     fundamentals_flags_found,

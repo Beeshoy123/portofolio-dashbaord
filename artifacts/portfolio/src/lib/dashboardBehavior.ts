@@ -2235,10 +2235,10 @@ export function initDashboardBehavior(
   }
 
   function buildVerdictCardHtml(v: any): string {
-    const signalIcon = v.signal === "Strong" ? "✅" : v.signal === "Mixed" ? "⚡" : "⚠️";
-    const signalColor = v.signal === "Strong" ? "var(--pnl-up)" : v.signal === "Mixed" ? "var(--warning-border)" : "var(--pnl-down)";
-    const signalBg   = v.signal === "Strong" ? "var(--pnl-up-soft)" : v.signal === "Mixed" ? "var(--warning-bg)" : "var(--pnl-down-soft)";
-    const signalBorder = v.signal === "Strong" ? "var(--pnl-up-soft)" : v.signal === "Mixed" ? "var(--warning-border)" : "var(--pnl-down-soft)";
+    const signalIcon = v.signal === "Strong" ? "✅" : v.signal === "Mixed" ? "⚡" : v.signal === "Insufficient Data" ? "❓" : "⚠️";
+    const signalColor = v.signal === "Strong" ? "var(--pnl-up)" : v.signal === "Mixed" ? "var(--warning-border)" : v.signal === "Insufficient Data" ? "#7aa3c4" : "var(--pnl-down)";
+    const signalBg   = v.signal === "Strong" ? "var(--pnl-up-soft)" : v.signal === "Mixed" ? "var(--warning-bg)" : v.signal === "Insufficient Data" ? "rgba(100, 150, 180, .14)" : "var(--pnl-down-soft)";
+    const signalBorder = v.signal === "Strong" ? "var(--pnl-up-soft)" : v.signal === "Mixed" ? "var(--warning-border)" : v.signal === "Insufficient Data" ? "rgba(100, 150, 180, .14)" : "var(--pnl-down-soft)";
 
     const periodLabel = (v.return_period as string).replace("return_", "").toUpperCase();
     const returnPct: number | null = v.holding_return_percent;
@@ -2338,9 +2338,9 @@ export function initDashboardBehavior(
         return;
       }
 
-      const rank: Record<string, number> = { Strong: 0, Mixed: 1, Weak: 2 };
+      const rank: Record<string, number> = { Strong: 0, Mixed: 1, Weak: 2, 'Insufficient Data': 3 };
       const orderedVerdicts = [...verdicts].sort((a: any, b: any) =>
-        (rank[a.signal] ?? 2) - (rank[b.signal] ?? 2),
+        (rank[a.signal] ?? 3) - (rank[b.signal] ?? 3),
       );
       const buyCount = verdicts.filter((v: any) => v.signal === "Strong").length;
       const holdCount = verdicts.filter((v: any) => v.signal === "Mixed").length;

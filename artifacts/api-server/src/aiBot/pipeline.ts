@@ -23,6 +23,11 @@ export async function runBotPipeline(
 ): Promise<BotRunSummary> {
   const summary = await dependencies.runPriceChecker();
 
+  // Stop pipeline if Price Checker failed for every entity
+  if (summary.succeeded === 0 && summary.total > 0) {
+    throw new Error("Price Checker failed for every entity");
+  }
+
   try {
     await dependencies.runChartReader(summary.runId);
   } catch (error) {

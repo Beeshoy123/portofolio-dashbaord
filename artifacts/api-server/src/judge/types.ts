@@ -58,7 +58,8 @@ export interface HoldingVerdict {
   };
   return_period: "return_1y" | "return_6m" | "return_3m";
   groups: ComparisonGroup[];
-  signal: "Strong" | "Mixed" | "Weak";
+  signal: "Strong" | "Mixed" | "Weak" | "Insufficient Data";
+  coverage_percent: number | null;
   flags: string[];
   data_completeness_warning: boolean;
   fundamentals_flags_found: boolean;
