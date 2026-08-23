@@ -22,7 +22,7 @@ type BotStatus = {
   error: string | null;
   stages: {
     priceChecker: StageState;
-    technicalAnalysis: StageState;
+    chartReader: StageState;
     comparisonJudge: StageState;
     alerts: StageState;
     smartAdvisor: StageState;
@@ -36,7 +36,7 @@ let status: BotStatus = {
   error: null,
   stages: {
     priceChecker: "waiting",
-    technicalAnalysis: "waiting",
+    chartReader: "waiting",
     comparisonJudge: "waiting",
     alerts: "waiting",
     smartAdvisor: "waiting",
@@ -69,7 +69,7 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
     error: null,
     stages: {
       priceChecker: "running",
-      technicalAnalysis: "waiting",
+      chartReader: "waiting",
       comparisonJudge: "waiting",
       alerts: "waiting",
       smartAdvisor: "waiting",
@@ -83,15 +83,15 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
         status.stages.priceChecker = result.failed === result.total ? "failed" : "completed";
         return result;
       },
-      runTechnicalAnalysis: async (runId) => {
-        status.stages.technicalAnalysis = "running";
+      runChartReader: async (runId) => {
+        status.stages.chartReader = "running";
         try {
           const result = await runTechnicalAnalysis(runId);
-          status.stages.technicalAnalysis = "completed";
+          status.stages.chartReader = "completed";
           return result;
         } catch (error) {
-          status.stages.technicalAnalysis = "failed";
-          console.error("[ai-bot] Technical Analysis failed", error);
+          status.stages.chartReader = "failed";
+          console.error("[ai-bot] Chart Reader failed", error);
           return { succeeded: 0, failed: 0, total: 0 };
         }
       },
@@ -167,8 +167,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
     status.error = err instanceof Error ? err.message : "AI Bot run failed";
     const failedStage = status.stages.priceChecker === "running"
       ? "priceChecker"
-      : status.stages.technicalAnalysis === "running"
-        ? "technicalAnalysis"
+      : status.stages.chartReader === "running"
+        ? "chartReader"
       : status.stages.comparisonJudge === "running"
         ? "comparisonJudge"
         : status.stages.alerts === "running"
@@ -249,7 +249,7 @@ router.get("/ai-bot/status", async (_req, res) => {
       error: latest.error_message,
       stages: {
         priceChecker: latest.status === "failed" ? "failed" : latest.status === "running" ? "running" : "completed",
-        technicalAnalysis: latest.status === "failed" ? "failed" : latest.status === "running" ? "running" : "completed",
+        chartReader: latest.status === "failed" ? "failed" : latest.status === "running" ? "running" : "completed",
         comparisonJudge: latest.status === "completed" || latest.status === "partial" ? "completed" : "waiting",
         alerts: latest.status === "completed" || latest.status === "partial" ? "completed" : "waiting",
         smartAdvisor: latest.status === "completed" || latest.status === "partial" ? "completed" : "waiting",

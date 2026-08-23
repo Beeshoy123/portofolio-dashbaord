@@ -100,7 +100,7 @@ function describeAdvisorError(error: unknown): string {
     return 'The AI service took too long to respond. Try Generate again; completed holdings will be kept.';
   }
   if (normalized.includes('no return data') || normalized.includes('no holdings')) {
-    return 'There is not enough completed comparison data yet. Run the price checker and comparison judge first.';
+    return 'There is not enough completed comparison data yet. Run the price checker and Comparison Judge first.';
   }
   if (normalized.includes('(409')) {
     return 'Another Smart Advisor generation is already running. Wait for it to finish before trying again.';
@@ -367,19 +367,24 @@ export function SmartAdvisorPanel() {
   };
 
   return (
-    <div className="space-y-4 p-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
+    <div className="smart-advisor-panel">
+      <Card className="smart-advisor-card">
+        <CardHeader className="smart-advisor-header">
+          <div className="smart-advisor-heading">
+            <div className="smart-advisor-mark">
               <Brain className="h-5 w-5" />
-              <div>
-                <CardTitle>Smart Advisor</CardTitle>
-                <CardDescription>AI-powered investment recommendations</CardDescription>
-              </div>
             </div>
+            <div>
+              <div className="smart-advisor-kicker">Portfolio intelligence</div>
+              <CardTitle>Smart Advisor</CardTitle>
+              <CardDescription>AI recommendations grounded in your comparison data</CardDescription>
+            </div>
+          </div>
+          <div className="smart-advisor-action">
+            <span className="smart-advisor-live"><span /> Live analysis</span>
             <Button
               size="sm"
+              className="smart-advisor-generate"
               onClick={handleGenerateRecommendations}
               disabled={generating || loading}
               variant="outline"
@@ -399,35 +404,38 @@ export function SmartAdvisorPanel() {
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-3 gap-2 border-b pb-4">
-            <div className="rounded-lg border bg-muted/30 p-3">
-              <div className="text-xs text-muted-foreground">Active alerts</div>
-              <div className="mt-1 text-xl font-bold">{activeAlertCount}</div>
+        <CardContent className="smart-advisor-content">
+          <div className="smart-advisor-metrics">
+            <div className="advisor-metric advisor-metric-total">
+              <span className="advisor-metric-label">Active alerts</span>
+              <strong>{activeAlertCount}</strong>
+              <span className="advisor-metric-note">Across your portfolio</span>
             </div>
-            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-              <div className="text-xs text-yellow-800">Warnings</div>
-              <div className="mt-1 text-xl font-bold text-yellow-800">{activeTimeStops}</div>
+            <div className="advisor-metric advisor-metric-warning">
+              <span className="advisor-metric-label">Warnings</span>
+              <strong>{activeTimeStops}</strong>
+              <span className="advisor-metric-note">Time-stop reviews</span>
             </div>
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-              <div className="text-xs text-red-800">Critical</div>
-              <div className="mt-1 text-xl font-bold text-red-800">{activeTheses + activeDrawdown}</div>
+            <div className="advisor-metric advisor-metric-critical">
+              <span className="advisor-metric-label">Critical</span>
+              <strong>{activeTheses + activeDrawdown}</strong>
+              <span className="advisor-metric-note">Thesis and drawdown risk</span>
             </div>
           </div>
           {(activeAlertCount > 0 || drawdownPercent !== undefined && drawdownPercent !== null) && (
-            <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="smart-advisor-status-row">
               {activeTimeStops > 0 && (
-                <span className="rounded-full bg-yellow-100 px-2 py-1 font-medium text-yellow-800">
+                <span className="advisor-status advisor-status-warning">
                   {activeTimeStops} time-stop {activeTimeStops === 1 ? 'review' : 'reviews'}
                 </span>
               )}
               {activeTheses > 0 && (
-                <span className="rounded-full bg-red-100 px-2 py-1 font-medium text-red-800">
+                <span className="advisor-status advisor-status-critical">
                   {activeTheses} thesis {activeTheses === 1 ? 'risk' : 'risks'}
                 </span>
               )}
               {drawdownPercent !== undefined && (
-                <span className={`rounded-full px-2 py-1 font-medium ${activeDrawdown ? 'bg-red-100 text-red-800' : 'bg-muted text-muted-foreground'}`}>
+                <span className={`advisor-status ${activeDrawdown ? 'advisor-status-critical' : 'advisor-status-neutral'}`}>
                   Portfolio drawdown: {Number(drawdownPercent).toFixed(1)}%
                 </span>
               )}
@@ -435,7 +443,7 @@ export function SmartAdvisorPanel() {
           )}
 
           {error && (
-            <Alert variant="destructive">
+            <Alert className="smart-advisor-error" variant="destructive">
               <AlertCircle className="h-4 w-4" />
               <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
@@ -443,8 +451,8 @@ export function SmartAdvisorPanel() {
           )}
 
           {generationResults.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="font-medium text-muted-foreground">Latest run:</span>
+            <div className="smart-advisor-run-status">
+              <span className="smart-advisor-run-label">Latest run</span>
               {(['success', 'skipped', 'failed'] as const).map((resultStatus) => {
                 const count = generationResults.filter((result) => result.status === resultStatus).length;
                 if (count === 0) return null;
@@ -456,12 +464,12 @@ export function SmartAdvisorPanel() {
                 return (
                   <span
                     key={resultStatus}
-                    className={`rounded-full px-2 py-1 font-medium ${
+                    className={`advisor-status ${
                       resultStatus === 'success'
-                        ? 'bg-green-100 text-green-800'
+                        ? 'advisor-status-success'
                         : resultStatus === 'skipped'
-                          ? 'bg-muted text-muted-foreground'
-                          : 'bg-red-100 text-red-800'
+                          ? 'advisor-status-neutral'
+                          : 'advisor-status-critical'
                     }`}
                   >
                     {count} {label}
@@ -473,7 +481,7 @@ export function SmartAdvisorPanel() {
 
           {/* Generation info */}
           {lastGenerationTime && (
-            <div className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
+            <div className="smart-advisor-generation-info">
               Last generated:{' '}
               {new Date(lastGenerationTime).toLocaleTimeString()}
               {!canAutoGenerate() && (
@@ -488,11 +496,11 @@ export function SmartAdvisorPanel() {
           )}
 
           {loading ? (
-            <div className="flex items-center justify-center py-8">
+            <div className="smart-advisor-loading">
               <Spinner className="h-6 w-6" />
             </div>
           ) : recommendations.length === 0 ? (
-            <div className="rounded-lg border border-dashed p-6 text-center text-muted-foreground">
+            <div className="smart-advisor-empty">
               <Brain className="mx-auto mb-2 h-8 w-8 opacity-50" />
               <p>No recommendations yet.</p>
               <p className="text-sm">Click "Generate" to create AI recommendations for your holdings.</p>
@@ -508,22 +516,28 @@ export function SmartAdvisorPanel() {
                   return (
                 <div
                   key={rec.ticker}
-                  className="rounded-lg border bg-muted/30 p-4 space-y-2"
+                  className="advisor-recommendation"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="advisor-recommendation-topline">
                     <div>
-                      <h3 className="font-semibold">{rec.ticker}</h3>
-                      <p className="text-xs text-muted-foreground">
+                      <div className="advisor-ticker-line">
+                        <h3>{rec.ticker}</h3>
+                        <span className={`advisor-confidence advisor-confidence-${confidence.toLowerCase()}`}>
+                          {confidence} confidence
+                        </span>
+                      </div>
+                      <p className="advisor-recommendation-meta">
                         Generated {new Date(rec.generated_at).toLocaleDateString()} •{' '}
                         {rec.model_used}
                       </p>
-                      <p className={`text-xs ${needsRefresh ? 'text-yellow-700' : 'text-muted-foreground'}`}>
+                      <p className={`advisor-recommendation-age ${needsRefresh ? 'advisor-needs-refresh' : ''}`}>
                         {recommendationAgeLabel(rec.generated_at)}
                         {needsRefresh && ' · Refresh comparison data'}
                       </p>
                     </div>
 
                     <Button
+                      className="advisor-regenerate"
                       size="sm"
                       variant="ghost"
                       onClick={() => handleRegenerate(rec.ticker)}
@@ -537,27 +551,17 @@ export function SmartAdvisorPanel() {
                       <span className="sr-only">Regenerate {rec.ticker}</span>
                     </Button>
 
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      confidence === 'High'
-                        ? 'bg-green-100 text-green-800'
-                        : confidence === 'Moderate'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {confidence} confidence
-                    </span>
-
                     {/* Alert badges */}
                     {alerts[rec.ticker] && (
-                      <div className="flex gap-2">
+                      <div className="advisor-alert-badges">
                         {alerts[rec.ticker].timeStop?.is_stagnant && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800">
+                          <span className="advisor-status advisor-status-warning">
                             <Zap className="h-3 w-3" />
                             Time Stop
                           </span>
                         )}
                         {alerts[rec.ticker].thesis?.has_reversal && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                          <span className="advisor-status advisor-status-critical">
                             <TrendingDown className="h-3 w-3" />
                             Thesis
                           </span>
@@ -566,12 +570,12 @@ export function SmartAdvisorPanel() {
                     )}
                   </div>
 
-                  <p className="text-sm leading-relaxed text-card-foreground">
+                  <p className="advisor-recommendation-text">
                     {rec.recommendation_text}
                   </p>
 
                   {verdict && (
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 border-t pt-2 text-xs text-muted-foreground">
+                    <div className="advisor-evidence">
                       <span>Signal: <strong>{verdict.signal}</strong></span>
                       <span>Period: {verdict.return_period.replace('return_', '')}</span>
                       <span>Evidence: {verdict.data_quality?.comparable_with_return_count ?? 0}/{verdict.data_quality?.comparable_count ?? 0} usable comparisons</span>
@@ -581,7 +585,7 @@ export function SmartAdvisorPanel() {
 
                   {/* Alert details */}
                   {alerts[rec.ticker] && (
-                    <div className="mt-3 space-y-2 border-t pt-2">
+                    <div className="advisor-alert-details">
                       {alerts[rec.ticker].timeStop?.is_stagnant && (
                         <div className="text-xs text-muted-foreground">
                           <span className="font-medium">Time Stop:</span> Stagnant for{' '}

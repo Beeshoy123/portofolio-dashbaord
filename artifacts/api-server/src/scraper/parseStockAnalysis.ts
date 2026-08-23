@@ -220,7 +220,7 @@ async function fetchHistory(ticker: string): Promise<Partial<StockFundamentals>>
 function parseSuffixedNumber(raw: string | null | undefined): number | null {
   if (!raw) return null;
   const cleaned = raw.trim().replace(/,/g, "");
-  if (cleaned === "--" || cleaned === "" || /n\/?a/i.test(cleaned)) return null;
+  if (cleaned === "--" || cleaned === "—" || cleaned === "" || /n\/?a/i.test(cleaned)) return null;
 
   const match = cleaned.match(/^-?\d+(\.\d+)?([BMK])?$/i);
   if (!match) return null;
@@ -236,7 +236,7 @@ function parseSuffixedNumber(raw: string | null | undefined): number | null {
 function parsePlainNumber(raw: string | null | undefined): number | null {
   if (!raw) return null;
   const cleaned = raw.trim().replace(/,/g, "");
-  if (cleaned === "--" || cleaned === "" || /n\/?a/i.test(cleaned)) return null;
+  if (cleaned === "--" || cleaned === "—" || cleaned === "" || /n\/?a/i.test(cleaned)) return null;
   const value = parseFloat(cleaned);
   return isNaN(value) ? null : value;
 }
@@ -244,7 +244,7 @@ function parsePlainNumber(raw: string | null | undefined): number | null {
 function parsePercent(raw: string | null | undefined): number | null {
   if (!raw) return null;
   const cleaned = raw.trim().replace(/[+,%]/g, "");
-  if (cleaned === "--" || cleaned === "" || /n\/?a/i.test(cleaned)) return null;
+  if (cleaned === "--" || cleaned === "—" || cleaned === "" || /n\/?a/i.test(cleaned)) return null;
   const value = parseFloat(cleaned);
   return isNaN(value) ? null : value;
 }
@@ -261,12 +261,14 @@ function parsePercent(raw: string | null | undefined): number | null {
  */
 function extractLabeled(text: string, label: string): string | null {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  // Value is typically the next "word" after the label: numbers, %, B/M/K,
-  // currency prefixes, dates, or short words like "Buy"/"n/a".
+  // The page text is flattened to single spaces, so do not depend on
+  // repeated whitespace to separate a label from its value. Capture only
+  // the next scalar token; this prevents a missing field from consuming the
+  // next metric's label/value pair.
   const match = text.match(
-    new RegExp(`${escaped}\\s*:?\\s*([\\-\\d.,%A-Za-z/£$ ]{1,25}?)(?=\\s{2,}|\\s[A-Z][a-z]|$)`, "i")
+    new RegExp(`${escaped}\\s*:?\\s*(--|—|n\\/?a|[-+]?\\d[\\d,.]*(?:\\.\\d+)?%?(?:[BMK])?)`, "i")
   );
-  return match ? match[1].trim() : null;
+  return match?.[1]?.trim() ?? null;
 }
 
 // ---------- Overview page ----------

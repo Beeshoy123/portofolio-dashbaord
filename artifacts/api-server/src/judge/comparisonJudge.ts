@@ -302,11 +302,13 @@ async function judgeHolding(
 }
 
 /**
- * judgeAllHoldings - runs comparison judge for all held positions
+ * judgeAllHoldings - runs comparison judge for held positions by default.
+ * Pass includeAllEntities to evaluate every non-reserve watchlist entity.
  */
 export async function judgeAllHoldings(
   period: ReturnPeriod,
   runId?: number,
+  includeAllEntities = false,
 ): Promise<HoldingVerdict[]> {
   try {
     const [watchlist, snapshots, fundamentals, technicalSignals] = await Promise.all([
@@ -317,7 +319,10 @@ export async function judgeAllHoldings(
     ]);
 
     const verdicts: HoldingVerdict[] = [];
-    for (const holding of watchlist.filter((row) => row.is_held && !isEmergencyReserveFund(row))) {
+    const entities = includeAllEntities
+      ? watchlist.filter((row) => !isEmergencyReserveFund(row))
+      : watchlist.filter((row) => row.is_held && !isEmergencyReserveFund(row));
+    for (const holding of entities) {
       const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, runId);
       verdicts.push(verdict);
     }

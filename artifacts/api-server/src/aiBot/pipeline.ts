@@ -7,14 +7,14 @@ export interface BotRunSummary {
 
 export interface BotPipelineDependencies {
   runPriceChecker: () => Promise<BotRunSummary>;
-  runTechnicalAnalysis: (runId: number) => Promise<unknown>;
+  runChartReader: (runId: number) => Promise<unknown>;
   runComparisonJudge: (runId: number) => Promise<unknown[]>;
   runAlerts: (runId: number) => Promise<unknown>;
   runSmartAdvisor: (runId: number, verdicts: unknown[], alerts: unknown) => Promise<void>;
 }
 
 /**
- * Coordinates the four engines as one bot run. Each downstream engine receives
+ * Coordinates the five engines as one bot run. Each downstream engine receives
  * the exact run ID created by Price Checker, so no stage can silently consume
  * data from another execution.
  */
@@ -24,7 +24,7 @@ export async function runBotPipeline(
   const summary = await dependencies.runPriceChecker();
 
   try {
-    await dependencies.runTechnicalAnalysis(summary.runId);
+    await dependencies.runChartReader(summary.runId);
   } catch (error) {
     console.error("[ai-bot] Technical Analysis failed; continuing pipeline", error);
   }

@@ -44,7 +44,15 @@ router.get("/scraper/snapshots", async (req, res) => {
         s.dividend_yield_percent,
         s.market_cap,
         s.sector_rank,
-        s.raw_fetch_ok
+        s.raw_fetch_ok,
+        f.pe_ratio,
+        f.forward_pe,
+        f.roe_percent,
+        f.debt_to_equity,
+        f.current_ratio,
+        f.revenue_growth_percent,
+        f.dividend_yield_percent,
+        f.beta
       FROM comparison_watchlist w
       LEFT JOIN LATERAL (
         SELECT * FROM comparison_snapshots cs
@@ -55,6 +63,17 @@ router.get("/scraper/snapshots", async (req, res) => {
         ORDER BY cs.scraped_at DESC
         LIMIT 1
       ) s ON true
+      LEFT JOIN LATERAL (
+        SELECT pe_ratio, forward_pe, roe_percent, debt_to_equity,
+               current_ratio, revenue_growth_percent, dividend_yield_percent, beta
+        FROM stock_fundamentals sf
+        WHERE sf.watchlist_id = w.id
+          AND sf.raw_fetch_ok = true
+          AND sf.fetched_at >= now() - interval '30 days'
+          AND ($1::bigint IS NULL OR sf.run_id = $1::bigint)
+        ORDER BY sf.fetched_at DESC
+        LIMIT 1
+      ) f ON true
       ORDER BY w.entity_type, w.sector, w.ticker
     `, [runId, since]);
     const lastRunAt = result.rows.reduce<string | null>((latest, row) => {

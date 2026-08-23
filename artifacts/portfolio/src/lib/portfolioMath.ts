@@ -109,6 +109,7 @@ export interface Derived {
   };
   allocation: {
     pctGold: number;
+    pctLiquid: number;
     pctAbr: number;
     pctRe: number;
     pctCert: number;
@@ -342,6 +343,7 @@ export function computeDerived(portfolio: Portfolio): Derived {
     },
     allocation: {
       pctGold: totalValue > 0 ? (goldValueForTotals / totalValue) * 100 : 0,
+      pctLiquid: totalValue > 0 ? (liquidValue / totalValue) * 100 : 0,
       pctAbr: totalValue > 0 ? (abrValue / totalValue) * 100 : 0,
       pctRe: totalValue > 0 ? (reValue / totalValue) * 100 : 0,
       pctCert: totalValue > 0 ? (totalPrincipal / totalValue) * 100 : 0,

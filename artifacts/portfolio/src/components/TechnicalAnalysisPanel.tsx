@@ -23,7 +23,7 @@ async function authorizedJson<T>(url: string): Promise<T> {
     if (data.session?.access_token) headers.set('Authorization', `Bearer ${data.session.access_token}`);
   }
   const response = await fetch(url, { headers });
-  if (!response.ok) throw new Error(`Technical analysis unavailable (${response.status})`);
+  if (!response.ok) throw new Error(`Chart Reader unavailable (${response.status})`);
   return response.json() as Promise<T>;
 }
 
@@ -55,7 +55,7 @@ function CandleChart({ candles }: { candles: Candle[] }) {
   );
 }
 
-export function TechnicalAnalysisPanel() {
+export function ChartReaderPanel() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,14 +68,21 @@ export function TechnicalAnalysisPanel() {
         const result = await authorizedJson<{ signals: Signal[] }>(`/api/technical-signals?runId=${encodeURIComponent(status.runId)}`);
         const usableSignals = result.signals.filter((signal) => signal.raw_fetch_ok);
         setSignals(usableSignals);
-        const mount = document.getElementById('technical-analysis-mount');
+        const mount = document.getElementById('chart-reader-mount');
         if (mount) {
           mount.setAttribute('data-technical-ready', String(usableSignals.length > 0));
           const view = document.querySelector('.bento')?.getAttribute('data-view');
           mount.style.display = view === 'ai' && usableSignals.length > 0 ? '' : 'none';
         }
+        const pipelineStage = document.getElementById('ai-stage-chart-reader');
+        const pipelineState = pipelineStage?.querySelector('span');
+        if (pipelineStage && pipelineState) {
+          pipelineState.textContent = usableSignals.length > 0 ? 'Completed' : 'Waiting';
+          pipelineStage.style.borderColor = usableSignals.length > 0 ? 'var(--pnl-up)' : 'var(--edge)';
+          pipelineState.style.color = usableSignals.length > 0 ? 'var(--pnl-up)' : 'var(--dim)';
+        }
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Technical analysis unavailable');
+        setError(loadError instanceof Error ? loadError.message : 'Chart Reader unavailable');
       } finally {
         setLoading(false);
       }
@@ -85,11 +92,11 @@ export function TechnicalAnalysisPanel() {
 
   if (loading) return <div className="flex items-center justify-center p-6"><Spinner className="h-5 w-5" /></div>;
   if (error) return <Card><CardContent className="p-4 text-sm text-muted-foreground">{error}</CardContent></Card>;
-  if (signals.length === 0) return <Card><CardContent className="p-4 text-sm text-muted-foreground">No chart data is available for the latest technical-analysis run.</CardContent></Card>;
+  if (signals.length === 0) return <Card><CardContent className="p-4 text-sm text-muted-foreground">No candlestick data is available for the latest Chart Reader run.</CardContent></Card>;
 
   return (
     <div className="space-y-4 p-4">
-      <div className="flex items-center gap-2"><Activity className="h-5 w-5" /><div><h2 className="font-semibold">Technical Analysis</h2><p className="text-xs text-muted-foreground">Daily OHLC patterns and trend context</p></div></div>
+      <div className="flex items-center gap-2"><Activity className="h-5 w-5" /><div><h2 className="font-semibold">Chart Reader</h2><p className="text-xs text-muted-foreground">Candlestick patterns, trend, and momentum context</p></div></div>
       {signals.map((signal) => {
         const confidence = signal.confidence === null ? null : Number(signal.confidence);
         const TrendIcon = signal.trend === 'downtrend' ? TrendingDown : TrendingUp;

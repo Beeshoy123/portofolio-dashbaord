@@ -20,8 +20,7 @@ import { computeDerived } from './lib/portfolioMath';
 import { buildDashboardHtml } from './lib/dashboardHtml';
 import { initDashboardBehavior } from './lib/dashboardBehavior';
 import { runUSDRealityCheck } from './lib/usdRealityEngine';
-import { SmartAdvisorPanel } from './components/SmartAdvisorPanel';
-import { TechnicalAnalysisPanel } from './components/TechnicalAnalysisPanel';
+import { AiBotWorkspace } from './components/AiBotWorkspace';
 
 // Shown only in place of real data when the database has no rows yet, so the
 // full widget/card/heatmap layout can still be previewed with its real CSS —
@@ -115,8 +114,7 @@ export default function App() {
   const updateFundMutation = useUpdateFund();
   const createSnapshotMutation = useCreateGrowthSnapshot();
   const containerRef = useRef<HTMLDivElement>(null);
-  const advisorRootRef = useRef<Root | null>(null);
-  const technicalRootRef = useRef<Root | null>(null);
+  const aiBotRootRef = useRef<Root | null>(null);
 
   const notSeeded =
     isError &&
@@ -137,14 +135,10 @@ export default function App() {
     const derived = computeDerived(dataToRender);
     containerRef.current.innerHTML = buildDashboardHtml(dataToRender, derived, usdReality);
 
-    const advisorMount = containerRef.current.querySelector('#smart-advisor-mount');
-    advisorRootRef.current?.unmount();
-    advisorRootRef.current = advisorMount ? createRoot(advisorMount) : null;
-    advisorRootRef.current?.render(<SmartAdvisorPanel />);
-    const technicalMount = containerRef.current.querySelector('#technical-analysis-mount');
-    technicalRootRef.current?.unmount();
-    technicalRootRef.current = technicalMount ? createRoot(technicalMount) : null;
-    technicalRootRef.current?.render(<TechnicalAnalysisPanel />);
+    const aiBotMount = containerRef.current.querySelector('#ai-bot-workspace-mount');
+    aiBotRootRef.current?.unmount();
+    aiBotRootRef.current = aiBotMount ? createRoot(aiBotMount) : null;
+    aiBotRootRef.current?.render(<AiBotWorkspace />);
 
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: getGetPortfolioQueryKey() });
@@ -166,10 +160,8 @@ export default function App() {
     });
 
     return () => {
-      advisorRootRef.current?.unmount();
-      advisorRootRef.current = null;
-      technicalRootRef.current?.unmount();
-      technicalRootRef.current = null;
+      aiBotRootRef.current?.unmount();
+      aiBotRootRef.current = null;
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

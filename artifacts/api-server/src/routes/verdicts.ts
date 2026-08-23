@@ -6,9 +6,13 @@ const router = Router();
 // GET /api/rotation-verdicts — runs the comparison judge for all live held
 // positions and returns the full verdict array. Read-only; does not trigger
 // any scrape or write to the database.
-router.get("/rotation-verdicts", async (_req, res) => {
+router.get("/rotation-verdicts", async (req, res) => {
   try {
-    const verdicts = await judgeAllHoldings("return_1y");
+    const runId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
+      ? Number(req.query.runId)
+      : undefined;
+    const includeAllEntities = req.query.all === "true";
+    const verdicts = await judgeAllHoldings("return_1y", runId, includeAllEntities);
     res.json(verdicts);
   } catch (err: any) {
     console.error("[/api/rotation-verdicts]", err);

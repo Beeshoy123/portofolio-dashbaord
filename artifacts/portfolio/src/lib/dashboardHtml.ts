@@ -51,12 +51,12 @@ function attribBar(
   </div>`;
 }
 
-// Donut ring built from four segments (gold, abr, re, cert) as fractions of
+// Donut ring built from three segments (gold, EG stock, certificates) as fractions of
 // a circle with r=28 (circumference ≈ 175.93).
 function buildDonutRing(d: Derived): string {
   const r = 28;
   const c = 2 * Math.PI * r;
-  const liquidPct = d.allocation.pctAbr + d.allocation.pctRe;
+  const liquidPct = d.allocation.pctLiquid;
   const segments = [
     { pct: d.allocation.pctGold, color: "#b8893f" },
     { pct: liquidPct, color: "#0f6a5e" },
@@ -858,10 +858,10 @@ ${buildUsdRealityCard(p, d, usdReality)}
       </svg>
     </div>
     <div class="wh-metrics">
-      <div class="wh-metric"><span class="wh-dot" style="background:var(--pnl-down)"></span><span class="wh-mname" data-i18n="health.diversity">Diversity</span><div class="wh-track"><div class="wh-fill" id="wh-div" style="width:0%"></div></div><span class="wh-mval" id="wh-div-v">${Math.round(d.health.diversityScore)}</span></div>
-      <div class="wh-metric"><span class="wh-dot" style="background:var(--warning-border)"></span><span class="wh-mname" data-i18n="health.ef">Emergency fund</span><div class="wh-track"><div class="wh-fill" id="wh-ef" style="width:0%"></div></div><span class="wh-mval" id="wh-ef-v">${Math.round(d.health.emergencyFundScore)}</span></div>
-      <div class="wh-metric"><span class="wh-dot" style="background:var(--pnl-up)"></span><span class="wh-mname" data-i18n="health.yield">Yield rate</span><div class="wh-track"><div class="wh-fill" id="wh-yield-bar" style="width:0%"></div></div><span class="wh-mval" id="wh-yield-v">${Math.round(d.health.yieldScore)}</span></div>
-      <div class="wh-metric"><span class="wh-dot" style="background:var(--warning-border)"></span><span class="wh-mname" data-i18n="health.liquidity">Liquidity</span><div class="wh-track"><div class="wh-fill" id="wh-liq-bar" style="width:0%"></div></div><span class="wh-mval" id="wh-liq-v">${Math.round(d.health.liquidityScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--pnl-down)"></span><span class="wh-mname" data-i18n="health.diversity">Diversity</span><div class="wh-track"><div class="wh-fill" id="wh-div" style="width:${Math.round(d.health.diversityScore)}%;background:var(--accent)"></div></div><span class="wh-mval" id="wh-div-v">${Math.round(d.health.diversityScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--warning-border)"></span><span class="wh-mname" data-i18n="health.ef">Emergency fund</span><div class="wh-track"><div class="wh-fill" id="wh-ef" style="width:${Math.round(d.health.emergencyFundScore)}%;background:var(--pnl-down)"></div></div><span class="wh-mval" id="wh-ef-v">${Math.round(d.health.emergencyFundScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--pnl-up)"></span><span class="wh-mname" data-i18n="health.yield">Yield rate</span><div class="wh-track"><div class="wh-fill" id="wh-yield-bar" style="width:${Math.round(d.health.yieldScore)}%;background:var(--pnl-up)"></div></div><span class="wh-mval" id="wh-yield-v">${Math.round(d.health.yieldScore)}</span></div>
+      <div class="wh-metric"><span class="wh-dot" style="background:var(--warning-border)"></span><span class="wh-mname" data-i18n="health.liquidity">Liquidity</span><div class="wh-track"><div class="wh-fill" id="wh-liq-bar" style="width:${Math.round(d.health.liquidityScore)}%;background:var(--pnl-down)"></div></div><span class="wh-mval" id="wh-liq-v">${Math.round(d.health.liquidityScore)}</span></div>
     </div>
     <div class="math-section" id="math-health">
       <div class="math-line"><span class="math-label" data-i18n="ml.diversity">Diversity:</span><span class="math-calc">100 - ${d.health.goldConcentrationPct.toFixed(1)}% <span data-i18n="mc.gold.conc">gold conc.</span></span><span class="math-result">= ${Math.round(d.health.diversityScore)}</span></div>
@@ -874,7 +874,7 @@ ${buildUsdRealityCard(p, d, usdReality)}
   </div>
 
   <!-- ④ WALLET SEGMENTS -->
-  <div class="card s-2" style="display:flex;flex-direction:column;gap:10px" data-view-card="segments">
+  <div class="card s-2 wallet-segments-card" style="display:flex;flex-direction:column;gap:10px" data-view-card="segments">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <div class="card-lbl"><span data-i18n="card.segments">Wallet Segments</span> <span class="info-icon" onclick="toggleMath('alloc-detail')" title="Show concentration">ℹ</span></div>
       <div style="font-size:9.5px;color:var(--dim)" id="seg-count">3 <span data-i18n="seg.assets">assets</span></div>
@@ -887,16 +887,14 @@ ${buildUsdRealityCard(p, d, usdReality)}
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex:1">
         <div class="dl-row"><span class="dl-dot" style="background:#b8893f"></span><span class="dl-name" data-i18n="seg.gold">Gold 24K</span><span class="dl-pct" id="pct-gold">${d.allocation.pctGold.toFixed(1)}%</span></div>
-        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name">Bareeq Reserve</span><span class="dl-pct" id="pct-abr">${d.allocation.pctAbr.toFixed(1)}%</span></div>
-        <div class="dl-row"><span class="dl-dot" style="background:#2a8a70"></span><span class="dl-name">Real Estate Fund</span><span class="dl-pct" id="pct-re">${d.allocation.pctRe.toFixed(1)}%</span></div>
+        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name">EG Stock</span><span class="dl-pct" id="pct-liquid">${d.allocation.pctLiquid.toFixed(1)}%</span></div>
         <div class="dl-row" id="row-cert" style="display:flex"><span class="dl-dot" style="background:#8b6fb0"></span><span class="dl-name" data-i18n="seg.certs">Certificates</span><span class="dl-pct" id="pct-cert">${d.allocation.pctCert.toFixed(1)}%</span></div>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0">
-      <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name"><span data-i18n="seg.gold">Gold 24K</span> · ${fmt(d.gold.gramsHeld)}g</div><div class="seg-meta" id="gold-sub"><span data-i18n="seg.avg.cost">Avg cost</span> ${goldSubCost} EGP/g · <span data-i18n="seg.mkt">Mkt</span> ${goldSubMkt}</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--pnl-up)' : 'var(--pnl-down)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' <span data-i18n="seg.vs.cost">vs cost</span>' : ''}</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">🏦</div><div class="seg-body"><div class="seg-name">Bareeq Emergency Reserve</div><div class="seg-meta" id="liquid-sub">Money market · covers ${d.health.emergencyFundPct.toFixed(0)}% of emergency-fund target</div></div><div class="seg-right"><div class="seg-val" id="seg-liquid-val">${fmt(d.abr.value)}</div><div class="seg-pct" style="color:var(--pnl-up)">${fmt(d.abr.apyPercent)}% APY</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">🏢</div><div class="seg-body"><div class="seg-name">Real Estate Fund</div><div class="seg-meta">Beltone · investment position</div></div><div class="seg-right"><div class="seg-val">${fmt(d.re.value)}</div><div class="seg-pct" style="color:${d.re.pnlPct >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${pctStr(d.re.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
-      <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name" data-i18n="seg.nbe.certs">NBE Certificates</div><div class="seg-meta" id="cert-sub">${p.certificates.length} <span data-i18n="seg.nbe.certs.avg">NBE certs · avg</span> ${d.certTotals.weightedAvgRate.toFixed(1)}% APY</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--pnl-up)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name"><span data-i18n="seg.gold">Gold 24K</span> · ${fmt(d.gold.gramsHeld)}g</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--pnl-up)' : 'var(--pnl-down)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' <span data-i18n="seg.vs.cost">vs cost</span>' : ''}</div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">💧</div><div class="seg-body"><div class="seg-name">EG Stock</div></div><div class="seg-right"><div class="seg-val" id="seg-liquid-val">${fmt(d.liquid.value)}</div><div class="seg-pct" style="color:${d.liquid.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${pctStr(d.liquid.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
+      <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name" data-i18n="seg.nbe.certs">NBE Certificates</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--pnl-up)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
     </div>
     <div class="math-section" id="alloc-detail" style="margin-top:auto">
       <div id="alloc-detail-text" style="padding:2px 4px;line-height:1.5;font-size:11px;color:var(--ink)">${allocInsight(d)}</div>
@@ -981,43 +979,24 @@ ${buildUsdRealityCard(p, d, usdReality)}
         </div>
       </div>
 
-      <div id="ai-engine-pipeline" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:16px">
+      <div id="ai-engine-pipeline" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:16px">
         <div id="ai-stage-price" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">1. Prices</b><span>Waiting</span></div>
-        <div id="ai-stage-judge" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">2. Judge</b><span>Waiting</span></div>
-        <div id="ai-stage-alerts" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">3. Alerts</b><span>Waiting</span></div>
-        <div id="ai-stage-advisor" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">4. Advisor</b><span>Waiting</span></div>
+        <div id="ai-stage-chart-reader" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">2. Chart Reader</b><span>Waiting</span></div>
+        <div id="ai-stage-judge" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">3. Comparison Judge</b><span>Waiting</span></div>
+        <div id="ai-stage-alerts" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">4. Alerts</b><span>Waiting</span></div>
+        <div id="ai-stage-advisor" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">5. Advisor</b><span>Waiting</span></div>
       </div>
 
       <!-- Status line shown while scraper runs or after it completes -->
       <div id="scraper-status" style="display:none;font-size:10.5px;color:var(--dim);margin-bottom:14px;padding:8px 12px;background:var(--bg);border-radius:8px"></div>
 
-      <!-- Portfolio health insights (always visible) -->
-      <div id="ai-insights-body">
-        <div style="font-size:13px;color:var(--dim);line-height:1.6">
-          AI insights are generated from the market data and dashboard state. Use the refresh button to load the latest analysis.
-        </div>
-      </div>
-
-      <!-- Price comparison table — shown after a successful scraper run -->
-      <div id="price-checker-results" style="display:none;margin-top:20px">
-        <div id="price-checker-summary" style="display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px"></div>
-        <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:10px">📊 Market Comparison</div>
-        <div id="price-checker-table"></div>
-        <div id="price-checker-failures" style="display:none;align-items:center;gap:8px;margin-top:12px;padding:9px 11px;border:1px solid var(--warning-border);border-radius:8px;background:var(--warning-bg);color:var(--warning-border);font-size:10.5px"></div>
-      </div>
     </div>
   </div>
 
 </div><!-- /bento -->
 
-<!-- ROTATION VERDICT — populated async by loadRotationVerdicts() in dashboardBehavior.ts -->
-<div id="rotation-verdict-section" data-comparison-ready="false" style="display:none;margin-top:var(--gap)"></div>
-
-<!-- SMART ADVISOR — mounted by App.tsx immediately after the comparison verdict -->
-<div id="smart-advisor-mount" style="display:none;margin-top:var(--gap)"></div>
-
-<!-- TECHNICAL ANALYSIS — mounted by App.tsx after chart analysis completes -->
-<div id="technical-analysis-mount" style="display:none;margin-top:var(--gap)"></div>
+<!-- AI BOT WORKSPACE — focused entity analysis mounted by App.tsx -->
+<div id="ai-bot-workspace-mount" style="display:none;margin-top:var(--gap)"></div>
 
 <!-- CERTIFICATES DETAIL -->
 <div id="certs-placeholder" style="display:none;margin-top:var(--gap)">

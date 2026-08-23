@@ -273,7 +273,10 @@ export function initDashboardBehavior(
     const cp = el("certs-placeholder");
     if (cp) cp.style.display = view === "certs" ? "block" : "none";
 
-    const rv = el("rotation-verdict-section");
+    const aiBotWorkspace = el("ai-bot-workspace-mount");
+    if (aiBotWorkspace) aiBotWorkspace.style.display = view === "ai" ? "" : "none";
+
+    const rv = el("comparison-judge-section");
     if (rv) {
       const comparisonReady = rv.getAttribute("data-comparison-ready") === "true";
       rv.style.display = view === "ai" && comparisonReady ? "" : "none";
@@ -281,7 +284,7 @@ export function initDashboardBehavior(
       if (advisorMount) {
         advisorMount.style.display = view === "ai" && comparisonReady ? "" : "none";
       }
-      const technicalMount = el("technical-analysis-mount");
+      const technicalMount = el("chart-reader-mount");
       if (technicalMount) {
         const technicalReady = technicalMount.getAttribute("data-technical-ready") === "true";
         technicalMount.style.display = view === "ai" && technicalReady ? "" : "none";
@@ -1272,11 +1275,11 @@ export function initDashboardBehavior(
 
       const judgeCompleted = runStatus.stages.comparisonJudge === "completed";
       const priceCheckerCompleted = runStatus.stages.priceChecker === "completed";
-      const verdictSection = el("rotation-verdict-section");
+      const verdictSection = el("comparison-judge-section");
       if (judgeCompleted && verdictSection) {
         verdictSection.setAttribute("data-comparison-ready", "true");
         verdictSection.style.display = currentView === "ai" ? "" : "none";
-        await loadRotationVerdicts();
+        await loadComparisonJudge();
       }
 
       const advisorMount = el("smart-advisor-mount");
@@ -1303,6 +1306,7 @@ export function initDashboardBehavior(
   function updateAiPipeline(stages: Record<string, string>): void {
     const stageMap: Record<string, string> = {
       priceChecker: "ai-stage-price",
+      chartReader: "ai-stage-chart-reader",
       comparisonJudge: "ai-stage-judge",
       alerts: "ai-stage-alerts",
       smartAdvisor: "ai-stage-advisor",
@@ -1339,7 +1343,7 @@ export function initDashboardBehavior(
     if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Fetching';
     if (engineState) (engineState as HTMLElement).style.color = "var(--warning-border)";
     if (engineUpdated) engineUpdated.textContent = "Price checker is running";
-    updateAiPipeline({ priceChecker: "running", comparisonJudge: "waiting", alerts: "waiting", smartAdvisor: "waiting" });
+    updateAiPipeline({ priceChecker: "running", chartReader: "waiting", comparisonJudge: "waiting", alerts: "waiting", smartAdvisor: "waiting" });
     if (statusEl) { statusEl.style.display = "block"; statusEl.textContent = "⏳ Fetching prices from FoudaLens — this takes 1–2 minutes…"; }
     if (resultsEl && tableEl) {
       resultsEl.style.display = "block";
@@ -1378,11 +1382,15 @@ export function initDashboardBehavior(
         runStatus = (await statusResp.json()) as typeof runStatus;
         updateAiPipeline(runStatus.stages);
         let fetchedCount = 0;
-        if (tableEl && resultsEl && runStatus.runId !== null) {
+        if (runStatus.runId !== null) {
           const liveSnapResp = await authenticatedFetch(`/api/scraper/snapshots?runId=${encodeURIComponent(runStatus.runId)}`, { signal: scraperController.signal });
           if (liveSnapResp.ok) {
             const liveData = (await liveSnapResp.json()) as { snapshots: any[] };
-            fetchedCount = renderPriceCheckerTable(liveData.snapshots, tableEl, resultsEl);
+            fetchedCount = liveData.snapshots.filter((snapshot: any) => snapshot.raw_fetch_ok).length;
+            window.dispatchEvent(new CustomEvent("ai-bot-snapshots-updated", {
+              detail: { snapshots: liveData.snapshots, runId: runStatus.runId },
+            }));
+            if (tableEl && resultsEl) renderPriceCheckerTable(liveData.snapshots, tableEl, resultsEl);
           }
         }
         if (statusEl && runStatus.running) {
@@ -1413,7 +1421,7 @@ export function initDashboardBehavior(
       if (statusEl) {
         const ts = lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now";
         const ok = snapshots.filter((s: any) => s.raw_fetch_ok).length;
-        const outcome = runStatus.stages.priceChecker === "completed" && runStatus.stages.comparisonJudge === "completed" && runStatus.stages.alerts === "completed" && runStatus.stages.smartAdvisor === "completed" ? "✅ Done" : "⚠️ Partial";
+        const outcome = runStatus.stages.priceChecker === "completed" && runStatus.stages.chartReader === "completed" && runStatus.stages.comparisonJudge === "completed" && runStatus.stages.alerts === "completed" && runStatus.stages.smartAdvisor === "completed" ? "✅ Done" : "⚠️ Partial";
         statusEl.textContent = `${outcome} at ${ts} · ${ok}/${snapshots.length} entities fetched successfully`;
       }
       if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Completed';
@@ -1421,16 +1429,19 @@ export function initDashboardBehavior(
       if (engineUpdated) engineUpdated.textContent = `Updated ${lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now"}`;
 
       if (tableEl && resultsEl) renderPriceCheckerTable(snapshots, tableEl, resultsEl);
+      window.dispatchEvent(new CustomEvent("ai-bot-snapshots-updated", {
+        detail: { snapshots, runId: runStatus.runId },
+      }));
       await callbacks.refreshPortfolio?.();
 
-      const verdictSection = el("rotation-verdict-section");
+      const verdictSection = el("comparison-judge-section");
       if (verdictSection) {
         verdictSection.setAttribute("data-comparison-ready", "true");
         verdictSection.style.display = currentView === "ai" ? "" : "none";
       }
       const advisorMount = el("smart-advisor-mount");
       if (advisorMount) advisorMount.style.display = currentView === "ai" ? "" : "none";
-      await loadRotationVerdicts();
+      await loadComparisonJudge();
     } catch (err: any) {
       if (scraperController.signal.aborted) return;
       if (statusEl) statusEl.textContent = `❌ Network error: ${err?.message ?? "Unknown"}`;
@@ -2129,12 +2140,12 @@ export function initDashboardBehavior(
   // stale EGP prices) are updated without waiting for the user to click 🔄.
   void (win.doRefresh as () => Promise<void>)();
 
-  // ── Rotation Verdict ────────────────────────────────────────────────────
+  // ── Comparison Judge ───────────────────────────────────────────────────
   // Mirrors the formatting logic from judge/printVerdicts.ts formatGroup(),
   // but renders HTML instead of plain text. Only shows second-opinion
   // disagreements (agrees === false) — agreements are the quiet case.
 
-  // ── Rotation Verdict helpers ─────────────────────────────────────────────
+  // ── Comparison Judge helpers ─────────────────────────────────────────────
 
   function riskPill(tier: string | null): string {
     if (!tier) return `<span style="color:var(--dim);font-size:9px">risk unknown</span>`;
@@ -2161,13 +2172,6 @@ export function initDashboardBehavior(
     };
     const label = labelMap[group.group_type] ?? group.group_type;
 
-    // compute max return across holding + all entries for bar scaling
-    const allReturns: number[] = group.entries
-      .map((e: any) => e.return_percent)
-      .filter((r: number | null) => r !== null) as number[];
-    if (holdingReturn !== null) allReturns.push(holdingReturn);
-    const maxReturn = allReturns.length > 0 ? Math.max(...allReturns) : 100;
-
     const hasAnyData = group.entries.some((e: any) => e.return_percent !== null);
     const allPending = !hasAnyData;
 
@@ -2177,24 +2181,20 @@ export function initDashboardBehavior(
     } else {
       rows = group.entries.map((entry: any) => {
         if (entry.return_percent === null) {
-          return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--edge)">
-            <span style="font-weight:700;font-size:10.5px;min-width:52px;color:var(--dim)">${entry.ticker}</span>
-            <span style="font-size:10px;color:var(--dim);font-style:italic">no data yet</span>
+          return `<div class="comparison-evidence-row comparison-evidence-pending">
+            <span class="comparison-ticker">${entry.ticker}</span>
+            <span class="comparison-pending-label">No return data yet</span>
           </div>`;
         }
 
         const ret: number = entry.return_percent;
         const gap: number | null = entry.gap_percent;
-        const barWidthEntry = maxReturn > 0 ? Math.max(2, Math.round((Math.abs(ret) / maxReturn) * 100)) : 2;
-        const barWidthHolding = maxReturn > 0 && holdingReturn !== null
-          ? Math.max(2, Math.round((Math.abs(holdingReturn) / maxReturn) * 100))
-          : 0;
         const retColor = ret >= 0 ? "var(--pnl-up)" : "var(--pnl-down)";
 
         const gapChip = gap !== null
           ? gap >= 0
-            ? `<span style="background:var(--pnl-up-soft);color:var(--pnl-up);font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">+${gap.toFixed(1)}pp ahead</span>`
-            : `<span style="background:var(--pnl-down-soft);color:var(--pnl-down);font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap">${Math.abs(gap).toFixed(1)}pp behind</span>`
+            ? `<span class="comparison-gap comparison-gap-ahead">+${gap.toFixed(1)}pp ahead</span>`
+            : `<span class="comparison-gap comparison-gap-behind">${Math.abs(gap).toFixed(1)}pp behind</span>`
           : "";
 
         const mismatchHtml = entry.risk_mismatch && entry.foudalens_risk_level
@@ -2211,33 +2211,24 @@ export function initDashboardBehavior(
             </div>`
           : "";
 
-        return `<div style="padding:6px 0;border-bottom:1px solid var(--edge)">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-weight:700;font-size:10.5px;min-width:52px">${entry.ticker}</span>
-            <div style="flex:1;display:flex;flex-direction:column;gap:3px">
-              <div style="display:flex;align-items:center;gap:6px">
-                <div style="position:relative;height:6px;background:var(--edge);border-radius:3px;flex:1;overflow:hidden">
-                  <div style="position:absolute;left:0;top:0;height:100%;width:${barWidthEntry}%;background:${retColor};border-radius:3px;transition:width .3s"></div>
-                  ${holdingReturn !== null ? `<div style="position:absolute;left:0;top:0;height:100%;width:${barWidthHolding}%;background:var(--pnl-up-soft);border-radius:3px;pointer-events:none"></div>` : ""}
-                </div>
-                <span style="font-size:10.5px;font-weight:700;min-width:42px;text-align:right;color:${retColor}">${ret >= 0 ? "+" : ""}${ret.toFixed(1)}%</span>
-                ${gapChip}
-              </div>
-            </div>
-            <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
-              ${entry.computed_risk_tier ? riskPill(entry.computed_risk_tier) : ""}
-              ${mismatchHtml}
-            </div>
+        return `<div class="comparison-evidence-row">
+          <span class="comparison-ticker">${entry.ticker}</span>
+          <span class="comparison-return" style="color:${retColor}">${ret >= 0 ? "+" : ""}${ret.toFixed(1)}%</span>
+          <div class="comparison-evidence-spacer"></div>
+          ${gapChip}
+          <div class="comparison-risk">
+            ${entry.computed_risk_tier ? riskPill(entry.computed_risk_tier) : ""}
+            ${mismatchHtml}
           </div>
           ${disagreeHtml}
         </div>`;
       }).join("");
     }
 
-    return `<div style="margin-top:18px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-        <span style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)">${label}</span>
-        <div style="display:flex;gap:4px">${beatPill(group.you_beat_count, group.you_lose_count, group.incomplete_count)}</div>
+    return `<div class="comparison-group">
+      <div class="comparison-group-header">
+        <span class="comparison-group-label">${label}</span>
+        <div class="comparison-group-summary">${beatPill(group.you_beat_count, group.you_lose_count, group.incomplete_count)}</div>
       </div>
       ${rows}
     </div>`;
@@ -2265,69 +2256,74 @@ export function initDashboardBehavior(
     const confidence = v.data_completeness_warning ? "Limited" : totalPending > 0 ? "Moderate" : "High";
 
     const flagsHtml = (v.flags as string[]).length > 0
-      ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:10px">
+      ? `<div class="comparison-flags">
           ${(v.flags as string[]).map((f: string) =>
-            `<span style="background:var(--edge);border-radius:4px;padding:2px 8px;font-size:9px;font-weight:700;color:var(--dim)">${f}</span>`
+            `<span>${f}</span>`
           ).join("")}
         </div>`
       : "";
 
     const warningHtml = v.data_completeness_warning
-      ? `<div style="margin-top:14px;padding:8px 12px;background:var(--warning-bg);border:1px solid var(--warning-border);border-radius:8px;font-size:10px;color:var(--warning-border);display:flex;align-items:flex-start;gap:7px">
+      ? `<div class="comparison-warning">
           <span style="flex-shrink:0">⚠️</span>
           <span>Over 30% of comparison entries have no data yet — verdict may be unreliable until the scraper has run more cycles.</span>
         </div>`
       : "";
 
-    return `<div class="card" style="padding:24px 26px;margin-bottom:var(--gap)">
+    return `<div class="card comparison-judge-card">
       <!-- Card header -->
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
-        <div>
-          <div style="font-weight:800;font-size:15px;letter-spacing:-.01em">${v.holding_ticker} <span style="font-weight:400;color:var(--dim)">·</span> ${v.holding_name}</div>
-          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:7px">
-            <span style="font-size:10px;color:var(--dim);background:var(--edge);border-radius:4px;padding:2px 7px">${periodLabel} return</span>
-            <span style="font-size:13px;font-weight:800;color:${returnColor}">${returnStr}</span>
+      <div class="comparison-holding-header">
+        <div class="comparison-holding-title">
+          <span class="comparison-holding-eyebrow">Current holding</span>
+          <div class="comparison-holding-name">${v.holding_ticker} <span>·</span> ${v.holding_name}</div>
+          <div class="comparison-holding-meta">
+            <span>${periodLabel} return</span>
+            <strong style="color:${returnColor}">${returnStr}</strong>
             ${riskPill(v.holding_risk_tier)}
-            ${posValue ? `<span style="font-size:10px;color:var(--dim)">${posValue} held</span>` : ""}
+            ${posValue ? `<span>${posValue} held</span>` : ""}
           </div>
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="background:${signalBg};border:1px solid ${signalBorder};color:${signalColor};border-radius:8px;padding:6px 14px;font-size:12px;font-weight:800;white-space:nowrap">${signalIcon} ${v.signal}</div>
-          <div style="font-size:9.5px;color:var(--dim);margin-top:6px;text-align:right">
+        <div class="comparison-verdict-result">
+          <div class="comparison-signal" style="background:${signalBg};border-color:${signalBorder};color:${signalColor}">${signalIcon} ${v.signal}</div>
+          <div class="comparison-overall-summary">
             ${beatPill(totalBeat, totalLose, totalPending)}
           </div>
-          <div style="font-size:9px;color:var(--dim);margin-top:5px;text-align:right">Confidence: ${confidence}</div>
+          <div class="comparison-confidence">${confidence} confidence</div>
         </div>
       </div>
 
       ${flagsHtml}
       ${warningHtml}
 
-      <!-- Divider -->
-      <div style="border-top:1px solid var(--edge);margin:18px 0 2px"></div>
-
       <!-- Group breakdown -->
       ${(v.groups as any[]).map((g: any) => buildGroupRows(g, returnPct)).join("")}
     </div>`;
   }
 
-  async function loadRotationVerdicts(): Promise<void> {
-    const section = el("rotation-verdict-section");
+  async function loadComparisonJudge(): Promise<void> {
+    const section = el("comparison-judge-section");
     if (!section) return;
 
     // Show skeleton while loading
     section.innerHTML = `
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:14px">🔄 Rotation Verdict</div>
+      <div class="comparison-judge-loading-title">Comparison Judge</div>
       <div class="card" style="padding:24px 26px;display:flex;align-items:center;gap:12px;color:var(--dim);font-size:11px">
         <div style="width:14px;height:14px;border:2px solid var(--pnl-up);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
       </div>`;
 
     try {
-      const resp = await authenticatedFetch("/api/rotation-verdicts");
+        const statusResp = await authenticatedFetch("/api/ai-bot/status");
+        const status = statusResp.ok
+          ? await statusResp.json() as { runId?: number | null }
+          : { runId: null };
+        const verdictUrl = status.runId === null || status.runId === undefined
+          ? "/api/rotation-verdicts"
+          : `/api/rotation-verdicts?runId=${encodeURIComponent(status.runId)}`;
+        const resp = await authenticatedFetch(verdictUrl);
       if (!resp.ok) {
         const errBody = await resp.json().catch(() => ({ error: resp.statusText }));
         section.innerHTML = `<div class="card" style="padding:20px 24px;font-size:11px;color:var(--pnl-down);display:flex;gap:8px;align-items:center">
-          <span>⚠️</span> Failed to load Rotation Verdict: ${(errBody as any).error ?? resp.statusText}
+          <span>⚠️</span> Failed to load Comparison Judge: ${(errBody as any).error ?? resp.statusText}
         </div>`;
         return;
       }
@@ -2336,7 +2332,7 @@ export function initDashboardBehavior(
 
       if (verdicts.length === 0) {
         section.innerHTML = `<div class="card" style="padding:24px 26px">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin-bottom:10px">🔄 Rotation Verdict</div>
+          <div class="comparison-judge-empty-title">Comparison Judge</div>
           <div style="color:var(--dim);font-size:11px">No holdings currently linked for comparison — map a <code>funds_table_key</code> in <code>comparison_watchlist</code> to start tracking.</div>
         </div>`;
         return;
@@ -2350,17 +2346,21 @@ export function initDashboardBehavior(
       const holdCount = verdicts.filter((v: any) => v.signal === "Mixed").length;
       const reviewCount = verdicts.length - buyCount - holdCount;
       const summaryCard = (label: string, count: number, color: string, background: string) => `
-        <div style="padding:10px 12px;border:1px solid ${color};border-radius:8px;background:${background}">
-          <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">${label}</div>
-          <div style="font-size:20px;font-weight:800;color:${color};margin-top:3px">${count}</div>
+        <div class="comparison-summary-card" style="--summary-color:${color};--summary-background:${background}">
+          <div class="comparison-summary-label">${label}</div>
+          <div class="comparison-summary-count">${count}</div>
         </div>`;
 
       section.innerHTML = `
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">
-          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--dim)">🔄 Rotation Verdict</div>
-          <div style="font-size:9.5px;color:var(--dim)">Based on latest price run</div>
+        <div class="comparison-page-header">
+          <div>
+            <div class="comparison-page-kicker">Decision support</div>
+            <h2>Comparison Judge</h2>
+            <p>See how each holding compares with its relevant market alternatives.</p>
+          </div>
+          <div class="comparison-updated">Based on latest price run</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:16px">
+        <div class="comparison-summary-grid">
           ${summaryCard("Buy", buyCount, "var(--pnl-up)", "var(--pnl-up-soft)")}
           ${summaryCard("Hold", holdCount, "var(--warning-border)", "var(--warning-bg)")}
           ${summaryCard("Review", reviewCount, "var(--edge)", "var(--edge)")}
