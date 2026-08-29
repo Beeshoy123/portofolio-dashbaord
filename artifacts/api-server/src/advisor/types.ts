@@ -6,13 +6,25 @@ export interface AdvisorRecommendation {
   generated_at: string; // ISO timestamp
   model_used: string;
   structured: {
+    /** 4-state action vocabulary.
+     *  consider_entry    — unheld entity worth researching
+     *  consider_rotation — held entity losing to a specific named alternative
+     *  watch_and_wait    — default when data quality or flags reduce certainty
+     *  hold              — Strong/Mixed signal, no conflicting flags
+     */
     decision: "consider_entry" | "consider_rotation" | "watch_and_wait" | "hold";
     confidence: number;
     summary: string;
     evidence: string[];
     risks: string[];
     next_review_days: number;
+    /** Non-empty when decision is watch_and_wait or consider_rotation.
+     *  Contains one concrete, checkable condition grounded in the DATA block.
+     *  Empty string "" when decision is consider_entry or hold. */
     watch_trigger: string;
+    /** Non-empty when decision is watch_and_wait or hold.
+     *  Contains 1-3 reasons NOT to act yet, grounded in the DATA block.
+     *  Empty array [] when decision is consider_entry or consider_rotation. */
     do_not_act_reasons: string[];
   };
 }

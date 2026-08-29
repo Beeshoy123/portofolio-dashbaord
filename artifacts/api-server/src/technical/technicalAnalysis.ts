@@ -1,7 +1,5 @@
 import { allPatterns, patternChain } from "candlestick";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+import { pool } from "../lib/dbPool";
 const YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/";
 
 type Candle = { date: string; open: number; high: number; low: number; close: number; volume: number | null };
