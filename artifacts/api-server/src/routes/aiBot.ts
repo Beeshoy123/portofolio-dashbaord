@@ -220,55 +220,154 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             ? Number(((valueSums.insufficientValue / valueSums.totalValue) * 100).toFixed(1))
             : null;
 
+          // Check how many held entities were expected vs how many verdicts succeeded
+          let totalExpectedHoldings = verdicts.length;
           try {
-            // Discover opportunities periodically (every 5th run) to balance freshness vs. performance
-            // Each run evaluates ~59 entities instead of ~8-10 held ones, so we throttle to reduce load
-            let opportunities: OpportunitiesAnalysis | undefined;
-            if (runId && runId % 5 === 0) {
-              try {
-                opportunities = await findOpportunities(runId);
-                console.log("[ai-bot] Opportunities discovery ran for runId", runId);
-              } catch (err) {
-                console.warn("[ai-bot] Opportunities discovery failed; proceeding without opportunity context:", err);
-                // Non-fatal: opportunities are optional context, portfolio summary can still run
-              }
-            } else if (runId) {
-              console.log("[ai-bot] Skipping opportunities discovery for runId", runId, "(runs every 5th time)");
-            }
-
-            const portfolioSummary = await generatePortfolioSummary(verdicts, opportunities);
-            portfolioSummaryContext = {
-              summary_text: portfolioSummary.summary_text,
-              strong_count: counts.strong,
-              mixed_count: counts.mixed,
-              weak_count: counts.weak,
-              insufficient_data_count: counts.insufficientData,
-            };
-            await pool.query(
-              `INSERT INTO portfolio_summaries
-                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-               ON CONFLICT (run_id) DO NOTHING`,
-              [
-                runId,
-                portfolioSummary.summary_text,
-                counts.strong,
-                counts.mixed,
-                counts.weak,
-                counts.insufficientData,
-                portfolioSummary.model_used,
-                counts.flaggedCount,
-                avgCoveragePercent,
-                counts.reversalRiskCount,
-                counts.divergenceCount,
-                strongValuePercent,
-                mixedValuePercent,
-                weakValuePercent,
-                insufficientValuePercent,
-              ],
+            const heldCountResult = await pool.query<{ count: number }>(
+              `SELECT COUNT(*)::int AS count FROM comparison_watchlist
+               WHERE is_held = true AND ticker <> 'ABR' AND COALESCE(funds_table_key, '') <> 'abr' AND lower(name) NOT LIKE '%bareeq%'`
             );
+            if (heldCountResult.rows.length > 0 && heldCountResult.rows[0].count > 0) {
+              totalExpectedHoldings = Number(heldCountResult.rows[0].count);
+            }
+          } catch (countErr) {
+            console.warn("[ai-bot] Could not query expected held holdings count:", countErr);
+          }
+
+          const succeededCount = verdicts.length;
+          const hasEnoughData = succeededCount > 0 && totalExpectedHoldings > 0 && (succeededCount / totalExpectedHoldings) >= 0.5;
+
+          try {
+            if (!hasEnoughData) {
+              const fallbackSummaryText = `Only ${succeededCount} of ${totalExpectedHoldings} holdings could be judged this run — not enough data for a reliable portfolio summary. Retry the run for a complete picture.`;
+              portfolioSummaryContext = {
+                summary_text: fallbackSummaryText,
+                strong_count: counts.strong,
+                mixed_count: counts.mixed,
+                weak_count: counts.weak,
+                insufficient_data_count: counts.insufficientData,
+              };
+              await pool.query(
+                `INSERT INTO portfolio_summaries
+                  (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                 ON CONFLICT (run_id) DO UPDATE SET
+                   summary_text = EXCLUDED.summary_text,
+                   strong_count = EXCLUDED.strong_count,
+                   mixed_count = EXCLUDED.mixed_count,
+                   weak_count = EXCLUDED.weak_count,
+                   insufficient_data_count = EXCLUDED.insufficient_data_count,
+                   model_used = EXCLUDED.model_used,
+                   flagged_count = EXCLUDED.flagged_count,
+                   avg_coverage_percent = EXCLUDED.avg_coverage_percent,
+                   reversal_risk_count = EXCLUDED.reversal_risk_count,
+                   divergence_count = EXCLUDED.divergence_count,
+                   strong_value_percent = EXCLUDED.strong_value_percent,
+                   mixed_value_percent = EXCLUDED.mixed_value_percent,
+                   weak_value_percent = EXCLUDED.weak_value_percent,
+                   insufficient_value_percent = EXCLUDED.insufficient_value_percent,
+                   generated_at = now()`,
+                [
+                  runId,
+                  fallbackSummaryText,
+                  counts.strong,
+                  counts.mixed,
+                  counts.weak,
+                  counts.insufficientData,
+                  "deterministic-fallback",
+                  counts.flaggedCount,
+                  avgCoveragePercent,
+                  counts.reversalRiskCount,
+                  counts.divergenceCount,
+                  strongValuePercent,
+                  mixedValuePercent,
+                  weakValuePercent,
+                  insufficientValuePercent,
+                ],
+              );
+              console.warn(`[ai-bot] Portfolio summary skipped (below 50% threshold: ${succeededCount}/${totalExpectedHoldings} judged); saved deterministic summary.`);
+            } else {
+              // Discover opportunities periodically (every 5th run) to balance freshness vs. performance
+              // Each run evaluates ~59 entities instead of ~8-10 held ones, so we throttle to reduce load
+              let opportunities: OpportunitiesAnalysis | undefined;
+              if (runId && runId % 5 === 0) {
+                try {
+                  opportunities = await findOpportunities(runId);
+                  console.log("[ai-bot] Opportunities discovery ran for runId", runId);
+                } catch (err) {
+                  console.warn("[ai-bot] Opportunities discovery failed; proceeding without opportunity context:", err);
+                  // Non-fatal: opportunities are optional context, portfolio summary can still run
+                }
+              } else if (runId) {
+                console.log("[ai-bot] Skipping opportunities discovery for runId", runId, "(runs every 5th time)");
+              }
+
+              const evaluationScope = {
+                totalExpected: totalExpectedHoldings,
+                evaluated: succeededCount,
+              };
+
+              let summaryText = "";
+              let modelUsed = "deterministic-fallback";
+
+              try {
+                const portfolioSummary = await generatePortfolioSummary(verdicts, opportunities, evaluationScope);
+                summaryText = portfolioSummary.summary_text;
+                modelUsed = portfolioSummary.model_used;
+              } catch (genError) {
+                console.error("[ai-bot] generatePortfolioSummary failed; falling back to deterministic summary:", genError);
+                summaryText = `Portfolio summary could not be generated by AI for this run. Evaluated ${succeededCount} of ${totalExpectedHoldings} holdings: ${counts.strong} Strong, ${counts.mixed} Mixed, ${counts.weak} Weak, ${counts.insufficientData} Insufficient Data.`;
+                modelUsed = "fallback";
+              }
+
+              portfolioSummaryContext = {
+                summary_text: summaryText,
+                strong_count: counts.strong,
+                mixed_count: counts.mixed,
+                weak_count: counts.weak,
+                insufficient_data_count: counts.insufficientData,
+              };
+              await pool.query(
+                `INSERT INTO portfolio_summaries
+                  (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                 ON CONFLICT (run_id) DO UPDATE SET
+                   summary_text = EXCLUDED.summary_text,
+                   strong_count = EXCLUDED.strong_count,
+                   mixed_count = EXCLUDED.mixed_count,
+                   weak_count = EXCLUDED.weak_count,
+                   insufficient_data_count = EXCLUDED.insufficient_data_count,
+                   model_used = EXCLUDED.model_used,
+                   flagged_count = EXCLUDED.flagged_count,
+                   avg_coverage_percent = EXCLUDED.avg_coverage_percent,
+                   reversal_risk_count = EXCLUDED.reversal_risk_count,
+                   divergence_count = EXCLUDED.divergence_count,
+                   strong_value_percent = EXCLUDED.strong_value_percent,
+                   mixed_value_percent = EXCLUDED.mixed_value_percent,
+                   weak_value_percent = EXCLUDED.weak_value_percent,
+                   insufficient_value_percent = EXCLUDED.insufficient_value_percent,
+                   generated_at = now()`,
+                [
+                  runId,
+                  summaryText,
+                  counts.strong,
+                  counts.mixed,
+                  counts.weak,
+                  counts.insufficientData,
+                  modelUsed,
+                  counts.flaggedCount,
+                  avgCoveragePercent,
+                  counts.reversalRiskCount,
+                  counts.divergenceCount,
+                  strongValuePercent,
+                  mixedValuePercent,
+                  weakValuePercent,
+                  insufficientValuePercent,
+                ],
+              );
+            }
           } catch (error) {
-            throw new Error(`Portfolio summary generation failed; cannot continue with per-holding advisor: ${error instanceof Error ? error.message : "unknown error"}`);
+            console.error("[ai-bot] Portfolio summary step encountered an error; continuing with per-holding advisor:", error);
           }
 
           // Track advisor generation success — if all fail, the run should not be "completed"

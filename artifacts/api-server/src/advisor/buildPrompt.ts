@@ -65,7 +65,7 @@ DO_NOT_ACT_REASONS: when decision is watch_and_wait or hold, list 1-3 short reas
 
 export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are not a licensed financial advisor.
 
-Write ONE concise overall portfolio read in 4-6 sentences. Use only the verdict-level data provided. State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a holding-count read of "mostly Strong" but a large value percentage sits in Weak, or vice versa), you MUST call this out explicitly in the summary — this is the single most decision-relevant signal in the whole prompt, since it means a small-looking problem is actually large in money terms, or a large-looking problem is actually a small position. Name holdings that clearly carry the portfolio or drag it down when their signal is notably different from the rest. Do not repeat every holding's details; this is an overall conclusion, not a re-listing of evidence. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If average coverage is low, or if flagged holdings, reversal risk, or trend divergences represent more than a small fraction of total holdings, you must mention this as a reason for lower confidence in the overall summary — do not just report the counts, explain what they mean for how much to trust the read. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now. If data is missing, say so plainly.
+Write ONE concise overall portfolio read in 4-6 sentences. Use only the verdict-level data provided. State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a holding-count read of "mostly Strong" but a large value percentage sits in Weak, or vice versa), you MUST call this out explicitly in the summary — this is the single most decision-relevant signal in the whole prompt, since it means a small-looking problem is actually large in money terms, or a large-looking problem is actually a small position. Name holdings that clearly carry the portfolio or drag it down when their signal is notably different from the rest. Do not repeat every holding's details; this is an overall conclusion, not a re-listing of evidence. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If average coverage is low, or if flagged holdings, reversal risk, or trend divergences represent more than a small fraction of total holdings, you must mention this as a reason for lower confidence in the overall summary — do not just report the counts, explain what they mean for how much to trust the read. If the prompt notes that some entities could not be evaluated and this missing count is more than 1-2 entities, explicitly mention that this summary is based on a partial evaluation of the portfolio. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now. If data is missing, say so plainly.
 `;
 
 export const OPPORTUNITY_ANALYSIS_SYSTEM_INSTRUCTIONS = `You are a financial explainer helping an Egyptian investor identify portfolio diversification opportunities. Your job is to explain PRE-CALCULATED opportunity facts, not discover them yourself.
@@ -85,13 +85,20 @@ OPPORTUNITY ANALYSIS RULES:
 
 export function buildPortfolioSummaryPrompt(
   verdicts: HoldingVerdict[],
-  opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> }
+  opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> },
+  evaluationScope?: { totalExpected: number; evaluated: number }
 ): string {
   const lines = verdicts.length > 0
     ? verdicts.map((verdict) =>
       `- ${verdict.holding_ticker} (${verdict.holding_name}): ${verdict.signal}; return ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "unavailable"}`,
     )
     : ["- No holding verdicts were produced for this run."];
+
+  let partialEvaluationLine = "";
+  if (evaluationScope && evaluationScope.totalExpected > evaluationScope.evaluated) {
+    const missingCount = evaluationScope.totalExpected - evaluationScope.evaluated;
+    partialEvaluationLine = `\n- Note: ${evaluationScope.evaluated} of ${evaluationScope.totalExpected} entities were judged this run; ${missingCount} could not be evaluated.`;
+  }
 
   const totalCount = verdicts.length;
   const flaggedCount = verdicts.filter((v) => v.flags && v.flags.length > 0).length;
@@ -177,7 +184,7 @@ export function buildPortfolioSummaryPrompt(
     "- Include only actual watchlist evidence; do not invent sectors or holdings.",
   ].join("\n");
 
-  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}\n${distributionLine}\n${aggregateLine}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
+  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}${partialEvaluationLine}\n${distributionLine}\n${aggregateLine}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
 }
 
 function formatGroupForPrompt(group: ComparisonGroup): string {

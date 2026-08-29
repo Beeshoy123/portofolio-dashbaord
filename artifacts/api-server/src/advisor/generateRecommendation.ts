@@ -300,7 +300,8 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
 
 export async function generatePortfolioSummary(
   verdicts: HoldingVerdict[],
-  opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> }
+  opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> },
+  evaluationScope?: { totalExpected: number; evaluated: number }
 ): Promise<{ summary_text: string; model_used: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -315,7 +316,7 @@ export async function generatePortfolioSummary(
       signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS }] },
-        contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts, opportunities) }] }],
+        contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts, opportunities, evaluationScope) }] }],
         generationConfig: {
           temperature: GEMINI_TEMPERATURE,
           maxOutputTokens: 400,

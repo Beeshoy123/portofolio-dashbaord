@@ -50,6 +50,27 @@ type PortfolioSummary = {
   generated_at: string;
 };
 
+type OpportunitiesAnalysis = {
+  strong_unheld: Array<{
+    holding_ticker: string;
+    holding_name: string;
+    holding_return_percent: number | null;
+    signal: string;
+    coverage_percent?: number | null;
+  }>;
+  underrepresented_sectors: Array<{
+    sector: string;
+    portfolio_allocation_percent: number;
+    strong_candidates: Array<{
+      holding_ticker: string;
+      holding_name: string;
+      holding_return_percent: number | null;
+      signal: string;
+      coverage_percent?: number | null;
+    }>;
+  }>;
+};
+
 const VERDICT_FLAG_MAP: Record<string, { label: string; category: 'info' | 'warning' }> = {
   thin_comparable_sample: { label: 'Thin sample', category: 'info' },
   underperforming_comparables: { label: 'Underperforming peers', category: 'warning' },
@@ -144,6 +165,7 @@ export function AiBotWorkspace() {
   const [verdicts, setVerdicts] = useState<Verdict[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
+  const [opportunitiesData, setOpportunitiesData] = useState<OpportunitiesAnalysis | null>(null);
   const [runId, setRunId] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [filterMode, setFilterMode] = useState<'held' | 'all'>('held');
@@ -175,12 +197,13 @@ export function AiBotWorkspace() {
         const status = await json<{ runId: number | null }>('/api/ai-bot/status');
         setRunId(status.runId);
         const suffix = status.runId === null ? '' : `?runId=${encodeURIComponent(status.runId)}`;
-        const [snapshotData, signalData, verdictData, recommendationData, summaryData] = await Promise.all([
+        const [snapshotData, signalData, verdictData, recommendationData, summaryData, oppData] = await Promise.all([
           json<{ snapshots: Snapshot[] }>(`/api/scraper/snapshots${suffix}`),
           json<{ signals: TechnicalSignal[] }>(`/api/technical-signals${suffix}`).catch(() => ({ signals: [] })),
           json<Verdict[]>(`/api/rotation-verdicts${suffix}${suffix ? '&' : '?'}all=true`).catch(() => []),
           status.runId === null ? Promise.resolve([] as Recommendation[]) : json<Recommendation[]>(`/api/advisor/recommendations${suffix}`).catch(() => []),
           status.runId === null ? Promise.resolve(null) : json<PortfolioSummary>(`/api/portfolio-summary${suffix}`).catch(() => null),
+          status.runId === null ? Promise.resolve(null) : json<OpportunitiesAnalysis>(`/api/advisor/opportunities${suffix}`).catch(() => null),
         ]);
         const entitySnapshots = snapshotData.snapshots.filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock' || snapshot.entity_type === 'index');
         if (entitySnapshots.length > 0) hasEntityDataRef.current = true;
@@ -189,6 +212,7 @@ export function AiBotWorkspace() {
         setVerdicts(verdictData);
         setRecommendations(recommendationData);
         setPortfolioSummary(summaryData);
+        setOpportunitiesData(oppData);
       } catch (loadError) {
         if (!hasEntityDataRef.current) {
           setError(loadError instanceof Error ? loadError.message : 'AI Bot workspace unavailable');
@@ -234,6 +258,19 @@ export function AiBotWorkspace() {
 
   // Analyze strong unheld entities as opportunities
   const opportunities = useMemo(() => {
+    if (opportunitiesData?.strong_unheld && opportunitiesData.strong_unheld.length > 0) {
+      return opportunitiesData.strong_unheld.map((v) => {
+        const snap = allEntities.find((e) => e.ticker === v.holding_ticker);
+        return {
+          ticker: v.holding_ticker,
+          name: snap?.name || v.holding_name || v.holding_ticker,
+          entityType: snap?.entity_type || 'unknown',
+          sector: snap?.sector || null,
+          score: snap?.total_score ?? null,
+          signal: v.signal,
+        };
+      });
+    }
     const strongUnheld = verdicts
       .filter((v) => v.signal === 'Strong' && !allEntities.find((e) => e.ticker === v.holding_ticker && e.is_held))
       .map((v) => {
@@ -248,7 +285,28 @@ export function AiBotWorkspace() {
         };
       });
     return strongUnheld;
-  }, [verdicts, allEntities]);
+  }, [opportunitiesData, verdicts, allEntities]);
+
+  const strongUnheldMatch = entity && !entity.is_held
+    ? opportunitiesData?.strong_unheld?.find(
+        (item) => item.holding_ticker.toUpperCase() === entity.ticker.toUpperCase()
+      )
+    : undefined;
+
+  const matchingSector = strongUnheldMatch
+    ? opportunitiesData?.underrepresented_sectors?.find((sec) =>
+        sec.strong_candidates?.some(
+          (cand) => cand.holding_ticker.toUpperCase() === entity.ticker.toUpperCase()
+        )
+      )
+    : undefined;
+
+  const opportunityReason = matchingSector
+    ? `Fills gap in ${matchingSector.sector} (currently only ${Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% of portfolio)`
+    : verdict?.coverage_percent !== null && verdict?.coverage_percent !== undefined
+      ? `Strong signal with ${Number(verdict.coverage_percent).toFixed(1)}% comparable coverage.`
+      : 'Strong signal detected. Consider for portfolio inclusion.';
+
   const fundamentals = entity?.entity_type === 'stock' ? [
     ['P/E', metric(entity.pe_ratio)],
     ['Forward P/E', metric(entity.forward_pe)],
@@ -435,7 +493,23 @@ export function AiBotWorkspace() {
       </section>
       <section className="ai-bot-engine ai-bot-advisor-engine">
         <div className="ai-bot-engine-header"><div><h3>Smart Advisor</h3><p>Final recommendation based on the completed analysis.</p></div><Brain /></div>
-        <article className="ai-bot-panel ai-bot-advice-panel">{recommendation ? <><p className="ai-bot-recommendation">{recommendation.recommendation_text}</p><small>{recommendation.model_used} / {new Date(recommendation.generated_at).toLocaleDateString()}</small></> : entity?.is_held ? <p>Recommendation is not available for this run yet.</p> : verdict?.signal === 'Strong' ? <><p className="ai-bot-opportunity-label">💡 Opportunity Candidate</p><p>{verdict?.coverage_percent !== null ? `Strong signal with ${verdict.coverage_percent.toFixed(1)}% comparable coverage.` : 'Strong signal detected. Consider for portfolio inclusion.'}</p></> : <p>Smart Advisor recommendations are generated for held positions only.</p>}</article>
+        <article className="ai-bot-panel ai-bot-advice-panel">
+          {recommendation ? (
+            <>
+              <p className="ai-bot-recommendation">{recommendation.recommendation_text}</p>
+              <small>{recommendation.model_used} / {new Date(recommendation.generated_at).toLocaleDateString()}</small>
+            </>
+          ) : entity?.is_held ? (
+            <p>Recommendation is not available for this run yet.</p>
+          ) : strongUnheldMatch ? (
+            <>
+              <p className="ai-bot-opportunity-label">💡 Opportunity Candidate</p>
+              <p>{opportunityReason}</p>
+            </>
+          ) : (
+            <p>Smart Advisor recommendations are generated for held positions only.</p>
+          )}
+        </article>
       </section>
     </section>
   );
