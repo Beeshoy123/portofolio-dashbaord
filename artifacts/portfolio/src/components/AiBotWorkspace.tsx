@@ -77,7 +77,56 @@ type Verdict = {
   data_completeness_warning?: boolean;
   fundamentals_flags_found?: boolean;
 };
-type Recommendation = { ticker: string; recommendation_text: string; model_used: string; generated_at: string };
+type StructuredRecommendation = {
+  decision: 'consider_entry' | 'consider_rotation' | 'watch_and_wait' | 'hold';
+  confidence: number;
+  summary: string;
+  evidence: string[];
+  risks: string[];
+  next_review_days: number;
+  watch_trigger: string;
+  do_not_act_reasons: string[];
+};
+
+type Recommendation = {
+  ticker: string;
+  recommendation_text: string;
+  model_used: string;
+  generated_at: string;
+  structured?: StructuredRecommendation | null;
+};
+
+type TimeStopAlert = {
+  watchlist_id?: number;
+  ticker: string;
+  is_stagnant: boolean;
+  days_in_current_state: number;
+  threshold_days: number;
+  message?: string;
+};
+
+type ThesisAlert = {
+  watchlist_id?: number;
+  ticker: string;
+  has_reversal: boolean;
+  prior_signal?: string;
+  current_signal?: string;
+  message?: string;
+};
+
+type DrawdownAlert = {
+  current_drawdown_percent: number;
+  drawdown_percent?: number;
+  peak_value?: number;
+  current_value?: number;
+  is_elevated?: boolean;
+};
+
+type AlertsSummary = {
+  timeStops: TimeStopAlert[];
+  theses: ThesisAlert[];
+  drawdown: DrawdownAlert | null;
+};
 type PortfolioSummary = {
   summary_text: string;
   strong_count: number;
@@ -207,6 +256,28 @@ function formatPeriodLabel(period?: string): string {
   return '1-Year Return';
 }
 
+function getDecisionMeta(decision?: string): { label: string; className: string } {
+  switch (decision) {
+    case 'consider_entry':
+      return { label: 'Consider Entry', className: 'ai-bot-decision-entry' };
+    case 'consider_rotation':
+      return { label: 'Consider Rotation', className: 'ai-bot-decision-rotation' };
+    case 'watch_and_wait':
+      return { label: 'Watch & Wait', className: 'ai-bot-decision-watch' };
+    case 'hold':
+      return { label: 'Hold', className: 'ai-bot-decision-hold' };
+    default:
+      return { label: decision ? decision.replace(/_/g, ' ') : 'Hold', className: 'ai-bot-decision-hold' };
+  }
+}
+
+function formatConfidenceLevel(confidence?: number | null): { label: string; className: string } {
+  if (confidence === null || confidence === undefined) return { label: 'Unrated', className: 'ai-bot-confidence-unrated' };
+  if (confidence >= 70) return { label: `${confidence}% (High Conviction)`, className: 'ai-bot-confidence-high' };
+  if (confidence >= 45) return { label: `${confidence}% (Moderate Conviction)`, className: 'ai-bot-confidence-medium' };
+  return { label: `${confidence}% (Low Conviction / Data Limited)`, className: 'ai-bot-confidence-low' };
+}
+
 function MiniCandleChart({ candles }: { candles: Candle[] }) {
   const visible = candles.slice(-24);
   if (!visible.length) return <div className="ai-bot-chart-empty">No OHLC history available.</div>;
@@ -251,6 +322,7 @@ export function AiBotWorkspace() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
   const [opportunitiesData, setOpportunitiesData] = useState<OpportunitiesAnalysis | null>(null);
+  const [alertsData, setAlertsData] = useState<AlertsSummary | null>(null);
   const [runId, setRunId] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [filterMode, setFilterMode] = useState<'held' | 'all'>('all');
@@ -282,13 +354,14 @@ export function AiBotWorkspace() {
         const status = await json<{ runId: number | null }>('/api/ai-bot/status');
         setRunId(status.runId);
         const suffix = status.runId === null ? '' : `?runId=${encodeURIComponent(status.runId)}`;
-        const [snapshotData, signalData, verdictData, recommendationData, summaryData, oppData] = await Promise.all([
+        const [snapshotData, signalData, verdictData, recommendationData, summaryData, oppData, alertSummary] = await Promise.all([
           json<{ snapshots: Snapshot[] }>(`/api/scraper/snapshots${suffix}`),
           json<{ signals: TechnicalSignal[] }>(`/api/technical-signals${suffix}`).catch(() => ({ signals: [] })),
           json<Verdict[]>(`/api/rotation-verdicts${suffix}${suffix ? '&' : '?'}all=true`).catch(() => []),
           status.runId === null ? Promise.resolve([] as Recommendation[]) : json<Recommendation[]>(`/api/advisor/recommendations${suffix}`).catch(() => []),
           status.runId === null ? Promise.resolve(null) : json<PortfolioSummary>(`/api/portfolio-summary${suffix}`).catch(() => null),
           status.runId === null ? Promise.resolve(null) : json<OpportunitiesAnalysis>(`/api/advisor/opportunities${suffix}`).catch(() => null),
+          status.runId === null ? Promise.resolve({ timeStops: [], theses: [], drawdown: null } as AlertsSummary) : json<AlertsSummary>(`/api/alerts/summary${suffix}`).catch(() => ({ timeStops: [], theses: [], drawdown: null })),
         ]);
         const entitySnapshots = snapshotData.snapshots.filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock' || snapshot.entity_type === 'index');
         if (entitySnapshots.length > 0) hasEntityDataRef.current = true;
@@ -298,6 +371,7 @@ export function AiBotWorkspace() {
         setRecommendations(recommendationData);
         setPortfolioSummary(summaryData);
         setOpportunitiesData(oppData);
+        setAlertsData(alertSummary);
       } catch (loadError) {
         if (!hasEntityDataRef.current) {
           setError(loadError instanceof Error ? loadError.message : 'AI Bot workspace unavailable');
@@ -339,6 +413,9 @@ export function AiBotWorkspace() {
   const signal = entity ? signals.find((item) => item.ticker === entity.ticker) : undefined;
   const verdict = entity ? verdicts.find((item) => item.holding_ticker === entity.ticker) : undefined;
   const recommendation = entity ? recommendations.find((item) => item.ticker === entity.ticker) : undefined;
+  const entityTimeStop = entity && alertsData ? alertsData.timeStops?.find((ts) => ts.ticker.toUpperCase() === entity.ticker.toUpperCase()) : undefined;
+  const entityThesis = entity && alertsData ? alertsData.theses?.find((t) => t.ticker.toUpperCase() === entity.ticker.toUpperCase()) : undefined;
+  const portfolioDrawdown = alertsData?.drawdown;
   const trendDown = signal?.trend === 'downtrend';
 
   // Analyze strong unheld entities as opportunities
@@ -814,18 +891,88 @@ export function AiBotWorkspace() {
         <article className="ai-bot-panel ai-bot-advice-panel">
           {recommendation ? (
             <>
-              <p className="ai-bot-recommendation">{recommendation.recommendation_text}</p>
-              <small>{recommendation.model_used} / {new Date(recommendation.generated_at).toLocaleDateString()}</small>
+              {/* Feature 1: Decision Pill & Confidence Header */}
+              {(() => {
+                const inferredDecision = entity?.is_held
+                  ? (verdict?.signal === 'Weak' ? 'consider_rotation' : verdict?.signal === 'Mixed' ? 'watch_and_wait' : 'hold')
+                  : 'consider_entry';
+                const decision = recommendation.structured?.decision || inferredDecision;
+                const decisionMeta = getDecisionMeta(decision);
+                const confidence = recommendation.structured?.confidence ?? null;
+                const confidenceMeta = formatConfidenceLevel(confidence);
+
+                return (
+                  <div className="ai-bot-advice-section ai-bot-advice-decision-section">
+                    <div className="ai-bot-decision-row">
+                      <div className={`ai-bot-decision-pill ${decisionMeta.className}`}>
+                        {decisionMeta.label}
+                      </div>
+                      {confidence !== null && (
+                        <span className={`ai-bot-confidence-badge ${confidenceMeta.className}`}>
+                          {confidenceMeta.label}
+                        </span>
+                      )}
+                    </div>
+                    <p className="ai-bot-verdict-caption">
+                      Action recommendation synthesized from relative peer performance, chart evidence, and portfolio risk tolerance.
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Feature 2: AI Recommendation Synthesis & Evidence / Risk Bullets */}
+              <div className="ai-bot-advice-section ai-bot-advice-narrative-section">
+                <span className="comparison-holding-eyebrow">Advisory Thesis</span>
+                <p className="ai-bot-recommendation">
+                  {recommendation.structured?.summary || recommendation.recommendation_text}
+                </p>
+
+                {recommendation.structured?.evidence && recommendation.structured.evidence.length > 0 && (
+                  <div className="ai-bot-portfolio-list-section">
+                    <span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--evidence">
+                      Key Grounded Evidence
+                    </span>
+                    <ul className="ai-bot-portfolio-list">
+                      {recommendation.structured.evidence.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {recommendation.structured?.risks && recommendation.structured.risks.length > 0 && (
+                  <div className="ai-bot-portfolio-list-section">
+                    <span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--risks">
+                      Downside Risks & Considerations
+                    </span>
+                    <ul className="ai-bot-portfolio-list ai-bot-portfolio-list--risks">
+                      {recommendation.structured.risks.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <small className="ai-bot-summary-meta">
+                  {recommendation.model_used} · {new Date(recommendation.generated_at).toLocaleDateString()}
+                </small>
+              </div>
             </>
           ) : entity?.is_held ? (
             <p>Recommendation is not available for this run yet.</p>
-          ) : strongUnheldMatch ? (
+          ) : (strongUnheldMatch || verdict?.signal === 'Strong') ? (
             <>
               <p className="ai-bot-opportunity-label">💡 Opportunity Candidate</p>
               <p>{opportunityReason}</p>
             </>
+          ) : verdict?.signal === 'Weak' ? (
+            <p>Watchlist asset underperforming its peer group. Not recommended for portfolio inclusion at this time.</p>
+          ) : verdict?.signal === 'Mixed' ? (
+            <p>Watchlist asset showing mixed peer performance. Monitor for trend confirmation before considering entry.</p>
+          ) : verdict?.signal === 'Insufficient Data' ? (
+            <p>Insufficient peer comparison history to formulate an entry thesis.</p>
           ) : (
-            <p>Smart Advisor recommendations are generated for held positions only.</p>
+            <p>No active entry or rotation thesis for this watchlist asset.</p>
           )}
         </article>
       </section>
