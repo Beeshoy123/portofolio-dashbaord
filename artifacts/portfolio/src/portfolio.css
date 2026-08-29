@@ -661,6 +661,33 @@ html[lang="ar"] .sort-popover {
 .ai-bot-workspace-loading { display: flex; align-items: center; gap: 10px; }
 .ai-bot-workspace-error { border: 1px solid rgba(224, 90, 80, .35); color: #f08078; }
 
+/* Enhanced Comparison Judge Report Card & Educational Styles */
+.ai-bot-verdict-section { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.ai-bot-verdict-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.ai-bot-verdict-caption { margin-top: 6px; color: #78948f; font-size: 11px; line-height: 1.55; }
+.ai-bot-verdict-data-quality { margin-top: 4px; color: #64857e; font-size: 10px; font-style: italic; }
+.ai-bot-verdict-signal-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 14px 0 10px; }
+.ai-bot-verdict-signal-row .ai-bot-verdict-pill { margin: 0; }
+.ai-bot-coverage-badge { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 6px; background: rgba(100, 150, 180, .12); color: #8bb5d6; border: 1px solid rgba(100, 150, 180, .25); font-size: 12px; font-weight: 700; }
+.ai-bot-verdict-peers-tally { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 10px 0 6px; }
+.ai-bot-tally-chip { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 5px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.ai-bot-tally-win { background: rgba(85, 209, 155, .14); color: #62d9a4; border: 1px solid rgba(85, 209, 155, .3); }
+.ai-bot-tally-loss { background: rgba(224, 90, 80, .14); color: #f08078; border: 1px solid rgba(224, 90, 80, .3); }
+.ai-bot-tally-text { color: #a8c5be; font-size: 11px; font-weight: 500; }
+.ai-bot-callout-box { padding: 12px 14px; border-radius: 8px; margin: 12px 0; font-size: 11px; line-height: 1.55; }
+.ai-bot-callout-box strong { display: block; margin-bottom: 3px; font-size: 12px; }
+.ai-bot-callout-warning { background: rgba(217, 154, 43, .12); border: 1px solid rgba(217, 154, 43, .3); color: #e7b85b; }
+.ai-bot-callout-warning p { color: #dceae6; }
+.ai-bot-callout-info { background: rgba(100, 150, 180, .12); border: 1px solid rgba(100, 150, 180, .3); color: #8bb5d6; }
+.ai-bot-callout-info p { color: #dceae6; }
+.ai-bot-callout-opportunity { background: rgba(233, 212, 96, .08); border: 1px solid rgba(233, 212, 96, .28); color: #e7d85f; }
+.ai-bot-callout-opportunity p { color: #dceae6; margin-top: 4px; }
+.ai-bot-snapshot-badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 4px; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.ai-bot-snapshot-fresh { background: rgba(85, 209, 155, .12); color: #62d9a4; border: 1px solid rgba(85, 209, 155, .25); }
+.ai-bot-snapshot-stale { background: rgba(217, 154, 43, .12); color: #e7b85b; border: 1px solid rgba(217, 154, 43, .25); }
+.ai-bot-snapshot-missing, .ai-bot-snapshot-failed { background: rgba(224, 90, 80, .12); color: #f08078; border: 1px solid rgba(224, 90, 80, .25); }
+.ai-bot-groups-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+
 /* Portfolio Summary Sections */
 .ai-bot-summary-section, .ai-bot-opportunities-section, .ai-bot-summary-analysis { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .ai-bot-summary-section:last-child, .ai-bot-summary-analysis:last-child { border-bottom: 0; }

@@ -30,7 +30,53 @@ type Snapshot = {
 
 type Candle = { date: string; open: number; high: number; low: number; close: number };
 type TechnicalSignal = { ticker: string; trend: string; confidence: number | string | null; candle_date: string | null; patterns: Array<{ name: string; direction: string }>; reversal_risk?: "none" | "watch" | "elevated"; candles: Candle[] };
-type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; comparables_beaten?: number; comparables_total?: number; flags?: string[]; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
+type ComparisonEntry = {
+  ticker: string;
+  return_percent: number | null;
+  gap_percent: number | null;
+  computed_risk_tier: 'Low' | 'Medium' | 'High' | null;
+  risk_mismatch: boolean;
+  foudalens_risk_level: string | null;
+};
+
+type ComparisonGroup = {
+  group_type: 'sector_sibling' | 'manager_sibling' | 'direct_stock' | 'benchmark';
+  you_beat_count: number;
+  you_lose_count: number;
+  incomplete_count: number;
+  entries: ComparisonEntry[];
+};
+
+type Verdict = {
+  holding_ticker: string;
+  holding_name?: string;
+  holding_return_percent: number | null;
+  holding_current_value_egp?: number | null;
+  holding_risk_tier?: 'Low' | 'Medium' | 'High' | null;
+  holding_asset_role?: string;
+  is_held?: boolean;
+  return_period?: 'return_1y' | 'return_6m' | 'return_3m';
+  signal: string;
+  coverage_percent: number | null;
+  comparables_beaten?: number;
+  comparables_total?: number;
+  flags?: string[];
+  groups?: ComparisonGroup[];
+  technical_signal?: {
+    trend: string;
+    confidence: number | null;
+    reversal_risk?: 'none' | 'watch' | 'elevated';
+    patterns: Array<{ name: string; direction: string }>;
+  } | null;
+  data_quality?: {
+    comparable_with_return_count: number;
+    comparable_count: number;
+    holding_snapshot_status?: 'fresh' | 'stale' | 'missing' | 'failed';
+    holding_snapshot_age_hours?: number | null;
+  };
+  data_completeness_warning?: boolean;
+  fundamentals_flags_found?: boolean;
+};
 type Recommendation = { ticker: string; recommendation_text: string; model_used: string; generated_at: string };
 type PortfolioSummary = {
   summary_text: string;
@@ -128,6 +174,39 @@ function slugify(text: string): string {
   return text.toLowerCase().replace(/\s+/g, '-');
 }
 
+function getGroupTypeLabel(type: string): string {
+  switch (type) {
+    case 'sector_sibling':
+      return 'Sector Peers (Funds in Same Sector)';
+    case 'manager_sibling':
+      return 'Manager Siblings (Same Fund Manager)';
+    case 'direct_stock':
+      return 'Stock Alternatives (Direct Equities)';
+    case 'benchmark':
+      return 'Market Benchmarks (Indices)';
+    default:
+      return type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+}
+
+function formatGap(gap: number | null | undefined): { text: string; className: string } {
+  if (gap === null || gap === undefined || !Number.isFinite(Number(gap))) {
+    return { text: '—', className: '' };
+  }
+  const num = Number(gap);
+  const isAhead = num >= 0;
+  return {
+    text: `${isAhead ? '+' : ''}${num.toFixed(1)} pp ${isAhead ? 'ahead' : 'behind'}`,
+    className: isAhead ? 'comparison-gap-ahead' : 'comparison-gap-behind',
+  };
+}
+
+function formatPeriodLabel(period?: string): string {
+  if (period === 'return_6m') return '6-Month Return';
+  if (period === 'return_3m') return '3-Month Return';
+  return '1-Year Return';
+}
+
 function MiniCandleChart({ candles }: { candles: Candle[] }) {
   const visible = candles.slice(-24);
   if (!visible.length) return <div className="ai-bot-chart-empty">No OHLC history available.</div>;
@@ -174,7 +253,7 @@ export function AiBotWorkspace() {
   const [opportunitiesData, setOpportunitiesData] = useState<OpportunitiesAnalysis | null>(null);
   const [runId, setRunId] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [filterMode, setFilterMode] = useState<'held' | 'all'>('held');
+  const [filterMode, setFilterMode] = useState<'held' | 'all'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMarketComparison, setShowMarketComparison] = useState(false);
@@ -394,30 +473,225 @@ export function AiBotWorkspace() {
           <div className="ai-bot-panel-heading"><div><h3>Comparison Judge</h3><span>Selected entity</span></div><Activity /></div>
           {verdict ? (
             <>
-              <div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>
-                {verdict.signal}{verdict.coverage_percent !== null ? ` (${verdict.coverage_percent.toFixed(1)}% coverage)` : ''}
+              {/* Feature 5: Holding Metadata Header */}
+              <div className="ai-bot-verdict-section ai-bot-verdict-header-section">
+                <div className="comparison-holding-header">
+                  <div>
+                    <span className="comparison-holding-eyebrow">Evaluated Asset</span>
+                    <h4 className="comparison-holding-name">
+                      {verdict.holding_name || entity.name || verdict.holding_ticker} <span>({verdict.holding_ticker})</span>
+                    </h4>
+                    <div className="comparison-holding-meta">
+                      <span><b>{formatPeriodLabel(verdict.return_period)}:</b> <strong>{pct(verdict.holding_return_percent)}</strong></span>
+                      {verdict.holding_risk_tier && (
+                        <span><b>Risk Tier:</b> {verdict.holding_risk_tier}</span>
+                      )}
+                      {verdict.holding_current_value_egp !== null && verdict.holding_current_value_egp !== undefined && (
+                        <span><b>Position:</b> {Number(verdict.holding_current_value_egp).toLocaleString()} EGP</span>
+                      )}
+                      {verdict.data_quality?.holding_snapshot_status && (
+                        <span className={`ai-bot-snapshot-badge ai-bot-snapshot-${verdict.data_quality.holding_snapshot_status}`}>
+                          Snapshot: {verdict.data_quality.holding_snapshot_status}
+                          {verdict.data_quality.holding_snapshot_age_hours !== null && verdict.data_quality.holding_snapshot_age_hours !== undefined
+                            ? ` (${verdict.data_quality.holding_snapshot_age_hours.toFixed(0)}h ago)`
+                            : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <p className="ai-bot-verdict-caption">
+                  Baseline metrics for this holding over the {formatPeriodLabel(verdict.return_period).toLowerCase()} evaluation window.
+                </p>
               </div>
-              {verdict.comparables_total !== undefined && verdict.comparables_total > 0 && (
-                <div className="ai-bot-verdict-peers">
-                  Beat {verdict.comparables_beaten ?? 0} of {verdict.comparables_total} peers
+
+              {/* Features 3, 2, 6: Signal Verdict Pill, Win/Loss Tally, Coverage */}
+              <div className="ai-bot-verdict-section ai-bot-verdict-signal-section">
+                <div className="ai-bot-verdict-signal-row">
+                  <div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>
+                    {verdict.signal}
+                  </div>
+                  {verdict.coverage_percent !== null && (
+                    <span className="ai-bot-coverage-badge">
+                      {verdict.coverage_percent.toFixed(1)}% Coverage
+                    </span>
+                  )}
+                </div>
+
+                {verdict.comparables_total !== undefined && verdict.comparables_total > 0 ? (
+                  <div className="ai-bot-verdict-peers-tally">
+                    <span className="ai-bot-tally-chip ai-bot-tally-win">
+                      ✅ {verdict.comparables_beaten ?? 0} Beat
+                    </span>
+                    <span className="ai-bot-tally-chip ai-bot-tally-loss">
+                      ❌ {Math.max(0, (verdict.comparables_total ?? 0) - (verdict.comparables_beaten ?? 0))} Lost
+                    </span>
+                    <span className="ai-bot-tally-text">
+                      out of {verdict.comparables_total} comparable peers with return data
+                    </span>
+                  </div>
+                ) : (
+                  <p className="ai-bot-verdict-peers">
+                    No comparable peers with return data found for this evaluation period.
+                  </p>
+                )}
+
+                <p className="ai-bot-verdict-caption">
+                  Signal is derived from the head-to-head win rate against comparable peers (≥60% wins = Strong, 40–59% = Mixed, &lt;40% = Weak). Coverage measures the percentage of peers with usable return data — higher coverage indicates greater statistical reliability.
+                </p>
+              </div>
+
+              {/* Feature 8: Technical Divergence Warning Callout */}
+              {(verdict.flags?.includes('technical_divergence') ||
+                (verdict.signal === 'Strong' && (verdict.technical_signal?.trend === 'downtrend' || signal?.trend === 'downtrend'))) && (
+                <div className="comparison-warning ai-bot-callout-warning">
+                  <span>⚠️</span>
+                  <div>
+                    <strong>Technical Divergence:</strong>
+                    <p>
+                      This holding beats its peers on returns, but the price chart is in a downtrend. Peer performance data and price action are sending conflicting signals — wait for the chart to confirm before acting on the Strong verdict.
+                    </p>
+                  </div>
                 </div>
               )}
+
+              {/* Feature 7: Chart Reversal Risk */}
+              {(() => {
+                const reversalRisk = verdict.technical_signal?.reversal_risk || signal?.reversal_risk;
+                if (!reversalRisk || reversalRisk === 'none') return null;
+                const isElevated = reversalRisk === 'elevated';
+                return (
+                  <div className={`comparison-warning ${isElevated ? 'ai-bot-callout-warning' : 'ai-bot-callout-info'}`}>
+                    <span>{isElevated ? '⚠️' : '👁️'}</span>
+                    <div>
+                      <strong>Chart Reversal Risk: {isElevated ? 'Elevated' : 'Watch'}</strong>
+                      <p>
+                        Bearish candlestick patterns detected in an active uptrend. Consider this a caution flag even if the peer comparison is strong.
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Feature 4: Diagnostic Warning Flags */}
               {verdict.flags && verdict.flags.length > 0 && (
-                <div className="ai-bot-verdict-flags">
-                  {verdict.flags.map((flag) => {
-                    const meta = getVerdictFlagMeta(flag);
-                    return (
-                      <span key={flag} className={`ai-bot-flag-chip ai-bot-flag-${meta.category}`}>
-                        {meta.label}
-                      </span>
-                    );
-                  })}
+                <div className="ai-bot-verdict-section ai-bot-verdict-flags-section">
+                  <span className="comparison-holding-eyebrow">Diagnostic Alerts</span>
+                  <div className="ai-bot-verdict-flags">
+                    {verdict.flags.map((flag) => {
+                      const meta = getVerdictFlagMeta(flag);
+                      return (
+                        <span key={flag} className={`ai-bot-flag-chip ai-bot-flag-${meta.category}`}>
+                          {meta.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <p className="ai-bot-verdict-caption">
+                    These diagnostic alerts are raised automatically when the system detects data gaps, sample size limitations, or signal conflicts.
+                  </p>
+                  <p className="ai-bot-verdict-data-quality">
+                    Data completeness: {verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable assets have usable return history.
+                  </p>
                 </div>
               )}
-              <p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>
+              {/* Feature 1: Peer Group Breakdown Cards */}
+              <div className="ai-bot-verdict-section ai-bot-verdict-groups-section">
+                <span className="comparison-holding-eyebrow">Peer Group Breakdown</span>
+                <p className="ai-bot-verdict-caption">
+                  Peers are grouped by relationship type. Each row shows a peer's return and how many percentage points ahead (+) or behind (−) you are.
+                </p>
+
+                {verdict.groups && verdict.groups.length > 0 ? (
+                  <div className="ai-bot-groups-list">
+                    {verdict.groups.map((group) => {
+                      const totalRated = group.you_beat_count + group.you_lose_count;
+                      return (
+                        <div key={group.group_type} className="comparison-group">
+                          <div className="comparison-group-header">
+                            <span className="comparison-group-label">{getGroupTypeLabel(group.group_type)}</span>
+                            <div className="comparison-group-summary">
+                              <span className="ai-bot-tally-chip ai-bot-tally-win">
+                                Beat {group.you_beat_count} / {totalRated}
+                              </span>
+                              {group.incomplete_count > 0 && (
+                                <span className="ai-bot-flag-chip ai-bot-flag-info">
+                                  {group.incomplete_count} Pending
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {group.entries && group.entries.length > 0 ? (
+                            group.entries.map((peer) => {
+                              const hasReturn = peer.return_percent !== null && peer.return_percent !== undefined;
+                              const gapMeta = formatGap(peer.gap_percent);
+                              return (
+                                <div
+                                  key={peer.ticker}
+                                  className={`comparison-evidence-row ${!hasReturn ? 'comparison-evidence-pending' : ''}`}
+                                >
+                                  <strong className="comparison-ticker">{peer.ticker}</strong>
+                                  {hasReturn ? (
+                                    <>
+                                      <span className={`comparison-return ${Number(peer.return_percent) >= 0 ? 'ai-positive' : 'ai-negative'}`}>
+                                        {pct(peer.return_percent)}
+                                      </span>
+                                      <span className="comparison-evidence-spacer" />
+                                      <span className={`comparison-gap ${gapMeta.className}`}>
+                                        {gapMeta.text}
+                                      </span>
+                                      <div className="comparison-risk">
+                                        {peer.computed_risk_tier && (
+                                          <span className="ai-bot-flag-chip ai-bot-flag-info">
+                                            {peer.computed_risk_tier} Risk
+                                          </span>
+                                        )}
+                                        {peer.risk_mismatch && (
+                                          <span className="ai-bot-flag-chip ai-bot-flag-warning" title="Risk tier mismatch compared to holding">
+                                            Mismatch
+                                          </span>
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <span className="comparison-pending-label">
+                                      No return data available yet for this evaluation window
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <p className="comparison-pending-label" style={{ padding: '8px 0' }}>
+                              No peers assigned to this bucket.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="comparison-pending-label" style={{ marginTop: '8px' }}>
+                    No peer comparison groups available for this entity.
+                  </p>
+                )}
+              </div>
+
               {verdict.technical_signal && (
                 <div className="ai-bot-inline-signal">
                   Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}
+                </div>
+              )}
+
+              {/* Feature 9: Opportunity Candidate Banner (for un-held entities with Strong signal) */}
+              {!entity?.is_held && verdict.signal === 'Strong' && (
+                <div className="ai-bot-callout-box ai-bot-callout-opportunity">
+                  <strong>💡 Opportunity Candidate</strong>
+                  <p>{opportunityReason}</p>
+                  <small className="ai-bot-verdict-caption">
+                    Surfaced because this unheld asset exhibits outperformance relative to its peer group and may offer favorable portfolio rotation or diversification potential.
+                  </small>
                 </div>
               )}
             </>
