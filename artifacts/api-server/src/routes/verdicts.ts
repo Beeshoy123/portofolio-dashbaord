@@ -38,6 +38,21 @@ router.get("/portfolio-summary", async (req, res) => {
   }
 
   try {
+    let query = `SELECT id, run_id, summary_text, strong_count, mixed_count, weak_count,
+                        insufficient_data_count, flagged_count, avg_coverage_percent,
+                        reversal_risk_count, divergence_count,
+                        strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent,
+                        decision, confidence, evidence, risks, next_review_days,
+                        model_used, generated_at
+                 FROM portfolio_summaries`;
+    const params: number[] = [];
+    if (runId !== null && Number.isSafeInteger(runId) && runId > 0) {
+      query += ` WHERE run_id = $1`;
+      params.push(runId);
+    } else {
+      query += ` ORDER BY generated_at DESC LIMIT 1`;
+    }
+
     const result = await pool.query<{
       id: number;
       run_id: number;
@@ -54,20 +69,16 @@ router.get("/portfolio-summary", async (req, res) => {
       mixed_value_percent: number | string | null;
       weak_value_percent: number | string | null;
       insufficient_value_percent: number | string | null;
+      decision: string | null;
+      confidence: number | null;
+      evidence: unknown | null;
+      risks: unknown | null;
+      next_review_days: number | null;
       model_used: string;
       generated_at: string;
-    }>(
-      `SELECT id, run_id, summary_text, strong_count, mixed_count, weak_count,
-              insufficient_data_count, flagged_count, avg_coverage_percent,
-              reversal_risk_count, divergence_count,
-              strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent,
-              model_used, generated_at
-       FROM portfolio_summaries
-       WHERE run_id = $1`,
-      [runId],
-    );
+    }>(query, params);
     if (result.rows.length === 0) {
-      res.status(404).json({ error: "No portfolio summary found for this run" });
+      res.status(404).json({ error: "No portfolio summary found" });
       return;
     }
     const summary = result.rows[0];
@@ -87,6 +98,11 @@ router.get("/portfolio-summary", async (req, res) => {
       mixed_value_percent: summary.mixed_value_percent !== null ? Number(summary.mixed_value_percent) : null,
       weak_value_percent: summary.weak_value_percent !== null ? Number(summary.weak_value_percent) : null,
       insufficient_value_percent: summary.insufficient_value_percent !== null ? Number(summary.insufficient_value_percent) : null,
+      decision: summary.decision ?? null,
+      confidence: summary.confidence !== null ? Number(summary.confidence) : null,
+      evidence: Array.isArray(summary.evidence) ? summary.evidence : null,
+      risks: Array.isArray(summary.risks) ? summary.risks : null,
+      next_review_days: summary.next_review_days !== null ? Number(summary.next_review_days) : null,
       model_used: summary.model_used,
       generated_at: summary.generated_at,
     });

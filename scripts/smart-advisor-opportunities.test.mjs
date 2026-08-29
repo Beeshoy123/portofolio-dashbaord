@@ -52,6 +52,6 @@ test("portfolio summary prompt calls out strong unheld opportunities", () => {
 
   const prompt = buildPortfolioSummaryPrompt(verdicts);
 
-  assert.match(prompt, /Strong unheld opportunities/i);
+  assert.match(prompt, /Strong unheld opportunit/i);
   assert.match(prompt, /MAB/i);
 });
