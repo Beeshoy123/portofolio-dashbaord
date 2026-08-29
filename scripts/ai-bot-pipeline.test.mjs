@@ -13,6 +13,9 @@ test("AI Bot runs Price Checker, Judge, Alerts, and Advisor with one run ID", as
       calls.push(["priceChecker", runId]);
       return { runId, succeeded: 3, failed: 0, total: 3 };
     },
+    runChartReader: async (receivedRunId) => {
+      calls.push(["chartReader", receivedRunId]);
+    },
     runComparisonJudge: async (receivedRunId) => {
       calls.push(["comparisonJudge", receivedRunId]);
       return verdicts;
@@ -29,13 +32,14 @@ test("AI Bot runs Price Checker, Judge, Alerts, and Advisor with one run ID", as
   assert.deepEqual(summary, { runId, succeeded: 3, failed: 0, total: 3 });
   assert.deepEqual(calls.map(([stage]) => stage), [
     "priceChecker",
+    "chartReader",
     "comparisonJudge",
     "alerts",
     "smartAdvisor",
   ]);
-  assert.deepEqual(calls.map(([, receivedRunId]) => receivedRunId), [runId, runId, runId, runId]);
-  assert.deepEqual(calls[3][2], verdicts);
-  assert.deepEqual(calls[3][3], alerts);
+  assert.deepEqual(calls.map(([, receivedRunId]) => receivedRunId), [runId, runId, runId, runId, runId]);
+  assert.deepEqual(calls[4][2], verdicts);
+  assert.deepEqual(calls[4][3], alerts);
 });
 
 test("AI Bot stops before Judge, Alerts, and Advisor when every price fetch fails", async () => {
@@ -63,4 +67,23 @@ test("AI Bot stops before Judge, Alerts, and Advisor when every price fetch fail
   );
 
   assert.deepEqual(calls, ["priceChecker"]);
+});
+
+test("AI Bot marks run as partial when a downstream stage fails after Price Checker succeeds", async () => {
+  const summary = await runBotPipeline({
+    runPriceChecker: async () => ({ runId: 7, succeeded: 3, failed: 0, total: 3 }),
+    runChartReader: async () => {},
+    runComparisonJudge: async () => {
+      throw new Error("judge failed");
+    },
+    runAlerts: async () => ({ ok: true }),
+    runSmartAdvisor: async () => {
+      throw new Error("advisor failed");
+    },
+  });
+
+  assert.equal(summary.runId, 7);
+  assert.equal(summary.succeeded, 3);
+  assert.equal(summary.failed, 1);
+  assert.equal(summary.total, 3);
 });

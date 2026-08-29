@@ -64,7 +64,17 @@ export function buildPortfolioSummaryPrompt(verdicts: HoldingVerdict[]): string 
     )
     : ["- No holding verdicts were produced for this run."];
 
-  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
+  const strongUnheld = verdicts.filter((verdict) => verdict.signal === "Strong");
+  const opportunityLines = strongUnheld.length > 0
+    ? strongUnheld.map((verdict) => `- Strong unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}; describe as a candidate rather than an active holding`)
+    : ["- No strong unheld opportunities were detected in the current run."];
+
+  const sectorsLine = [
+    "- Strong unheld opportunities: call out any strong positions that are not currently held, then identify underrepresented sectors where the portfolio has no current holding with a Strong signal.",
+    "- Include only actual watchlist evidence; do not invent sectors or holdings.",
+  ].join("\n");
+
+  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n${sectorsLine}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
 }
 
 function formatGroupForPrompt(group: ComparisonGroup): string {

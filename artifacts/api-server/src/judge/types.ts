@@ -50,6 +50,7 @@ export interface HoldingVerdict {
   holding_current_value_egp: number | null;
   holding_risk_tier: "Low" | "Medium" | "High" | null;
   technical_signal: TechnicalSignal | null;
+  is_held: boolean;
   data_quality: {
     holding_snapshot_status: "fresh" | "stale" | "missing" | "failed";
     holding_snapshot_age_hours: number | null;

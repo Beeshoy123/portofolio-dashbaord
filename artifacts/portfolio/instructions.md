@@ -116,6 +116,12 @@
 
 ## ⚡ QUICKEST START (60 seconds)
 
+### App Start Rule
+**When the user asks to start the app, the backend must be started first as part of the same workflow.**
+- Backend: `artifacts/api-server` on port `8080`
+- Frontend: `artifacts/portfolio` on port `3001`
+- This should happen automatically whenever the app is launched from this repo unless the user explicitly says otherwise.
+
 ### Windows Users - SETUP GIT BASH FIRST
 **⚠️ CRITICAL: PowerShell WILL NOT WORK - you must use Git Bash**
 

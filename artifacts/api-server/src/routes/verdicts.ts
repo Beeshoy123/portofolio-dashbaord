@@ -8,10 +8,16 @@ const router = Router();
 // positions and returns the full verdict array. Read-only; does not trigger
 // any scrape or write to the database.
 router.get("/rotation-verdicts", async (req, res) => {
+  const runId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
+    ? Number(req.query.runId)
+    : null;
+
+  if (!Number.isSafeInteger(runId) || runId <= 0) {
+    res.status(400).json({ error: "runId is required" });
+    return;
+  }
+
   try {
-    const runId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
-      ? Number(req.query.runId)
-      : undefined;
     const includeAllEntities = req.query.all === "true";
     const verdicts = await judgeAllHoldings("return_1y", runId, includeAllEntities);
     res.json(verdicts);

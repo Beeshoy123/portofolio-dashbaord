@@ -141,17 +141,19 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             weak_count: number;
             insufficient_data_count: number;
           } | undefined;
+
+          // Portfolio Summary must succeed — it's essential for per-holding context
+          const counts = verdicts.reduce(
+            (result, verdict) => {
+              if (verdict.signal === "Strong") result.strong++;
+              else if (verdict.signal === "Mixed") result.mixed++;
+              else if (verdict.signal === "Weak") result.weak++;
+              else if (verdict.signal === "Insufficient Data") result.insufficientData++;
+              return result;
+            },
+            { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
+          );
           try {
-            const counts = verdicts.reduce(
-              (result, verdict) => {
-                if (verdict.signal === "Strong") result.strong++;
-                else if (verdict.signal === "Mixed") result.mixed++;
-                else if (verdict.signal === "Weak") result.weak++;
-                else if (verdict.signal === "Insufficient Data") result.insufficientData++;
-                return result;
-              },
-              { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
-            );
             const portfolioSummary = await generatePortfolioSummary(verdicts);
             portfolioSummaryContext = {
               summary_text: portfolioSummary.summary_text,
@@ -176,21 +178,16 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               ],
             );
           } catch (error) {
-            console.error("[ai-bot] Portfolio summary failed before per-entity Advisor; continuing", error);
+            throw new Error(`Portfolio summary generation failed; cannot continue with per-holding advisor: ${error instanceof Error ? error.message : "unknown error"}`);
           }
+
+          // Track advisor generation success — if all fail, the run should not be "completed"
+          let advisorSuccessCount = 0;
+          let advisorFailureCount = 0;
+
           await runWithConcurrency(verdicts, 3, async (verdict) => {
-            if (verdict.holding_return_percent === null) return;
             try {
-              // Skip Gemini call if there's insufficient comparison data; insert fixed record instead
-              if (verdict.signal === "Insufficient Data") {
-                await pool.query(
-                  `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days)
-                   SELECT id, $1, $2, $4, NULL, NULL, NULL, NULL, NULL FROM comparison_watchlist WHERE ticker = $3
-                   ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL DO NOTHING`,
-                  ["Not enough comparison data was available this run to generate a recommendation.", "none", verdict.holding_ticker, runId],
-                );
-                return;
-              }
+              // Call Gemini for ALL verdicts, including those with missing return data — Gemini will explain insufficient data
               // Fetch signal trend for context
               const watchlistIdResult = await pool.query<{ id: number }>(
                 `SELECT id FROM comparison_watchlist WHERE ticker = $1`,
@@ -222,10 +219,23 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                   recommendation.structured.next_review_days,
                 ],
               );
+              advisorSuccessCount++;
             } catch (error) {
+              advisorFailureCount++;
               console.error(`[ai-bot] Smart Advisor failed for ${verdict.holding_ticker}`, error);
             }
           });
+
+          // If no recommendations were generated, this is a failure
+          if (advisorSuccessCount === 0 && verdicts.length > 0) {
+            throw new Error(`Smart Advisor generated 0 recommendations out of ${verdicts.length} verdicts; all advisor calls failed`);
+          }
+
+          // Log partial advisor results if some failed
+          if (advisorFailureCount > 0) {
+            console.warn(`[ai-bot] Smart Advisor completed with partial results: ${advisorSuccessCount}/${verdicts.length} recommendations generated`);
+          }
+
           status.stages.smartAdvisor = "completed";
         } catch (error) {
           status.stages.smartAdvisor = "failed";
