@@ -46,6 +46,12 @@ type PortfolioSummary = {
   mixed_value_percent?: number | null;
   weak_value_percent?: number | null;
   insufficient_value_percent?: number | null;
+  // Decision-structured fields (present on rows from migration 022+; null on older rows)
+  decision?: "hold" | "watch" | "rebalance" | null;
+  confidence?: number | null;
+  evidence?: string[] | null;
+  risks?: string[] | null;
+  next_review_days?: number | null;
   model_used: string;
   generated_at: string;
 };
@@ -480,8 +486,46 @@ export function AiBotWorkspace() {
               )}
               
               <div className="ai-bot-summary-analysis">
-                <h4 className="ai-bot-summary-title">Analysis</h4>
-                <p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p>
+                <h4 className="ai-bot-summary-title">Portfolio-wide Advisor Read</h4>
+                {portfolioSummary.decision ? (
+                  <>
+                    <div className="ai-bot-portfolio-decision-row">
+                      <div className={`ai-bot-decision-pill ai-bot-decision-${portfolioSummary.decision}`}>
+                        {portfolioSummary.decision === 'hold' ? 'Hold' : portfolioSummary.decision === 'watch' ? 'Watch' : 'Rebalance'}
+                      </div>
+                      {portfolioSummary.confidence !== null && portfolioSummary.confidence !== undefined && (
+                        <span className="ai-bot-portfolio-confidence">Confidence: {portfolioSummary.confidence}%</span>
+                      )}
+                    </div>
+                    <p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p>
+                    {portfolioSummary.evidence && portfolioSummary.evidence.length > 0 && (
+                      <div className="ai-bot-portfolio-list-section">
+                        <span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--evidence">Evidence</span>
+                        <ul className="ai-bot-portfolio-list">
+                          {portfolioSummary.evidence.map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {portfolioSummary.risks && portfolioSummary.risks.length > 0 && (
+                      <div className="ai-bot-portfolio-list-section">
+                        <span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--risks">Risks</span>
+                        <ul className="ai-bot-portfolio-list ai-bot-portfolio-list--risks">
+                          {portfolioSummary.risks.map((item, i) => (
+                            <li key={i}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {portfolioSummary.next_review_days !== null && portfolioSummary.next_review_days !== undefined && (
+                      <p className="ai-bot-portfolio-next-review">Next portfolio review: in {portfolioSummary.next_review_days} day{portfolioSummary.next_review_days === 1 ? '' : 's'}</p>
+                    )}
+                  </>
+                ) : (
+                  // Pre-migration row or fallback path — render summary text only, no pill
+                  <p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p>
+                )}
               </div>
               
               <small className="ai-bot-summary-meta">{portfolioSummary.model_used} / {new Date(portfolioSummary.generated_at).toLocaleDateString()}</small>

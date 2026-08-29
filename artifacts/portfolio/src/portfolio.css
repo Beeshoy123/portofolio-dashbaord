@@ -680,6 +680,32 @@ html[lang="ar"] .sort-popover {
 
 .ai-bot-summary-meta { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); color: #64857e; font-size: 9px; }
 
+/* Portfolio-level aggregate pills (row of small stat chips) */
+.ai-bot-summary-row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.ai-bot-aggregate-pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; background: rgba(100, 150, 180, .1); color: #7aa3c4; font-size: 10px; font-weight: 600; letter-spacing: .01em; }
+
+/* Portfolio-level decision pill — same visual weight as .ai-bot-verdict-pill */
+.ai-bot-decision-pill { display: inline-block; border-radius: 8px; padding: 7px 14px; font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 800; line-height: 1; }
+.ai-bot-decision-hold { background: rgba(85, 209, 155, .14); color: #62d9a4; }
+.ai-bot-decision-watch { background: rgba(217, 154, 43, .14); color: #e7b85b; }
+.ai-bot-decision-rebalance { background: rgba(224, 110, 70, .14); color: #f09060; }
+
+/* Row containing the pill + confidence label */
+.ai-bot-portfolio-decision-row { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; }
+.ai-bot-portfolio-confidence { color: #78948f; font-size: 11px; font-weight: 600; }
+
+/* Evidence / Risks lists */
+.ai-bot-portfolio-list-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .06); }
+.ai-bot-portfolio-list-label { display: block; margin-bottom: 6px; font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.ai-bot-portfolio-list-label--evidence { color: #58cbbd; }
+.ai-bot-portfolio-list-label--risks { color: #e0a070; }
+.ai-bot-portfolio-list { margin: 0; padding-left: 16px; list-style: disc; }
+.ai-bot-portfolio-list li { color: #9ab3ad; font-size: 11px; line-height: 1.65; margin-bottom: 3px; }
+.ai-bot-portfolio-list--risks li { color: #b89080; }
+
+/* Next review line */
+.ai-bot-portfolio-next-review { margin-top: 12px; color: #64857e; font-size: 10px; font-style: italic; }
+
 @media (max-width: 700px) {
   .ai-bot-workspace { margin: 0 8px 18px; }
   .ai-bot-workspace-header { align-items: flex-start; flex-direction: column; padding: 16px; }
