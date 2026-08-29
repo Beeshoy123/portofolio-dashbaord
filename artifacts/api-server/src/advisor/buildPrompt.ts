@@ -65,7 +65,31 @@ DO_NOT_ACT_REASONS: when decision is watch_and_wait or hold, list 1-3 short reas
 
 export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are not a licensed financial advisor.
 
-Write ONE concise overall portfolio read in 4-6 sentences. Use only the verdict-level data provided. State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a holding-count read of "mostly Strong" but a large value percentage sits in Weak, or vice versa), you MUST call this out explicitly in the summary — this is the single most decision-relevant signal in the whole prompt, since it means a small-looking problem is actually large in money terms, or a large-looking problem is actually a small position. Name holdings that clearly carry the portfolio or drag it down when their signal is notably different from the rest. Do not repeat every holding's details; this is an overall conclusion, not a re-listing of evidence. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If average coverage is low, or if flagged holdings, reversal risk, or trend divergences represent more than a small fraction of total holdings, you must mention this as a reason for lower confidence in the overall summary — do not just report the counts, explain what they mean for how much to trust the read. If the prompt notes that some entities could not be evaluated and this missing count is more than 1-2 entities, explicitly mention that this summary is based on a partial evaluation of the portfolio. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now. If data is missing, say so plainly.
+Your job is to produce a single structured JSON object — NOT narrative prose — that captures an overall portfolio-level read based on the DATA block provided. Use only the numbers and counts given to you; do not invent, estimate, or assume any figure not in the data.
+
+DECISION (exactly one of: "hold", "watch", "rebalance"):
+- "hold": portfolio composition looks fine overall. The count-based and value-based signal distributions are both reasonable (e.g. most holdings and most portfolio value sit in Strong or Mixed). No flags or reversal-risk clusters represent a major fraction of the total. No changes needed at the portfolio level.
+- "watch": something specific deserves attention but does not yet require action. Examples: a single holding with an outsized value weight is showing Weak signal; reversal-risk or technical divergence is present in 2+ holdings; flagged holdings represent more than a small fraction of the total. Name what specifically deserves watching in the summary.
+- "rebalance": allocation is meaningfully skewed and attention to redistribution across holdings is warranted. Use this when the size-weighted (By value) data diverges materially from the count-based picture — e.g. a large percentage of total portfolio value sits in Weak or Insufficient Data holdings while the count looks fine, or multiple holdings share the same flag or risk exposure. Reference the size-weighted data and the flags/coverage/reversal-risk aggregates from the DATA block when justifying this decision.
+
+CONFIDENCE (0–100): Reflect the completeness and quality of the data.
+- If many holdings have Insufficient Data signal or missing coverage, or if a partial evaluation was noted, confidence must be lower (≤50).
+- If the data is complete and the signal distribution is clear, confidence can be higher.
+- Never assign confidence above 75 when the portfolio summary is based on a partial evaluation.
+
+SUMMARY: One concise paragraph (4–6 sentences). State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a count read of "mostly Strong" but a large value percentage sits in Weak), call this out explicitly — this is the single most decision-relevant signal. Name holdings that clearly carry or drag the portfolio when their signal is notably different from the rest. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If the prompt notes a partial evaluation, mention that the summary is based on partial data. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now.
+
+EVIDENCE (2–4 bullet points): Cite specific counts, tickers, or percentages drawn directly from the DATA block. Examples: "3 of 7 holdings are Weak", "62% of portfolio value is in Mixed holdings", "2 holdings have reversal_risk_elevated". Do not invent figures.
+
+RISKS (2–4 bullet points): Portfolio-level risks grounded in the DATA block. Examples: concentration of value in one signal tier, multiple holdings sharing the same flag, size-weighted mismatch between count signal and value signal, elevated reversal-risk cluster, low average coverage reducing confidence in verdicts.
+
+NEXT_REVIEW_DAYS (1–365): When to reassess the portfolio as a whole. This can differ from any individual holding's own next_review_days. Use shorter windows (7–14 days) when the decision is "rebalance" or when reversal risk is elevated. Use moderate windows (21–45 days) for "watch". Use longer windows (45–90 days) when the decision is "hold" with high confidence.
+
+TONE AND CONSTRAINTS:
+- Plain, direct, warm but not falsely encouraging. No emojis. No exclamation marks.
+- Never say "buy now", "sell now", or imply guaranteed outcomes.
+- Never mention inflation-adjustment or "real return" — this dashboard uses only nominal returns.
+- If data is missing, say so plainly; do not fill gaps with invented figures.
 `;
 
 export const OPPORTUNITY_ANALYSIS_SYSTEM_INSTRUCTIONS = `You are a financial explainer helping an Egyptian investor identify portfolio diversification opportunities. Your job is to explain PRE-CALCULATED opportunity facts, not discover them yourself.
@@ -184,7 +208,7 @@ export function buildPortfolioSummaryPrompt(
     "- Include only actual watchlist evidence; do not invent sectors or holdings.",
   ].join("\n");
 
-  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}${partialEvaluationLine}\n${distributionLine}\n${aggregateLine}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
+  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}${partialEvaluationLine}\n${distributionLine}\n${aggregateLine}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nReturn ONLY valid JSON matching this exact shape. Do not use Markdown fences:\n{"decision":"hold|watch|rebalance","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30}`;
 }
 
 function formatGroupForPrompt(group: ComparisonGroup): string {

@@ -249,8 +249,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               };
               await pool.query(
                 `INSERT INTO portfolio_summaries
-                  (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                  (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent, decision, confidence, evidence, risks, next_review_days)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
                  ON CONFLICT (run_id) DO UPDATE SET
                    summary_text = EXCLUDED.summary_text,
                    strong_count = EXCLUDED.strong_count,
@@ -266,6 +266,11 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                    mixed_value_percent = EXCLUDED.mixed_value_percent,
                    weak_value_percent = EXCLUDED.weak_value_percent,
                    insufficient_value_percent = EXCLUDED.insufficient_value_percent,
+                   decision = EXCLUDED.decision,
+                   confidence = EXCLUDED.confidence,
+                   evidence = EXCLUDED.evidence,
+                   risks = EXCLUDED.risks,
+                   next_review_days = EXCLUDED.next_review_days,
                    generated_at = now()`,
                 [
                   runId,
@@ -283,6 +288,11 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                   mixedValuePercent,
                   weakValuePercent,
                   insufficientValuePercent,
+                  null, // decision — not available for deterministic fallback
+                  null, // confidence
+                  null, // evidence
+                  null, // risks
+                  null, // next_review_days
                 ],
               );
               console.warn(`[ai-bot] Portfolio summary skipped (below 50% threshold: ${succeededCount}/${totalExpectedHoldings} judged); saved deterministic summary.`);

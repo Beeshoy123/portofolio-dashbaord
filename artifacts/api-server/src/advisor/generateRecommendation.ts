@@ -21,7 +21,7 @@ import {
   type AdvisorAlertContext,
 } from "./buildPrompt";
 import type { HoldingVerdict } from "../judge/types";
-import type { AdvisorRecommendation } from "./types";
+import type { AdvisorRecommendation, PortfolioSummaryResult } from "./types";
 
 function envNumber(name: string, fallback: number, minimum: number, maximum: number): number {
   const value = Number(process.env[name]);
@@ -83,9 +83,17 @@ const GEMINI_RESPONSE_SCHEMA = {
 const PORTFOLIO_SUMMARY_RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
+    decision: {
+      type: "STRING",
+      enum: ["hold", "watch", "rebalance"],
+    },
+    confidence: { type: "INTEGER", minimum: 0, maximum: 100 },
     summary: { type: "STRING" },
+    evidence: { type: "ARRAY", items: { type: "STRING" } },
+    risks: { type: "ARRAY", items: { type: "STRING" } },
+    next_review_days: { type: "INTEGER", minimum: 1, maximum: 365 },
   },
-  required: ["summary"],
+  required: ["decision", "confidence", "summary", "evidence", "risks", "next_review_days"],
 };
 
 /**
@@ -298,11 +306,29 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
   };
 }
 
+function isStructuredPortfolioResult(value: unknown): value is PortfolioSummaryResult {
+  if (!value || typeof value !== "object") return false;
+  const result = value as Record<string, unknown>;
+  const isTextArray = (entry: unknown, maxLength: number) =>
+    Array.isArray(entry) && entry.length <= maxLength
+      && entry.every((item) => typeof item === "string" && item.trim().length > 0 && item.length <= 400);
+  return (
+    (result.decision === "hold" || result.decision === "watch" || result.decision === "rebalance")
+    && typeof result.confidence === "number" && Number.isInteger(result.confidence)
+    && result.confidence >= 0 && result.confidence <= 100
+    && typeof result.summary === "string" && result.summary.trim().length > 0 && result.summary.length <= 1200
+    && isTextArray(result.evidence, 6)
+    && isTextArray(result.risks, 6)
+    && typeof result.next_review_days === "number" && Number.isInteger(result.next_review_days)
+    && result.next_review_days >= 1 && result.next_review_days <= 365
+  );
+}
+
 export async function generatePortfolioSummary(
   verdicts: HoldingVerdict[],
   opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> },
   evaluationScope?: { totalExpected: number; evaluated: number }
-): Promise<{ summary_text: string; model_used: string }> {
+): Promise<PortfolioSummaryResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("[generatePortfolioSummary] GEMINI_API_KEY not found in environment");
@@ -319,7 +345,7 @@ export async function generatePortfolioSummary(
         contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts, opportunities, evaluationScope) }] }],
         generationConfig: {
           temperature: GEMINI_TEMPERATURE,
-          maxOutputTokens: 400,
+          maxOutputTokens: 800,
           responseMimeType: "application/json",
           responseSchema: PORTFOLIO_SUMMARY_RESPONSE_SCHEMA,
         },
@@ -334,7 +360,27 @@ export async function generatePortfolioSummary(
 
   const data = (await res.json()) as GeminiResponse;
   const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text) throw new Error("[generatePortfolioSummary] Gemini returned no summary text");
+
+  if (!text) {
+    const blockReason: string | undefined = data?.promptFeedback?.blockReason;
+    const finishReason: string | undefined = data?.candidates?.[0]?.finishReason;
+
+    if (blockReason) {
+      throw new Error(
+        `[generatePortfolioSummary] Gemini blocked the prompt. Reason: ${blockReason}. Full response: ${JSON.stringify(data)}`
+      );
+    }
+
+    if (finishReason && finishReason !== "STOP") {
+      throw new Error(
+        `[generatePortfolioSummary] Gemini did not finish normally. Reason: ${finishReason}. Full response: ${JSON.stringify(data)}`
+      );
+    }
+
+    throw new Error(
+      `[generatePortfolioSummary] Gemini response had no text and no recognizable block/finish reason. Full response: ${JSON.stringify(data)}`
+    );
+  }
 
   let parsed: unknown;
   try {
@@ -343,12 +389,19 @@ export async function generatePortfolioSummary(
     throw new Error("[generatePortfolioSummary] Gemini returned invalid JSON", { cause: error });
   }
 
-  const summary = parsed && typeof parsed === "object" && "summary" in parsed
-    ? (parsed as { summary?: unknown }).summary
-    : null;
-  if (typeof summary !== "string" || summary.trim().length === 0) {
-    throw new Error("[generatePortfolioSummary] Gemini JSON did not contain a summary");
+  if (!isStructuredPortfolioResult(parsed)) {
+    throw new Error(
+      `[generatePortfolioSummary] Gemini JSON failed schema validation. Got: ${JSON.stringify(parsed)}`
+    );
   }
 
-  return { summary_text: summary.trim(), model_used: GEMINI_MODEL };
+  return {
+    decision: parsed.decision,
+    confidence: parsed.confidence,
+    summary: parsed.summary,
+    evidence: parsed.evidence,
+    risks: parsed.risks,
+    next_review_days: parsed.next_review_days,
+    model_used: GEMINI_MODEL,
+  };
 }
