@@ -18,6 +18,7 @@ export interface TechnicalSignal {
   patterns: Array<{ name: string; date: string; direction: "bullish" | "bearish" | "neutral" }>;
   confidence: number | null;
   raw_fetch_ok: boolean;
+  reversal_risk: "none" | "watch" | "elevated";
 }
 
 export interface ComparisonEntry {

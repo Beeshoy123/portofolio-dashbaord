@@ -76,6 +76,17 @@ interface ComparisonVerdict {
   };
 }
 
+interface PortfolioOpportunity {
+  ticker: string;
+  name: string;
+  opportunity_text: string;
+  generated_at: string;
+  model_used: string;
+  opportunity_type: 'strong_unheld' | 'sector_gap' | 'underrepresented';
+}
+
+type AdvisorMode = 'holding' | 'portfolio';
+
 function recommendationAgeLabel(generatedAt: string): string {
   const ageHours = Math.max(0, (Date.now() - new Date(generatedAt).getTime()) / 3_600_000);
   if (ageHours < 1) return 'Generated less than 1 hour ago';
@@ -152,11 +163,15 @@ async function requestJson<T>(
 
 export function SmartAdvisorPanel() {
   const [recommendations, setRecommendations] = useState<AdvisorRecommendation[]>([]);
+  const [opportunities, setOpportunities] = useState<PortfolioOpportunity[]>([]);
+  const [advisorMode, setAdvisorMode] = useState<AdvisorMode>('holding');
   const [alerts, setAlerts] = useState<Record<string, AlertContext>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [generatingOpportunities, setGeneratingOpportunities] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastGenerationTime, setLastGenerationTime] = useState<number | null>(null);
+  const [lastOpportunitiesGenerationTime, setLastOpportunitiesGenerationTime] = useState<number | null>(null);
   const [drawdown, setDrawdown] = useState<DrawdownAlert | undefined>();
   const [generationResults, setGenerationResults] = useState<GenerationResult[]>([]);
   const [verdicts, setVerdicts] = useState<Record<string, ComparisonVerdict>>({});
@@ -198,6 +213,13 @@ export function SmartAdvisorPanel() {
             { signal: controller.signal },
             'Failed to fetch recommendations',
           );
+        const opportunitiesRequest = botStatus.runId === null
+          ? Promise.resolve<PortfolioOpportunity[]>([])
+          : requestJson<PortfolioOpportunity[]>(
+            `/api/advisor/opportunities?runId=${encodeURIComponent(botStatus.runId)}`,
+            { signal: controller.signal },
+            'Failed to fetch opportunities',
+          ).catch(() => []);
         const alertsRequest = botStatus.runId === null
           ? Promise.resolve<AlertSummaryResponse>({ alerts: {} })
           : requestJson<AlertSummaryResponse>(
@@ -212,13 +234,15 @@ export function SmartAdvisorPanel() {
             { signal: controller.signal },
             'Failed to fetch comparison evidence',
           ).catch(() => []);
-        const [recRes, alertRes, verdictRes] = await Promise.all([
+        const [recRes, oppRes, alertRes, verdictRes] = await Promise.all([
           recommendationsRequest,
+          opportunitiesRequest,
           alertsRequest,
           verdictsRequest,
         ]);
 
         setRecommendations(Array.isArray(recRes) ? recRes : []);
+        setOpportunities(Array.isArray(oppRes) ? oppRes : []);
         setVerdicts(Object.fromEntries(verdictRes.map((verdict) => [verdict.holding_ticker, verdict])));
         setAlerts(alertRes.alerts || {});
         setDrawdown(alertRes.portfolio?.drawdown);
@@ -226,6 +250,7 @@ export function SmartAdvisorPanel() {
         if (controller.signal.aborted) return;
         setError(describeAdvisorError(err));
         setRecommendations([]);
+        setOpportunities([]);
         setAlerts({});
         setDrawdown(undefined);
       } finally {
@@ -237,6 +262,10 @@ export function SmartAdvisorPanel() {
     const savedTime = localStorage.getItem(STORAGE_KEY);
     if (savedTime) {
       setLastGenerationTime(parseInt(savedTime, 10));
+    }
+    const savedOpportunitiesTime = localStorage.getItem(STORAGE_KEY + '_opportunities');
+    if (savedOpportunitiesTime) {
+      setLastOpportunitiesGenerationTime(parseInt(savedOpportunitiesTime, 10));
     }
 
     fetchData();
@@ -357,6 +386,46 @@ export function SmartAdvisorPanel() {
     }
   };
 
+  // Generate opportunities recommendations
+  const handleGenerateOpportunities = async () => {
+    try {
+      setGeneratingOpportunities(true);
+      setError(null);
+
+      const botStatus = await requestJson<BotStatusResponse>('/api/ai-bot/status', {}, 'Failed to fetch AI Bot status');
+      if (botStatus.runId === null) {
+        throw new Error('Run the AI Bot pipeline before generating opportunities.');
+      }
+      const generation = await requestJson<GenerationResponse>(
+        `/api/advisor/generate-opportunities?runId=${encodeURIComponent(botStatus.runId)}`,
+        { method: 'POST' },
+        'Failed to generate opportunities',
+      );
+      setGenerationResults(generation.results ?? []);
+
+      recordOpportunitiesGenerationTime();
+
+      // Refetch after generation
+      const data = await requestJson<PortfolioOpportunity[]>(
+        `/api/advisor/opportunities?runId=${encodeURIComponent(botStatus.runId)}`,
+        {},
+        'Failed to fetch opportunities',
+      );
+      setOpportunities(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(describeAdvisorError(err));
+    } finally {
+      setGeneratingOpportunities(false);
+    }
+  };
+
+  // Save opportunities generation time to localStorage
+  const recordOpportunitiesGenerationTime = () => {
+    const now = Date.now();
+    setLastOpportunitiesGenerationTime(now);
+    localStorage.setItem(STORAGE_KEY + '_opportunities', now.toString());
+  };
+
   const activeTimeStops = Object.values(alerts).filter((alert) => alert.timeStop?.is_stagnant).length;
   const activeTheses = Object.values(alerts).filter((alert) => alert.thesis?.has_reversal).length;
   const drawdownPercent = drawdown?.current_drawdown_percent ?? drawdown?.drawdown_percent;
@@ -384,229 +453,343 @@ export function SmartAdvisorPanel() {
             </div>
           </div>
           <div className="smart-advisor-action">
-            <span className="smart-advisor-live"><span /> Live analysis</span>
-            <Button
-              size="sm"
-              className="smart-advisor-generate"
-              onClick={handleGenerateRecommendations}
-              disabled={generating || loading}
-              variant="outline"
-            >
-              {generating ? (
-                <>
-                  <Spinner className="mr-2 h-4 w-4" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Generate
-                </>
-              )}
-            </Button>
+            <div className="flex items-center gap-3">
+              <div className="flex gap-1 border rounded p-1 bg-muted">
+                <Button
+                  size="sm"
+                  variant={advisorMode === 'holding' ? 'default' : 'ghost'}
+                  onClick={() => setAdvisorMode('holding')}
+                  className="text-xs"
+                >
+                  Held
+                </Button>
+                <Button
+                  size="sm"
+                  variant={advisorMode === 'portfolio' ? 'default' : 'ghost'}
+                  onClick={() => setAdvisorMode('portfolio')}
+                  className="text-xs"
+                >
+                  Opportunities
+                </Button>
+              </div>
+              <span className="smart-advisor-live"><span /> Live analysis</span>
+              <Button
+                size="sm"
+                className="smart-advisor-generate"
+                onClick={advisorMode === 'holding' ? handleGenerateRecommendations : handleGenerateOpportunities}
+                disabled={(advisorMode === 'holding' ? generating : generatingOpportunities) || loading}
+                variant="outline"
+              >
+                {(advisorMode === 'holding' ? generating : generatingOpportunities) ? (
+                  <>
+                    <Spinner className="mr-2 h-4 w-4" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Generate
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
 
         <CardContent className="smart-advisor-content">
-          <div className="smart-advisor-metrics">
-            <div className="advisor-metric advisor-metric-total">
-              <span className="advisor-metric-label">Active alerts</span>
-              <strong>{activeAlertCount}</strong>
-              <span className="advisor-metric-note">Across your portfolio</span>
-            </div>
-            <div className="advisor-metric advisor-metric-warning">
-              <span className="advisor-metric-label">Warnings</span>
-              <strong>{activeTimeStops}</strong>
-              <span className="advisor-metric-note">Time-stop reviews</span>
-            </div>
-            <div className="advisor-metric advisor-metric-critical">
-              <span className="advisor-metric-label">Critical</span>
-              <strong>{activeTheses + activeDrawdown}</strong>
-              <span className="advisor-metric-note">Thesis and drawdown risk</span>
-            </div>
-          </div>
-          {(activeAlertCount > 0 || drawdownPercent !== undefined && drawdownPercent !== null) && (
-            <div className="smart-advisor-status-row">
-              {activeTimeStops > 0 && (
-                <span className="advisor-status advisor-status-warning">
-                  {activeTimeStops} time-stop {activeTimeStops === 1 ? 'review' : 'reviews'}
-                </span>
-              )}
-              {activeTheses > 0 && (
-                <span className="advisor-status advisor-status-critical">
-                  {activeTheses} thesis {activeTheses === 1 ? 'risk' : 'risks'}
-                </span>
-              )}
-              {drawdownPercent !== undefined && (
-                <span className={`advisor-status ${activeDrawdown ? 'advisor-status-critical' : 'advisor-status-neutral'}`}>
-                  Portfolio drawdown: {Number(drawdownPercent).toFixed(1)}%
-                </span>
-              )}
-            </div>
-          )}
-
-          {error && (
-            <Alert className="smart-advisor-error" variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {generationResults.length > 0 && (
-            <div className="smart-advisor-run-status">
-              <span className="smart-advisor-run-label">Latest run</span>
-              {(['success', 'skipped', 'failed'] as const).map((resultStatus) => {
-                const count = generationResults.filter((result) => result.status === resultStatus).length;
-                if (count === 0) return null;
-                const label = resultStatus === 'success'
-                  ? 'generated'
-                  : resultStatus === 'skipped'
-                    ? 'skipped'
-                    : 'failed';
-                return (
-                  <span
-                    key={resultStatus}
-                    className={`advisor-status ${
-                      resultStatus === 'success'
-                        ? 'advisor-status-success'
-                        : resultStatus === 'skipped'
-                          ? 'advisor-status-neutral'
-                          : 'advisor-status-critical'
-                    }`}
-                  >
-                    {count} {label}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Generation info */}
-          {lastGenerationTime && (
-            <div className="smart-advisor-generation-info">
-              Last generated:{' '}
-              {new Date(lastGenerationTime).toLocaleTimeString()}
-              {!canAutoGenerate() && (
-                <div className="mt-1">
-                  Next auto-generation:{' '}
-                  {new Date(
-                    lastGenerationTime + AUTO_GENERATION_COOLDOWN_HOURS * 60 * 60 * 1000
-                  ).toLocaleTimeString()}
+          {advisorMode === 'holding' ? (
+            <>
+              <div className="smart-advisor-metrics">
+                <div className="advisor-metric advisor-metric-total">
+                  <span className="advisor-metric-label">Active alerts</span>
+                  <strong>{activeAlertCount}</strong>
+                  <span className="advisor-metric-note">Across your portfolio</span>
+                </div>
+                <div className="advisor-metric advisor-metric-warning">
+                  <span className="advisor-metric-label">Warnings</span>
+                  <strong>{activeTimeStops}</strong>
+                  <span className="advisor-metric-note">Time-stop reviews</span>
+                </div>
+                <div className="advisor-metric advisor-metric-critical">
+                  <span className="advisor-metric-label">Critical</span>
+                  <strong>{activeTheses + activeDrawdown}</strong>
+                  <span className="advisor-metric-note">Thesis and drawdown risk</span>
+                </div>
+              </div>
+              {(activeAlertCount > 0 || drawdownPercent !== undefined && drawdownPercent !== null) && (
+                <div className="smart-advisor-status-row">
+                  {activeTimeStops > 0 && (
+                    <span className="advisor-status advisor-status-warning">
+                      {activeTimeStops} time-stop {activeTimeStops === 1 ? 'review' : 'reviews'}
+                    </span>
+                  )}
+                  {activeTheses > 0 && (
+                    <span className="advisor-status advisor-status-critical">
+                      {activeTheses} thesis {activeTheses === 1 ? 'risk' : 'risks'}
+                    </span>
+                  )}
+                  {drawdownPercent !== undefined && (
+                    <span className={`advisor-status ${activeDrawdown ? 'advisor-status-critical' : 'advisor-status-neutral'}`}>
+                      Portfolio drawdown: {Number(drawdownPercent).toFixed(1)}%
+                    </span>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {loading ? (
-            <div className="smart-advisor-loading">
-              <Spinner className="h-6 w-6" />
-            </div>
-          ) : recommendations.length === 0 ? (
-            <div className="smart-advisor-empty">
-              <Brain className="mx-auto mb-2 h-8 w-8 opacity-50" />
-              <p>No recommendations yet.</p>
-              <p className="text-sm">Click "Generate" to create AI recommendations for your holdings.</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {recommendations.map((rec) => (
-                (() => {
-                  const verdict = verdicts[rec.ticker];
-                  const confidence = confidenceFor(verdict);
-                  const snapshotStatus = verdict?.data_quality?.holding_snapshot_status;
-                  const needsRefresh = snapshotStatus === 'stale' || snapshotStatus === 'missing' || snapshotStatus === 'failed';
-                  return (
-                <div
-                  key={rec.ticker}
-                  className="advisor-recommendation"
-                >
-                  <div className="advisor-recommendation-topline">
-                    <div>
-                      <div className="advisor-ticker-line">
-                        <h3>{rec.ticker}</h3>
-                        <span className={`advisor-confidence advisor-confidence-${confidence.toLowerCase()}`}>
-                          {confidence} confidence
-                        </span>
-                      </div>
-                      <p className="advisor-recommendation-meta">
-                        Generated {new Date(rec.generated_at).toLocaleDateString()} •{' '}
-                        {rec.model_used}
-                      </p>
-                      <p className={`advisor-recommendation-age ${needsRefresh ? 'advisor-needs-refresh' : ''}`}>
-                        {recommendationAgeLabel(rec.generated_at)}
-                        {needsRefresh && ' · Refresh comparison data'}
-                      </p>
+              {error && (
+                <Alert className="smart-advisor-error" variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {generationResults.length > 0 && (
+                <div className="smart-advisor-run-status">
+                  <span className="smart-advisor-run-label">Latest run</span>
+                  {(['success', 'skipped', 'failed'] as const).map((resultStatus) => {
+                    const count = generationResults.filter((result) => result.status === resultStatus).length;
+                    if (count === 0) return null;
+                    const label = resultStatus === 'success'
+                      ? 'generated'
+                      : resultStatus === 'skipped'
+                        ? 'skipped'
+                        : 'failed';
+                    return (
+                      <span
+                        key={resultStatus}
+                        className={`advisor-status ${
+                          resultStatus === 'success'
+                            ? 'advisor-status-success'
+                            : resultStatus === 'skipped'
+                              ? 'advisor-status-neutral'
+                              : 'advisor-status-critical'
+                        }`}
+                      >
+                        {count} {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Generation info */}
+              {lastGenerationTime && (
+                <div className="smart-advisor-generation-info">
+                  Last generated:{' '}
+                  {new Date(lastGenerationTime).toLocaleTimeString()}
+                  {!canAutoGenerate() && (
+                    <div className="mt-1">
+                      Next auto-generation:{' '}
+                      {new Date(
+                        lastGenerationTime + AUTO_GENERATION_COOLDOWN_HOURS * 60 * 60 * 1000
+                      ).toLocaleTimeString()}
                     </div>
+                  )}
+                </div>
+              )}
 
-                    <Button
-                      className="advisor-regenerate"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRegenerate(rec.ticker)}
-                      disabled={generating || regeneratingTicker !== null}
+              {loading ? (
+                <div className="smart-advisor-loading">
+                  <Spinner className="h-6 w-6" />
+                </div>
+              ) : recommendations.length === 0 ? (
+                <div className="smart-advisor-empty">
+                  <Brain className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  <p>No recommendations yet.</p>
+                  <p className="text-sm">Click "Generate" to create AI recommendations for your holdings.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {recommendations.map((rec) => (
+                    (() => {
+                      const verdict = verdicts[rec.ticker];
+                      const confidence = confidenceFor(verdict);
+                      const snapshotStatus = verdict?.data_quality?.holding_snapshot_status;
+                      const needsRefresh = snapshotStatus === 'stale' || snapshotStatus === 'missing' || snapshotStatus === 'failed';
+                      return (
+                    <div
+                      key={rec.ticker}
+                      className="advisor-recommendation"
                     >
-                      {regeneratingTicker === rec.ticker ? (
-                        <Spinner className="h-3 w-3" />
-                      ) : (
-                        <RefreshCw className="h-3 w-3" />
-                      )}
-                      <span className="sr-only">Regenerate {rec.ticker}</span>
-                    </Button>
+                      <div className="advisor-recommendation-topline">
+                        <div>
+                          <div className="advisor-ticker-line">
+                            <h3>{rec.ticker}</h3>
+                            <span className={`advisor-confidence advisor-confidence-${confidence.toLowerCase()}`}>
+                              {confidence} confidence
+                            </span>
+                          </div>
+                          <p className="advisor-recommendation-meta">
+                            Generated {new Date(rec.generated_at).toLocaleDateString()} •{' '}
+                            {rec.model_used}
+                          </p>
+                          <p className={`advisor-recommendation-age ${needsRefresh ? 'advisor-needs-refresh' : ''}`}>
+                            {recommendationAgeLabel(rec.generated_at)}
+                            {needsRefresh && ' · Refresh comparison data'}
+                          </p>
+                        </div>
 
-                    {/* Alert badges */}
-                    {alerts[rec.ticker] && (
-                      <div className="advisor-alert-badges">
-                        {alerts[rec.ticker].timeStop?.is_stagnant && (
-                          <span className="advisor-status advisor-status-warning">
-                            <Zap className="h-3 w-3" />
-                            Time Stop
-                          </span>
-                        )}
-                        {alerts[rec.ticker].thesis?.has_reversal && (
-                          <span className="advisor-status advisor-status-critical">
-                            <TrendingDown className="h-3 w-3" />
-                            Thesis
-                          </span>
+                        <Button
+                          className="advisor-regenerate"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRegenerate(rec.ticker)}
+                          disabled={generating || regeneratingTicker !== null}
+                        >
+                          {regeneratingTicker === rec.ticker ? (
+                            <Spinner className="h-3 w-3" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                          <span className="sr-only">Regenerate {rec.ticker}</span>
+                        </Button>
+
+                        {/* Alert badges */}
+                        {alerts[rec.ticker] && (
+                          <div className="advisor-alert-badges">
+                            {alerts[rec.ticker].timeStop?.is_stagnant && (
+                              <span className="advisor-status advisor-status-warning">
+                                <Zap className="h-3 w-3" />
+                                Time Stop
+                              </span>
+                            )}
+                            {alerts[rec.ticker].thesis?.has_reversal && (
+                              <span className="advisor-status advisor-status-critical">
+                                <TrendingDown className="h-3 w-3" />
+                                Thesis
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
 
-                  <p className="advisor-recommendation-text">
-                    {rec.recommendation_text}
-                  </p>
+                      <p className="advisor-recommendation-text">
+                        {rec.recommendation_text}
+                      </p>
 
-                  {verdict && (
-                    <div className="advisor-evidence">
-                      <span>Signal: <strong>{verdict.signal}</strong></span>
-                      <span>Period: {verdict.return_period.replace('return_', '')}</span>
-                      <span>Evidence: {verdict.data_quality?.comparable_with_return_count ?? 0}/{verdict.data_quality?.comparable_count ?? 0} usable comparisons</span>
-                      <span>Snapshot: {verdict.data_quality?.holding_snapshot_status ?? 'unknown'}</span>
-                    </div>
-                  )}
-
-                  {/* Alert details */}
-                  {alerts[rec.ticker] && (
-                    <div className="advisor-alert-details">
-                      {alerts[rec.ticker].timeStop?.is_stagnant && (
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Time Stop:</span> Stagnant for{' '}
-                          {alerts[rec.ticker].timeStop?.stagnant_days ?? 'an unknown number of'} days
+                      {verdict && (
+                        <div className="advisor-evidence">
+                          <span>Signal: <strong>{verdict.signal}</strong></span>
+                          <span>Period: {verdict.return_period.replace('return_', '')}</span>
+                          <span>Evidence: {verdict.data_quality?.comparable_with_return_count ?? 0}/{verdict.data_quality?.comparable_count ?? 0} usable comparisons</span>
+                          <span>Snapshot: {verdict.data_quality?.holding_snapshot_status ?? 'unknown'}</span>
                         </div>
                       )}
-                      {alerts[rec.ticker].thesis?.has_reversal && (
-                        <div className="text-xs text-muted-foreground">
-                          <span className="font-medium">Thesis Check:</span> Signal reversed.
+
+                      {/* Alert details */}
+                      {alerts[rec.ticker] && (
+                        <div className="advisor-alert-details">
+                          {alerts[rec.ticker].timeStop?.is_stagnant && (
+                            <div className="text-xs text-muted-foreground">
+                              <span className="font-medium">Time Stop:</span> Stagnant for{' '}
+                              {alerts[rec.ticker].timeStop?.stagnant_days ?? 'an unknown number of'} days
+                            </div>
+                          )}
+                          {alerts[rec.ticker].thesis?.has_reversal && (
+                            <div className="text-xs text-muted-foreground">
+                              <span className="font-medium">Thesis Check:</span> Signal reversed.
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
+                      );
+                    })()
+                  ))}
                 </div>
-                  );
-                })()
-              ))}
-            </div>
+              )}
+            </>
+          ) : (
+            <>
+              {error && (
+                <Alert className="smart-advisor-error" variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {generationResults.length > 0 && (
+                <div className="smart-advisor-run-status">
+                  <span className="smart-advisor-run-label">Latest run</span>
+                  {(['success', 'skipped', 'failed'] as const).map((resultStatus) => {
+                    const count = generationResults.filter((result) => result.status === resultStatus).length;
+                    if (count === 0) return null;
+                    const label = resultStatus === 'success'
+                      ? 'generated'
+                      : resultStatus === 'skipped'
+                        ? 'skipped'
+                        : 'failed';
+                    return (
+                      <span
+                        key={resultStatus}
+                        className={`advisor-status ${
+                          resultStatus === 'success'
+                            ? 'advisor-status-success'
+                            : resultStatus === 'skipped'
+                              ? 'advisor-status-neutral'
+                              : 'advisor-status-critical'
+                        }`}
+                      >
+                        {count} {label}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Opportunities Generation info */}
+              {lastOpportunitiesGenerationTime && (
+                <div className="smart-advisor-generation-info">
+                  Last analyzed:{' '}
+                  {new Date(lastOpportunitiesGenerationTime).toLocaleTimeString()}
+                </div>
+              )}
+
+              {loading ? (
+                <div className="smart-advisor-loading">
+                  <Spinner className="h-6 w-6" />
+                </div>
+              ) : opportunities.length === 0 ? (
+                <div className="smart-advisor-empty">
+                  <Brain className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  <p>No opportunities identified yet.</p>
+                  <p className="text-sm">Click "Generate" to analyze strong unheld entities and sector gaps in your portfolio.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {opportunities.map((opp) => (
+                    <div
+                      key={`${opp.ticker}-${opp.opportunity_type}`}
+                      className="advisor-recommendation"
+                    >
+                      <div className="advisor-recommendation-topline">
+                        <div>
+                          <div className="advisor-ticker-line">
+                            <h3>{opp.ticker}</h3>
+                            <span className={`advisor-confidence advisor-confidence-${opp.opportunity_type === 'strong_unheld' ? 'high' : 'moderate'}`}>
+                              {opp.opportunity_type === 'strong_unheld' ? 'Strong candidate' : opp.opportunity_type === 'sector_gap' ? 'Sector gap' : 'Underrepresented'}
+                            </span>
+                          </div>
+                          <p className="advisor-recommendation-meta">
+                            Generated {new Date(opp.generated_at).toLocaleDateString()} •{' '}
+                            {opp.model_used}
+                          </p>
+                          <p className="advisor-recommendation-age">
+                            {recommendationAgeLabel(opp.generated_at)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="advisor-recommendation-text">
+                        {opp.opportunity_text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>

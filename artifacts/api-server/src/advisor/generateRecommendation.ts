@@ -276,7 +276,10 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
   };
 }
 
-export async function generatePortfolioSummary(verdicts: HoldingVerdict[]): Promise<{ summary_text: string; model_used: string }> {
+export async function generatePortfolioSummary(
+  verdicts: HoldingVerdict[],
+  opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> }
+): Promise<{ summary_text: string; model_used: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("[generatePortfolioSummary] GEMINI_API_KEY not found in environment");
@@ -290,7 +293,7 @@ export async function generatePortfolioSummary(verdicts: HoldingVerdict[]): Prom
       signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS }] },
-        contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts) }] }],
+        contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts, opportunities) }] }],
         generationConfig: {
           temperature: GEMINI_TEMPERATURE,
           maxOutputTokens: 400,

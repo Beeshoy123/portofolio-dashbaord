@@ -13,6 +13,7 @@ type TechnicalSignal = {
   patterns: Array<{ name: string; date: string; direction: "bullish" | "bearish" | "neutral" }>;
   confidence: number | null;
   raw_fetch_ok: boolean;
+  reversal_risk: "none" | "watch" | "elevated";
   candles: Candle[];
 };
 
@@ -33,6 +34,18 @@ function patternDirection(name: string): "bullish" | "bearish" | "neutral" {
   if (normalized.includes("bullish") || normalized.includes("hammer") || normalized.includes("morning") || normalized.includes("soldiers") || normalized.includes("piercing")) return "bullish";
   if (normalized.includes("bearish") || normalized.includes("hanging") || normalized.includes("shooting") || normalized.includes("evening") || normalized.includes("crows") || normalized.includes("dark")) return "bearish";
   return "neutral";
+}
+
+function reversalRiskOf(
+  trend: TechnicalSignal["trend"],
+  patterns: TechnicalSignal["patterns"]
+): "none" | "watch" | "elevated" {
+  if (trend !== "uptrend") return "none";
+  const hasBearish = patterns.some((p) => p.direction === "bearish");
+  const hasNeutral = patterns.some((p) => p.direction === "neutral");
+  if (hasBearish) return "elevated";
+  if (hasNeutral) return "watch";
+  return "none";
 }
 
 async function fetchCandles(yahooTicker: string): Promise<Candle[]> {
@@ -66,19 +79,22 @@ async function analyzeEntity(row: { id: number; yahoo_ticker: string }, runId: n
     const latestDate = candles[candles.length - 1].date;
     const recentMatches = matches.filter((match) => match.index >= candles.length - 5);
     const patterns = recentMatches.map((match) => ({ name: match.pattern, date: candles[match.index].date, direction: patternDirection(match.pattern) }));
+    const trend = trendOf(candles);
+    const reversalRisk = reversalRiskOf(trend, patterns);
     return {
       watchlist_id: row.id,
       run_id: runId,
       candle_date: latestDate,
-      trend: trendOf(candles),
+      trend,
       patterns,
       confidence: patterns.length > 0 ? Math.min(1, 0.5 + patterns.length * 0.1) : null,
       raw_fetch_ok: true,
+      reversal_risk: reversalRisk,
       candles: candles.slice(-60),
     };
   } catch (error) {
     console.warn(`[technical] ${row.yahoo_ticker}: unavailable`, error);
-    return { watchlist_id: row.id, run_id: runId, candle_date: null, trend: "unknown", patterns: [], confidence: null, raw_fetch_ok: false, candles: [] };
+    return { watchlist_id: row.id, run_id: runId, candle_date: null, trend: "unknown", patterns: [], confidence: null, raw_fetch_ok: false, reversal_risk: "none", candles: [] };
   }
 }
 
@@ -95,10 +111,10 @@ export async function runTechnicalAnalysis(runId: number): Promise<{ succeeded: 
   for (const row of result.rows) {
     const signal = await analyzeEntity({ id: row.id, yahoo_ticker: row.yahoo_ticker! }, runId);
     await pool.query(
-      `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, candles)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT (watchlist_id, run_id) DO UPDATE SET candle_date = EXCLUDED.candle_date, trend = EXCLUDED.trend, patterns = EXCLUDED.patterns, confidence = EXCLUDED.confidence, raw_fetch_ok = EXCLUDED.raw_fetch_ok, candles = EXCLUDED.candles`,
-      [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, JSON.stringify(signal.candles)],
+      `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, candles)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (watchlist_id, run_id) DO UPDATE SET candle_date = EXCLUDED.candle_date, trend = EXCLUDED.trend, patterns = EXCLUDED.patterns, confidence = EXCLUDED.confidence, raw_fetch_ok = EXCLUDED.raw_fetch_ok, reversal_risk = EXCLUDED.reversal_risk, candles = EXCLUDED.candles`,
+      [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, JSON.stringify(signal.candles)],
     );
     if (signal.raw_fetch_ok) succeeded++;
   }

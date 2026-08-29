@@ -2,7 +2,7 @@ import { Router } from "express";
 import { type PoolClient } from "pg";
 import { pool } from "../lib/dbPool";
 import { runScraper } from "../scraper/runScraper";
-import { judgeAllHoldings } from "../judge/comparisonJudge";
+import { judgeAllHoldings, findOpportunities, type OpportunitiesAnalysis } from "../judge/comparisonJudge";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
 import { getRecentSignalTrend } from "../judge/signalTrend";
@@ -154,7 +154,22 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
           );
           try {
-            const portfolioSummary = await generatePortfolioSummary(verdicts);
+            // Discover opportunities periodically (every 5th run) to balance freshness vs. performance
+            // Each run evaluates ~59 entities instead of ~8-10 held ones, so we throttle to reduce load
+            let opportunities: OpportunitiesAnalysis | undefined;
+            if (runId && runId % 5 === 0) {
+              try {
+                opportunities = await findOpportunities(runId);
+                console.log("[ai-bot] Opportunities discovery ran for runId", runId);
+              } catch (err) {
+                console.warn("[ai-bot] Opportunities discovery failed; proceeding without opportunity context:", err);
+                // Non-fatal: opportunities are optional context, portfolio summary can still run
+              }
+            } else if (runId) {
+              console.log("[ai-bot] Skipping opportunities discovery for runId", runId, "(runs every 5th time)");
+            }
+
+            const portfolioSummary = await generatePortfolioSummary(verdicts, opportunities);
             portfolioSummaryContext = {
               summary_text: portfolioSummary.summary_text,
               strong_count: counts.strong,

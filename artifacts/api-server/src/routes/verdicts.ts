@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { judgeAllHoldings } from "../judge/comparisonJudge";
+import { suggestDepositAllocation } from "../advisor/depositSuggestion";
 import { pool } from "../lib/dbPool";
 
 const router = Router();
@@ -52,6 +53,27 @@ router.get("/portfolio-summary", async (req, res) => {
   } catch (error) {
     console.error("[/api/portfolio-summary]", error);
     res.status(500).json({ error: "Failed to fetch portfolio summary" });
+  }
+});
+
+router.post("/deposit-suggestion", async (req, res) => {
+  const { amount_egp, runId, emergencyFundTarget } = req.body;
+
+  // Validate amount
+  if (!Number.isFinite(amount_egp) || amount_egp <= 0) {
+    res.status(400).json({ error: "amount_egp must be a positive number" });
+    return;
+  }
+
+  const run = typeof runId === "number" && Number.isSafeInteger(runId) && runId > 0 ? runId : undefined;
+  const target = typeof emergencyFundTarget === "number" && emergencyFundTarget > 0 ? emergencyFundTarget : undefined;
+
+  try {
+    const suggestion = await suggestDepositAllocation(amount_egp, run, target);
+    res.json(suggestion);
+  } catch (error) {
+    console.error("[/api/deposit-suggestion]", error);
+    res.status(500).json({ error: "Failed to generate deposit suggestion" });
   }
 });
 

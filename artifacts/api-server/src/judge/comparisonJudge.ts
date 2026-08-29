@@ -256,6 +256,9 @@ async function judgeHolding(
   if (signal === "Strong" && technicalSignals.get(holding.id)?.trend === "downtrend") {
     flags.push("technical_divergence");
   }
+  if (technicalSignals.get(holding.id)?.reversal_risk === "elevated") {
+    flags.push("reversal_risk_elevated");
+  }
   const fundamentals_flags_found = groups.some((group) =>
     group.entries.some(
       (entry) => entry.gap_percent !== null && entry.gap_percent < 0 && entry.fundamentals && entry.fundamentals.flags.length > 0,
@@ -351,6 +354,90 @@ export async function judgeAllHoldings(
   } catch (err) {
     console.error("[judgeAllHoldings] failed:", err);
     throw new Error("Comparison Judge could not load its watchlist or snapshot data", { cause: err });
+  }
+}
+
+/**
+ * Represents discovered opportunities: strong unheld entities and underrepresented sectors
+ */
+export interface OpportunitiesAnalysis {
+  strong_unheld: HoldingVerdict[];
+  underrepresented_sectors: Array<{
+    sector: string;
+    portfolio_allocation_percent: number;
+    strong_candidates: HoldingVerdict[];
+  }>;
+}
+
+/**
+ * findOpportunities - discovers strong unheld entities and sectors with low portfolio exposure
+ * Calls judgeAllHoldings with includeAllEntities=true to evaluate every watchlist entity,
+ * then filters for:
+ *  - Unheld entities with "Strong" verdict
+ *  - Sectors where portfolio has <10% allocation but strong unheld candidates exist
+ */
+export async function findOpportunities(runId?: number): Promise<OpportunitiesAnalysis> {
+  try {
+    // Get all verdicts (held and unheld)
+    const allVerdicts = await judgeAllHoldings("return_1y", runId, true);
+
+    // Fetch watchlist to check is_held status and sector info
+    const watchlistResult = await pool.query<WatchlistRow>("SELECT * FROM comparison_watchlist");
+    const watchlist = watchlistResult.rows;
+    const watchlistMap = new Map(watchlist.map((row) => [row.id, row]));
+
+    // Filter to unheld entities with Strong signal
+    const strong_unheld = allVerdicts.filter(
+      (verdict) =>
+        !watchlistMap.get(verdict.holding_ticker.toUpperCase() as any)?.is_held &&
+        verdict.signal === "Strong"
+    );
+
+    // Compute sector allocation for held holdings
+    const heldVerdicts = allVerdicts.filter(
+      (verdict) => watchlistMap.get(verdict.holding_ticker.toUpperCase() as any)?.is_held
+    );
+    const totalHeldValue = heldVerdicts.reduce(
+      (sum, v) => sum + (v.holding_current_value_egp ?? 0),
+      0
+    );
+
+    // Group unheld strong entities by sector
+    const unheldBySector = new Map<string, HoldingVerdict[]>();
+    strong_unheld.forEach((verdict) => {
+      const watchlistRow = watchlist.find((w) => w.ticker === verdict.holding_ticker);
+      const sector = watchlistRow?.sector ?? "Unclassified";
+      if (!unheldBySector.has(sector)) {
+        unheldBySector.set(sector, []);
+      }
+      unheldBySector.get(sector)!.push(verdict);
+    });
+
+    // Identify underrepresented sectors (held allocation <10% with strong unheld candidates)
+    const underrepresented_sectors: OpportunitiesAnalysis["underrepresented_sectors"] = [];
+    for (const [sector, candidates] of unheldBySector.entries()) {
+      const sectorHeldValue = heldVerdicts
+        .filter((verdict) => {
+          const watchlistRow = watchlist.find((w) => w.ticker === verdict.holding_ticker);
+          return watchlistRow?.sector === sector;
+        })
+        .reduce((sum, v) => sum + (v.holding_current_value_egp ?? 0), 0);
+
+      const allocationPercent =
+        totalHeldValue > 0 ? (sectorHeldValue / totalHeldValue) * 100 : 0;
+      if (allocationPercent < 10) {
+        underrepresented_sectors.push({
+          sector,
+          portfolio_allocation_percent: allocationPercent,
+          strong_candidates: candidates,
+        });
+      }
+    }
+
+    return { strong_unheld, underrepresented_sectors };
+  } catch (err) {
+    console.error("[findOpportunities] failed:", err);
+    throw new Error("Opportunities analysis failed", { cause: err });
   }
 }
 
