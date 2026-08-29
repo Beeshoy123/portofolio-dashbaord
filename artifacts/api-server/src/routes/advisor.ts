@@ -183,13 +183,32 @@ router.post("/generate", async (req: Request, res: Response) => {
 
         // Save recommendation
         await pool.query(
-          `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
            DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
                          model_used = EXCLUDED.model_used,
+                         decision = EXCLUDED.decision,
+                         confidence = EXCLUDED.confidence,
+                         evidence = EXCLUDED.evidence,
+                         risks = EXCLUDED.risks,
+                         next_review_days = EXCLUDED.next_review_days,
+                         watch_trigger = EXCLUDED.watch_trigger,
+                         do_not_act_reasons = EXCLUDED.do_not_act_reasons,
                          generated_at = EXCLUDED.generated_at`,
-          [watchlistResult.rows[0].id, recommendation.recommendation_text, recommendation.model_used, runId]
+          [
+            watchlistResult.rows[0].id,
+            recommendation.recommendation_text,
+            recommendation.model_used,
+            runId,
+            recommendation.structured.decision,
+            recommendation.structured.confidence,
+            JSON.stringify(recommendation.structured.evidence),
+            JSON.stringify(recommendation.structured.risks),
+            recommendation.structured.next_review_days,
+            recommendation.structured.watch_trigger,
+            JSON.stringify(recommendation.structured.do_not_act_reasons),
+          ]
         );
 
         return {

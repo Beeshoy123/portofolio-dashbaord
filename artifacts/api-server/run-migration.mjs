@@ -25,9 +25,12 @@ async function runMigration() {
       '009_bot_runs.sql',
       '010_engine_run_links.sql',
       '011_advisor_run_idempotency.sql',
+      '014_advisor_structured_output.sql',
       '015_portfolio_summary.sql',
+      '016_advisor_recommendation_type.sql',
       '017_advisor_opportunities.sql',
       '018_technical_reversal_risk.sql',
+      '019_advisor_watch_triggers.sql',
     ];
     const client = await pool.connect();
     

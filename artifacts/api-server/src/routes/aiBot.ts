@@ -219,8 +219,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 portfolioSummary: portfolioSummaryContext,
               });
               await pool.query(
-                `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days)
-                 SELECT id, $1, $2, $4, $5, $6, $7, $8, $9 FROM comparison_watchlist WHERE ticker = $3
+                `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons)
+                 SELECT id, $1, $2, $4, $5, $6, $7, $8, $9, $10, $11 FROM comparison_watchlist WHERE ticker = $3
                  ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL DO NOTHING`,
                 [
                   recommendation.recommendation_text,
@@ -232,6 +232,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                   JSON.stringify(recommendation.structured.evidence),
                   JSON.stringify(recommendation.structured.risks),
                   recommendation.structured.next_review_days,
+                  recommendation.structured.watch_trigger,
+                  JSON.stringify(recommendation.structured.do_not_act_reasons),
                 ],
               );
               advisorSuccessCount++;

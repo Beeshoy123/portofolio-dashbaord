@@ -56,14 +56,28 @@ type StructuredAdvisorResult = AdvisorRecommendation["structured"];
 const GEMINI_RESPONSE_SCHEMA = {
   type: "OBJECT",
   properties: {
-    decision: { type: "STRING", enum: ["hold", "watch", "research"] },
+    decision: {
+      type: "STRING",
+      enum: ["consider_entry", "consider_rotation", "watch_and_wait", "hold"],
+    },
     confidence: { type: "INTEGER", minimum: 0, maximum: 100 },
     summary: { type: "STRING" },
     evidence: { type: "ARRAY", items: { type: "STRING" } },
     risks: { type: "ARRAY", items: { type: "STRING" } },
     next_review_days: { type: "INTEGER", minimum: 1, maximum: 365 },
+    watch_trigger: { type: "STRING" },
+    do_not_act_reasons: { type: "ARRAY", items: { type: "STRING" } },
   },
-  required: ["decision", "confidence", "summary", "evidence", "risks", "next_review_days"],
+  required: [
+    "decision",
+    "confidence",
+    "summary",
+    "evidence",
+    "risks",
+    "next_review_days",
+    "watch_trigger",
+    "do_not_act_reasons",
+  ],
 };
 
 const PORTFOLIO_SUMMARY_RESPONSE_SCHEMA = {
@@ -164,23 +178,31 @@ function parseStructuredResponse(text: string): StructuredAdvisorResult {
 
 function isStructuredAdvisorResult(value: unknown): value is StructuredAdvisorResult {
   // NOTE: The confidence field has a prompt-enforced ceiling based on data quality
-  // (see rule 10 in SYSTEM_INSTRUCTIONS: 0-2 comparables => ≤40, 3-5 comparables => ≤65,
-  // 6+ comparables => no ceiling). This validation only checks the schema range (0-100).
-  // Gemini may still violate the confidence ceiling — consider adding a post-parse clamp
-  // if ceiling violations become a problem, but for now we rely on prompt enforcement.
+  // (see rule 13 in SYSTEM_INSTRUCTIONS: 0-2 comparables => ≤40, 3-5 comparables => ≤65,
+  // 6+ comparables => no ceiling). Similarly, consider_entry is only for unheld holdings
+  // as instructed in prompt rules. This validation only checks schema shape and ranges.
+  // Gemini may still violate prompt-level constraints — consider adding post-parse clamps
+  // if violations become a problem, but for now we rely on prompt enforcement.
   if (!value || typeof value !== "object") return false;
   const result = value as Record<string, unknown>;
   const isTextArray = (entry: unknown, maxLength: number) =>
     Array.isArray(entry) && entry.length <= maxLength
       && entry.every((item) => typeof item === "string" && item.trim().length > 0 && item.length <= 400);
-  return (result.decision === "hold" || result.decision === "watch" || result.decision === "research")
+  return (
+    (result.decision === "consider_entry" ||
+      result.decision === "consider_rotation" ||
+      result.decision === "watch_and_wait" ||
+      result.decision === "hold")
     && typeof result.confidence === "number" && Number.isInteger(result.confidence)
     && result.confidence >= 0 && result.confidence <= 100
     && typeof result.summary === "string" && result.summary.trim().length > 0 && result.summary.length <= 1200
     && isTextArray(result.evidence, 6)
     && isTextArray(result.risks, 6)
     && typeof result.next_review_days === "number" && Number.isInteger(result.next_review_days)
-    && result.next_review_days >= 1 && result.next_review_days <= 365;
+    && result.next_review_days >= 1 && result.next_review_days <= 365
+    && typeof result.watch_trigger === "string" && result.watch_trigger.length <= 600
+    && isTextArray(result.do_not_act_reasons, 6)
+  );
 }
 
 export async function generateRecommendation(
@@ -203,7 +225,7 @@ export async function generateRecommendation(
   const dataBlock = `${buildDataBlock(verdict, alerts)}
 
 Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
-{"decision":"hold|watch|research","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30}`;
+{"decision":"consider_entry|consider_rotation|watch_and_wait|hold","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30,"watch_trigger":"...","do_not_act_reasons":["..."]}`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
