@@ -177,9 +177,13 @@ export async function parseIndexPage(
     $("script, style, noscript").remove();
     const bodyText = $("body").text().replace(/\s+/g, " ");
 
-    const sixtySessionMoves = await Promise.all(
-      targets.map((target) => target.analysisSlug ? fetchSixtySessionMove(target.analysisSlug) : Promise.resolve(null)),
-    );
+    // DISABLED: 60-session moves were causing 30+ second delays with extra HTTP requests
+    // These requests frequently timeout or fail, blocking index data retrieval
+    // Re-enable if FoudaLens API becomes more stable
+    // const sixtySessionMoves = await Promise.all(
+    //   targets.map((target) => target.analysisSlug ? fetchSixtySessionMove(target.analysisSlug) : Promise.resolve(null)),
+    // );
+    const sixtySessionMoves = targets.map(() => null); // All null for now
 
     return targets.map((t, index) => {
       const points = extractPointsNear(bodyText, t.label);

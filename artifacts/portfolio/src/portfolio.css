@@ -582,7 +582,11 @@ html[lang="ar"] .sort-popover {
 .ai-bot-market-table-wrap td { padding: 8px 9px; border-top: 1px solid rgba(255, 255, 255, .06); white-space: nowrap; }
 .ai-bot-market-table-wrap td:first-child { color: #e7f2ef; }
 .ai-bot-market-table-wrap td:first-child em { margin-left: 6px; border-radius: 4px; padding: 2px 4px; background: rgba(85, 209, 155, .14); color: #62d9a4; font-size: 8px; font-style: normal; font-weight: 800; }
-.ai-bot-entity-nav { display: grid; grid-template-columns: 42px 1fr 42px; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid rgba(255, 255, 255, .07); background: rgba(6, 16, 15, .34); }
+.ai-bot-entity-nav { display: grid; grid-template-columns: auto 42px 1fr 42px; align-items: center; gap: 12px; padding: 14px 22px; border-bottom: 1px solid rgba(255, 255, 255, .07); background: rgba(6, 16, 15, .34); }
+.ai-bot-entity-filters { display: flex; gap: 6px; }
+.ai-bot-filter-btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid rgba(95, 225, 208, .24); border-radius: 8px; padding: 6px 10px; background: rgba(18, 160, 143, .08); color: #78ded1; font-size: 9px; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: .05em; transition: all .2s; }
+.ai-bot-filter-btn:hover { background: rgba(18, 160, 143, .16); border-color: rgba(95, 225, 208, .32); }
+.ai-bot-filter-btn.is-active { border-color: rgba(95, 225, 208, .4); background: rgba(18, 160, 143, .2); color: #72dfd1; box-shadow: 0 0 8px rgba(18, 160, 143, .2); }
 .ai-bot-entity-nav button { display: grid; width: 36px; height: 36px; place-items: center; border: 1px solid rgba(95, 225, 208, .24); border-radius: 10px; background: rgba(18, 160, 143, .1); color: #78ded1; cursor: pointer; }
 .ai-bot-entity-nav button:last-child { justify-self: end; }
 .ai-bot-entity-nav button:disabled { opacity: .28; cursor: not-allowed; }
@@ -645,10 +649,31 @@ html[lang="ar"] .sort-popover {
 .ai-bot-inline-signal { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); color: #78948f; font-size: 10px; }
 .ai-bot-inline-signal b { color: #d5e5e0; }
 .ai-bot-recommendation { margin-top: 18px; color: #dceae6 !important; font-size: 12px !important; line-height: 1.7 !important; }
+.ai-bot-opportunity-label { display: inline-block; margin-bottom: 12px; padding: 6px 10px; border-radius: 6px; background: rgba(233, 212, 96, .12); color: #e7d85f; font-weight: 800; font-size: 11px; letter-spacing: .05em; }
+.ai-bot-opportunity-label + p { margin-top: 10px; color: #a8c5be; font-size: 12px; line-height: 1.6; }
 .ai-bot-advice-panel small { display: block; margin-top: 14px; color: #64857e; font-size: 9px; }
 .ai-bot-workspace-loading, .ai-bot-workspace-error { padding: 34px; color: #78948f; font-size: 12px; }
 .ai-bot-workspace-loading { display: flex; align-items: center; gap: 10px; }
 .ai-bot-workspace-error { border: 1px solid rgba(224, 90, 80, .35); color: #f08078; }
+
+/* Portfolio Summary Sections */
+.ai-bot-summary-section, .ai-bot-opportunities-section, .ai-bot-summary-analysis { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.ai-bot-summary-section:last-child, .ai-bot-summary-analysis:last-child { border-bottom: 0; }
+.ai-bot-summary-title { display: block; color: #58cbbd; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; margin-bottom: 10px; }
+.ai-bot-summary-holdings { color: #dceae6; font-size: 12px; line-height: 1.6; }
+.ai-bot-summary-holdings span { font-weight: 700; margin: 0 2px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.ai-bot-label-strong { background: rgba(85, 209, 155, .14); color: #62d9a4; }
+.ai-bot-label-mixed { background: rgba(217, 154, 43, .14); color: #e7b85b; }
+.ai-bot-label-weak { background: rgba(224, 90, 80, .14); color: #f08078; }
+.ai-bot-label-insufficient { background: rgba(100, 150, 180, .14); color: #7aa3c4; }
+
+.ai-bot-opportunities-list { display: flex; flex-direction: column; gap: 8px; }
+.ai-bot-opportunity-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid rgba(233, 212, 96, .24); border-radius: 8px; background: rgba(233, 212, 96, .06); }
+.ai-bot-opp-ticker { display: inline-block; min-width: 60px; font-family: monospace; font-weight: 800; color: #e7d85f; font-size: 11px; }
+.ai-bot-opp-name { flex: 1; color: #a8c5be; font-size: 11px; }
+.ai-bot-opp-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; background: rgba(85, 209, 155, .14); color: #62d9a4; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+
+.ai-bot-summary-meta { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); color: #64857e; font-size: 9px; }
 
 @media (max-width: 700px) {
   .ai-bot-workspace { margin: 0 8px 18px; }

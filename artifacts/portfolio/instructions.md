@@ -178,6 +178,8 @@ PORT=3001 pnpm run dev
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
+| Portfolio loads but some assets show FALLBACK + `/api/portfolio-summary` HTTP 500 | Missing database migrations (tables not created in Supabase) | See [Missing Database Migrations Issue](#missing-database-migrations-issue-new-2026-08-29) |
+| "Couldn't load your portfolio. HTTP 500" + `(EADDRNOTALLOWED) address not in tenant allow_list` | Supabase IP allowlist blocking connection | See [Supabase IP Allowlist Issue](#supabase-ip-allowlist-issue-new-2026-08-29) |
 | SmartAdvisor Token Limit Issue (Groq API) | SmartAdvisor API request too large for Groq model | See [SmartAdvisor Token Limit Issue](#smartadvisor-token-limit-issue-new-2026-08-16) |
 | "The server does not support SSL connections" | Database can't connect to Supabase over SSL (Windows firewall issue) | See [Database SSL Connection Issue](#database-ssl-connection-issue-new-2026-08-16) |
 | "Couldn't load your portfolio. HTTP 500 Internal Server Error" | Backend API not running OR database SSL error | **Start backend FIRST**: `cd artifacts/api-server && PORT=8080 node --enable-source-maps ./dist/index.mjs` (see [QUICKEST START](#-quickest-start-60-seconds)) |
@@ -228,6 +230,120 @@ The backend's SmartAdvisor feature generates AI recommendations using Groq's Lla
 1. Remove SmartAdvisor as non-essential feature
 2. Rewrite to work within token limits
 3. Switch to larger-context model
+
+---
+
+## Missing Database Migrations Issue (NEW - 2026-08-29)
+
+### Problem
+Portfolio dashboard loads successfully, but certain API endpoints return **HTTP 500 errors** and display **FALLBACK** badges:
+- `/api/portfolio-summary` → `relation "portfolio_summaries" does not exist`
+- Other endpoints may fail similarly if their tables aren't created
+
+### Root Cause
+**Database migrations have not been run on your Supabase database.** The backend code expects certain tables (like `portfolio_summaries`, `advisor_recommendations`, etc.) to exist, but they were never created in the Supabase PostgreSQL database.
+
+This is a **one-time setup issue** that happens after:
+1. Creating a new Supabase project
+2. Setting up a fresh database URL in `.secrets/api-server.env`
+3. First time running the backend
+
+### Solution: Run Migrations on Supabase (REQUIRED)
+
+#### Step 1: Open Supabase SQL Editor
+1. Go to https://supabase.com and log in
+2. Select your portfolio project
+3. Click **SQL Editor** (left sidebar)
+4. Click **"New Query"** (blue button)
+
+#### Step 2: Run All Pending Migrations
+
+Copy and paste **ALL** of these SQL migrations (in order) into the SQL editor:
+
+**Migration 1: portfolio_summaries table**
+```sql
+-- Migration: portfolio_summaries table
+-- Purpose: Store AI-generated portfolio summaries with verdict counts
+-- Used by: /api/portfolio-summary endpoint
+
+CREATE TABLE IF NOT EXISTS "portfolio_summaries" (
+	"id" serial PRIMARY KEY,
+	"run_id" integer NOT NULL,
+	"summary_text" text NOT NULL,
+	"strong_count" integer NOT NULL DEFAULT 0,
+	"mixed_count" integer NOT NULL DEFAULT 0,
+	"weak_count" integer NOT NULL DEFAULT 0,
+	"insufficient_data_count" integer NOT NULL DEFAULT 0,
+	"model_used" text NOT NULL,
+	"generated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS "idx_portfolio_summaries_run_id" ON "portfolio_summaries" ("run_id");
+CREATE INDEX IF NOT EXISTS "idx_portfolio_summaries_generated_at" ON "portfolio_summaries" ("generated_at");
+```
+
+**After pasting:** Click **Run** (or `Ctrl+Enter`) and verify: `Query executed successfully` ✅
+
+#### Step 3: Check for Other Missing Migrations
+If you see other API errors mentioning missing tables:
+1. Check [artifacts/api-server/src/lib/migrations/](artifacts/api-server/src/lib/migrations/) directory
+2. Open the `.sql` files that haven't been run yet
+3. Copy and run each one in Supabase SQL Editor (same as above)
+
+#### Step 4: Restart Backend
+1. In the backend terminal, press `Ctrl+C` to kill it
+2. Restart with:
+   ```bash
+   cd 'g:\tp\ai\portofolio-dashbaord\artifacts\api-server'
+   PORT=8080 node --enable-source-maps ./dist/index.mjs
+   ```
+3. Refresh frontend at http://localhost:3001/
+4. The FALLBACK badges should now show real data ✅
+
+### Status
+**ACTION REQUIRED** - Must run migrations in Supabase before the app can fully function.
+
+### Troubleshooting
+- **Error: "relation already exists"** → This is fine, the `IF NOT EXISTS` clause prevents duplicate creation. Just run the next migration.
+- **Still seeing HTTP 500 after restart?** → Check backend logs for the specific missing table name, find the corresponding `.sql` file in migrations folder, and run it.
+- **Don't know which migrations to run?** → Run ALL `.sql` files in [artifacts/api-server/src/lib/migrations/](artifacts/api-server/src/lib/migrations/) folder
+
+---
+
+## Supabase IP Allowlist Issue (NEW - 2026-08-29)
+
+### Problem
+Backend fails to connect to Supabase PostgreSQL database with error:
+```
+(EADDRNOTALLOWED) address not in tenant allow_list: {41, 42, 189, 77}
+```
+Portfolio fails to load with **HTTP 500 Internal Server Error**.
+
+### Root Cause
+Supabase has an IP allowlist configured on the database. Your current IP address (or IP range) is not in the allowed list. This is a **security feature** on the Supabase project that restricts which IPs can access the PostgreSQL database.
+
+### Solutions
+
+**Option 1: Disable IP Allowlist (QUICKEST - development only)**
+1. Go to Supabase Dashboard → Your Project → Database → Settings → Safeguard Policies
+2. Find "IP Allowlist" and **DISABLE** it or **Allow All IPs** (for development)
+3. Restart the backend: kill terminal and run again
+4. ⚠️ **WARNING**: This opens the database to all IPs - only for development, not production!
+
+**Option 2: Add Your IP to Allowlist (SECURE - recommended)**
+1. Determine your public IP: Open https://whatismyipaddress.com
+2. Go to Supabase Dashboard → Your Project → Database → Settings → Safeguard Policies
+3. Add your public IP to the IP allowlist
+4. Restart the backend
+5. ⚠️ If you're on a shared network or mobile hotspot, your IP may change
+
+**Option 3: Use VPN/Proxy (For restrictive networks)**
+1. If behind corporate firewall, connect to a VPN that has an allowed IP
+2. Or configure a proxy in your environment
+3. Restart backend with proxy environment variables set
+
+### Status
+**Action Required** - Must disable IP allowlist or add your IP before database can work.
 
 ---
 

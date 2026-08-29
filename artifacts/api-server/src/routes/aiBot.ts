@@ -361,4 +361,50 @@ router.get("/ai-bot/status", async (_req, res) => {
   }
 });
 
+router.get("/api/portfolio-summary", async (req, res) => {
+  try {
+    const runId = req.query.runId ? Number(req.query.runId) : undefined;
+    
+    let query = `SELECT summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, generated_at 
+                 FROM portfolio_summaries`;
+    const params: (number | undefined)[] = [];
+    
+    if (runId) {
+      query += ` WHERE run_id = $1`;
+      params.push(runId);
+    } else {
+      query += ` ORDER BY generated_at DESC LIMIT 1`;
+    }
+    
+    const result = await pool.query<{
+      summary_text: string;
+      strong_count: number;
+      mixed_count: number;
+      weak_count: number;
+      insufficient_data_count: number;
+      model_used: string;
+      generated_at: string;
+    }>(query, params.filter((p) => p !== undefined));
+    
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Portfolio summary not found" });
+      return;
+    }
+    
+    const summary = result.rows[0];
+    res.json({
+      summary_text: summary.summary_text,
+      strong_count: summary.strong_count,
+      mixed_count: summary.mixed_count,
+      weak_count: summary.weak_count,
+      insufficient_data_count: summary.insufficient_data_count,
+      model_used: summary.model_used,
+      generated_at: summary.generated_at,
+    });
+  } catch (err) {
+    console.error("[ai-bot] portfolio summary fetch failed:", err);
+    res.status(500).json({ error: "Portfolio summary fetch failed" });
+  }
+});
+
 export default router;

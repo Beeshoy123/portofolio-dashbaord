@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowLeft, ArrowRight, Brain, Gauge, List, RefreshCw, TrendingDown, TrendingUp, X } from 'lucide-react';
+import { Dialog, DialogContent } from './ui/dialog';
 import { supabase } from '../lib/supabaseClient';
 
 type Snapshot = {
@@ -105,6 +106,7 @@ export function AiBotWorkspace() {
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
   const [runId, setRunId] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [filterMode, setFilterMode] = useState<'held' | 'all'>('held');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMarketComparison, setShowMarketComparison] = useState(false);
@@ -113,7 +115,7 @@ export function AiBotWorkspace() {
   useEffect(() => {
     const handleSnapshotUpdate = (event: Event) => {
       const detail = (event as CustomEvent<{ snapshots?: Snapshot[]; runId?: number | null }>).detail;
-      const incoming = (detail?.snapshots ?? []).filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock');
+      const incoming = (detail?.snapshots ?? []).filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock' || snapshot.entity_type === 'index');
       if (detail?.runId !== undefined) setRunId(detail.runId ?? null);
       if (incoming.length === 0) return;
       hasEntityDataRef.current = true;
@@ -140,7 +142,7 @@ export function AiBotWorkspace() {
           status.runId === null ? Promise.resolve([] as Recommendation[]) : json<Recommendation[]>(`/api/advisor/recommendations${suffix}`).catch(() => []),
           status.runId === null ? Promise.resolve(null) : json<PortfolioSummary>(`/api/portfolio-summary${suffix}`).catch(() => null),
         ]);
-        const entitySnapshots = snapshotData.snapshots.filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock');
+        const entitySnapshots = snapshotData.snapshots.filter((snapshot) => snapshot.entity_type === 'fund' || snapshot.entity_type === 'stock' || snapshot.entity_type === 'index');
         if (entitySnapshots.length > 0) hasEntityDataRef.current = true;
         setSnapshots(entitySnapshots);
         setSignals(signalData.signals);
@@ -181,12 +183,32 @@ export function AiBotWorkspace() {
     };
   }, []);
 
-  const entities = useMemo(() => snapshots.filter((snapshot) => snapshot.raw_fetch_ok), [snapshots]);
-  const entity = entities[selectedIndex] ?? null;
+  const allEntities = useMemo(() => snapshots.filter((snapshot) => snapshot.raw_fetch_ok), [snapshots]);
+  const heldEntities = useMemo(() => allEntities.filter((snapshot) => snapshot.is_held), [allEntities]);
+  const displayedEntities = filterMode === 'held' ? heldEntities : allEntities;
+  const entity = displayedEntities[selectedIndex] ?? null;
   const signal = entity ? signals.find((item) => item.ticker === entity.ticker) : undefined;
   const verdict = entity ? verdicts.find((item) => item.holding_ticker === entity.ticker) : undefined;
   const recommendation = entity ? recommendations.find((item) => item.ticker === entity.ticker) : undefined;
   const trendDown = signal?.trend === 'downtrend';
+
+  // Analyze strong unheld entities as opportunities
+  const opportunities = useMemo(() => {
+    const strongUnheld = verdicts
+      .filter((v) => v.signal === 'Strong' && !allEntities.find((e) => e.ticker === v.holding_ticker && e.is_held))
+      .map((v) => {
+        const snap = allEntities.find((e) => e.ticker === v.holding_ticker);
+        return {
+          ticker: v.holding_ticker,
+          name: snap?.name || v.holding_ticker,
+          entityType: snap?.entity_type || 'unknown',
+          sector: snap?.sector || null,
+          score: snap?.total_score ?? null,
+          signal: v.signal,
+        };
+      });
+    return strongUnheld;
+  }, [verdicts, allEntities]);
   const fundamentals = entity?.entity_type === 'stock' ? [
     ['P/E', metric(entity.pe_ratio)],
     ['Forward P/E', metric(entity.forward_pe)],
@@ -198,12 +220,14 @@ export function AiBotWorkspace() {
     ['Beta', metric(entity.beta)],
   ] : [];
 
-  const move = (direction: number) => setSelectedIndex((index) => Math.min(Math.max(index + direction, 0), Math.max(entities.length - 1, 0)));
+  const move = (direction: number) => setSelectedIndex((index) => Math.min(Math.max(index + direction, 0), Math.max(displayedEntities.length - 1, 0)));
 
-  if (loading || error || !entity) {
-    const stateMessage = loading
-      ? "Loading entity intelligence..."
-      : error ?? "No fund or stock results are available for this AI Bot run.";
+  // Reset to first entity when filter mode changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [filterMode]);
+
+  if (error || !entity) {
     return (
       <section className="ai-bot-workspace">
         <header className="ai-bot-workspace-header">
@@ -212,7 +236,7 @@ export function AiBotWorkspace() {
         </header>
         <section className="ai-bot-engine ai-bot-market-engine">
           <div className="ai-bot-engine-header"><div><h3>Market Intelligence</h3></div><Gauge /></div>
-          <div className="ai-bot-workspace-state">{loading && <RefreshCw className="animate-spin" />}<span>{stateMessage}</span></div>
+          {error && <div className="ai-bot-workspace-state"><span>{error}</span></div>}
         </section>
         <section className="ai-bot-engine ai-bot-comparison-engine">
           <div className="ai-bot-engine-header"><div><h3>Comparison Judge</h3><p>Relative position against peers and benchmarks.</p></div><Activity /></div>
@@ -234,9 +258,13 @@ export function AiBotWorkspace() {
       </header>
 
       <nav className="ai-bot-entity-nav" aria-label="Entity navigation">
+        <div className="ai-bot-entity-filters">
+          <button type="button" className={`ai-bot-filter-btn ${filterMode === 'held' ? 'is-active' : ''}`} onClick={() => setFilterMode('held')}>Held ({heldEntities.length})</button>
+          <button type="button" className={`ai-bot-filter-btn ${filterMode === 'all' ? 'is-active' : ''}`} onClick={() => setFilterMode('all')}>All ({allEntities.length})</button>
+        </div>
         <button type="button" onClick={() => move(-1)} disabled={selectedIndex === 0} aria-label="Previous entity"><ArrowLeft /></button>
-        <div className="ai-bot-entity-current"><span>Entity {selectedIndex + 1} of {entities.length}</span><strong>{entity.ticker}</strong><small>{entity.name}</small></div>
-        <button type="button" onClick={() => move(1)} disabled={selectedIndex === entities.length - 1} aria-label="Next entity"><ArrowRight /></button>
+        <div className="ai-bot-entity-current"><span>Entity {selectedIndex + 1} of {displayedEntities.length}</span><strong>{entity?.ticker || '—'}</strong><small>{entity?.name || 'No entity selected'}</small></div>
+        <button type="button" onClick={() => move(1)} disabled={selectedIndex === displayedEntities.length - 1} aria-label="Next entity"><ArrowRight /></button>
       </nav>
 
       <div className="ai-bot-entity-summary">
@@ -253,7 +281,11 @@ export function AiBotWorkspace() {
           <article className="ai-bot-panel ai-bot-price-panel"><div className="ai-bot-panel-heading"><div><h3>Price Checker</h3><span>Market snapshot</span></div><Gauge /></div><div className="ai-bot-price-main"><strong>{pct(entity.return_1y_percent)}</strong><span>1 year return</span></div><div className="ai-bot-price-details"><span>Sector <b>{entity.sector ?? 'Unclassified'}</b></span><span>Score <b>{entity.total_score === null ? '—' : `${Number(entity.total_score).toFixed(0)}/100`}</b></span><span>Updated <b>{entity.scraped_at ? new Date(entity.scraped_at).toLocaleDateString() : '—'}</b></span></div></article>
           <article className="ai-bot-panel ai-bot-chart-panel"><div className="ai-bot-panel-heading"><div><h3>Chart Reader</h3><span>Candlestick context</span></div>{trendDown ? <TrendingDown /> : <TrendingUp />}</div><MiniCandleChart candles={signal?.candles ?? []} /><div className="ai-bot-chart-footer"><span className={trendDown ? 'ai-negative' : 'ai-positive'} title={signal?.reversal_risk && signal.reversal_risk !== 'none' ? 'Pattern-based observation, not a prediction.' : undefined}>{signal?.trend ?? 'No trend'}{signal?.reversal_risk && signal.reversal_risk !== 'none' ? ` · Reversal ${signal.reversal_risk === 'watch' ? 'Watch' : 'Alert'}` : ''}</span><span>{signal?.candle_date ?? 'No candle date'}</span></div></article>
         </div>
-        {showMarketComparison && <MarketComparison snapshots={snapshots} />}
+        <Dialog open={showMarketComparison} onOpenChange={setShowMarketComparison}>
+          <DialogContent className="max-w-4xl max-h-[90vh]">
+            <MarketComparison snapshots={snapshots} />
+          </DialogContent>
+        </Dialog>
         <article className="ai-bot-panel ai-bot-verdict-panel">
           <div className="ai-bot-panel-heading"><div><h3>Comparison Judge</h3><span>Selected entity</span></div><Activity /></div>
           {verdict ? <><div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>{verdict.signal}{verdict.coverage_percent !== null ? ` (${verdict.coverage_percent.toFixed(1)}% coverage)` : ''}</div><p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>{verdict.technical_signal && <div className="ai-bot-inline-signal">Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}</div>}</> : <p>No comparison result is available for this entity yet.</p>}
@@ -262,11 +294,49 @@ export function AiBotWorkspace() {
 
       <section className="ai-bot-engine ai-bot-comparison-engine">
         <div className="ai-bot-engine-header"><div><h3>Comparison Judge</h3><p>Portfolio-wide view across all holdings.</p></div><Activity /></div>
-        <article className="ai-bot-panel ai-bot-verdict-panel">{portfolioSummary ? <><div className="ai-bot-summary-counts"><span>Strong <b>{portfolioSummary.strong_count}</b></span><span>Mixed <b>{portfolioSummary.mixed_count}</b></span><span>Weak <b>{portfolioSummary.weak_count}</b></span><span>Insufficient <b>{portfolioSummary.insufficient_data_count}</b></span></div><p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p><small>{portfolioSummary.model_used} / {new Date(portfolioSummary.generated_at).toLocaleDateString()}</small></> : <p>Portfolio summary will appear after Comparison Judge completes for this run.</p>}</article>
+        <article className="ai-bot-panel ai-bot-verdict-panel">
+          {portfolioSummary ? (
+            <>
+              <div className="ai-bot-summary-section">
+                <h4 className="ai-bot-summary-title">Holdings Status</h4>
+                <p className="ai-bot-summary-holdings">
+                  Portfolio currently has <span className="ai-bot-label-strong">{portfolioSummary.strong_count} Strong</span>, 
+                  <span className="ai-bot-label-mixed">{portfolioSummary.mixed_count} Mixed</span>, 
+                  <span className="ai-bot-label-weak">{portfolioSummary.weak_count} Weak</span> holdings
+                  {portfolioSummary.insufficient_data_count > 0 && <span className="ai-bot-label-insufficient">, {portfolioSummary.insufficient_data_count} Insufficient Data</span>}
+                </p>
+              </div>
+              
+              {opportunities.length > 0 && (
+                <div className="ai-bot-opportunities-section">
+                  <h4 className="ai-bot-summary-title">🎯 Opportunities</h4>
+                  <div className="ai-bot-opportunities-list">
+                    {opportunities.map((opp) => (
+                      <div key={opp.ticker} className="ai-bot-opportunity-item">
+                        <span className="ai-bot-opp-ticker">{opp.ticker}</span>
+                        <span className="ai-bot-opp-name">{opp.name}</span>
+                        <span className="ai-bot-opp-badge">Strong Signal</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              <div className="ai-bot-summary-analysis">
+                <h4 className="ai-bot-summary-title">Analysis</h4>
+                <p className="ai-bot-recommendation">{portfolioSummary.summary_text}</p>
+              </div>
+              
+              <small className="ai-bot-summary-meta">{portfolioSummary.model_used} / {new Date(portfolioSummary.generated_at).toLocaleDateString()}</small>
+            </>
+          ) : (
+            <p>Portfolio summary will appear after Comparison Judge completes for this run.</p>
+          )}
+        </article>
       </section>
       <section className="ai-bot-engine ai-bot-advisor-engine">
         <div className="ai-bot-engine-header"><div><h3>Smart Advisor</h3><p>Final recommendation based on the completed analysis.</p></div><Brain /></div>
-        <article className="ai-bot-panel ai-bot-advice-panel">{recommendation ? <><p className="ai-bot-recommendation">{recommendation.recommendation_text}</p><small>{recommendation.model_used} / {new Date(recommendation.generated_at).toLocaleDateString()}</small></> : <p>{entity.is_held ? 'Recommendation is not available for this run yet.' : 'Smart Advisor recommendations are generated for held positions only.'}</p>}</article>
+        <article className="ai-bot-panel ai-bot-advice-panel">{recommendation ? <><p className="ai-bot-recommendation">{recommendation.recommendation_text}</p><small>{recommendation.model_used} / {new Date(recommendation.generated_at).toLocaleDateString()}</small></> : entity?.is_held ? <p>Recommendation is not available for this run yet.</p> : verdict?.signal === 'Strong' ? <><p className="ai-bot-opportunity-label">💡 Opportunity Candidate</p><p>{verdict?.coverage_percent !== null ? `Strong signal with ${verdict.coverage_percent.toFixed(1)}% comparable coverage.` : 'Strong signal detected. Consider for portfolio inclusion.'}</p></> : <p>Smart Advisor recommendations are generated for held positions only.</p>}</article>
       </section>
     </section>
   );
