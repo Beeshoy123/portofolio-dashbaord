@@ -65,4 +65,6 @@ export interface HoldingVerdict {
   signal: SignalStrength;
   flags: string[]; // e.g. "losing_to_direct_stock", "losing_to_benchmark", "risk_mismatch_beat", "second_opinion_disagreement" (see comparisonJudge.ts)
   data_completeness_warning: boolean; // true if too many entries had no data
+  comparables_beaten?: number;
+  comparables_total?: number;
 }

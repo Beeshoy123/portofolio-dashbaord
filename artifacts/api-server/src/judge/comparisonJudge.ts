@@ -303,6 +303,9 @@ async function judgeHolding(
     flags,
     data_completeness_warning: holdingReturn === null || groups.some((group) => group.incomplete_count > 0),
     fundamentals_flags_found,
+    is_held: Boolean(holding.is_held),
+    comparables_beaten: beats,
+    comparables_total: comparableEntries.length,
   };
 
   // V2 Alert System -- Step 1: log every verdict so Time Stop / Thesis

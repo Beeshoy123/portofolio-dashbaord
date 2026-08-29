@@ -30,7 +30,8 @@ type Snapshot = {
 
 type Candle = { date: string; open: number; high: number; low: number; close: number };
 type TechnicalSignal = { ticker: string; trend: string; confidence: number | string | null; candle_date: string | null; patterns: Array<{ name: string; direction: string }>; reversal_risk?: "none" | "watch" | "elevated"; candles: Candle[] };
-type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
+type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; comparables_beaten?: number; comparables_total?: number; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
+type Recommendation = { ticker: string; recommendation_text: string; model_used: string; generated_at: string };
 type PortfolioSummary = {
   summary_text: string;
   strong_count: number;
@@ -303,7 +304,26 @@ export function AiBotWorkspace() {
         </Dialog>
         <article className="ai-bot-panel ai-bot-verdict-panel">
           <div className="ai-bot-panel-heading"><div><h3>Comparison Judge</h3><span>Selected entity</span></div><Activity /></div>
-          {verdict ? <><div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>{verdict.signal}{verdict.coverage_percent !== null ? ` (${verdict.coverage_percent.toFixed(1)}% coverage)` : ''}</div><p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>{verdict.technical_signal && <div className="ai-bot-inline-signal">Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}</div>}</> : <p>No comparison result is available for this entity yet.</p>}
+          {verdict ? (
+            <>
+              <div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>
+                {verdict.signal}{verdict.coverage_percent !== null ? ` (${verdict.coverage_percent.toFixed(1)}% coverage)` : ''}
+              </div>
+              {verdict.comparables_total !== undefined && verdict.comparables_total > 0 && (
+                <div className="ai-bot-verdict-peers">
+                  Beat {verdict.comparables_beaten ?? 0} of {verdict.comparables_total} peers
+                </div>
+              )}
+              <p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>
+              {verdict.technical_signal && (
+                <div className="ai-bot-inline-signal">
+                  Chart evidence: <b>{verdict.technical_signal.trend}</b>{verdict.technical_signal.patterns.length ? ` / ${verdict.technical_signal.patterns[0].name}` : ''}
+                </div>
+              )}
+            </>
+          ) : (
+            <p>No comparison result is available for this entity yet.</p>
+          )}
         </article>
       </section>
 

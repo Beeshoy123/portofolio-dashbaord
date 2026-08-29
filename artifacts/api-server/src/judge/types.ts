@@ -65,4 +65,6 @@ export interface HoldingVerdict {
   flags: string[];
   data_completeness_warning: boolean;
   fundamentals_flags_found: boolean;
+  comparables_beaten: number;
+  comparables_total: number;
 }
