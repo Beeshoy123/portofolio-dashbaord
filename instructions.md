@@ -12,11 +12,18 @@ The **Project** run button executes these steps in order every time — not just
 2. **`artifacts/api-server: API Server`** — Express API on port 8080. Starts only after step 1 succeeds.
 3. **`artifacts/portfolio: web`** — Vite dev server on port 21113 (`/`). Starts only after step 2 is up.
 
-**Empty state is expected and correct — waiting for offline SQL backup.** After schema push, the database has empty tables. The API returns `404 NOT_SEEDED` and the dashboard shows "No data found — the database is empty" with placeholder zeros. This is the correct state until the real backup is imported. The startup script never seeds, restores, or touches data — that's intentional.
+**Supabase Database Connection (Primary & Authoritative):** All real portfolio data (gold transactions, funds, 25 certificates, historical transactions, settings) is stored in the remote Supabase PostgreSQL database configured in `.secrets/api-server.env` (`aws-1-eu-west-1.pooler.supabase.com`).
 
-**Current status: awaiting the user's offline SQL backup.** Do not seed, fabricate, or populate any data. Just run the project as-is and wait.
-
-To restore data when ready: the user will upload their offline `.sql` backup file, then ask the agent to pipe it directly into Postgres via `psql $DATABASE_URL`, then delete the uploaded file immediately. The agent must never keep the SQL file on disk after importing.
+**Preventing the "Database is empty / 0 EGP" State:**
+If the dashboard ever displays *"⚠️ No data found — the database is empty"* or placeholder zeros (0 EGP), it means the backend was started with an inherited environment variable pointing to an empty local database instead of Supabase.
+To fix:
+1. Always clear inherited database environment variables before starting the backend:
+   ```bash
+   unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY PORTFOLIO_OWNER_USER_ID USE_POOLER
+   ```
+2. Start the backend: `PORT=8080 node --enable-source-maps ./dist/index.mjs` (or use `start-backend.bat`).
+3. Verify the startup log confirms: `{ chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' } Using database host`.
+4. Refresh the frontend at `http://localhost:3001/` and log in via Supabase.
 
 To export data: ask the agent to generate a temporary SQL dump, download it, then ask the agent to delete it. Temporary export files generated on request are fine — they just must not be committed to GitHub or left in the project long-term.
 

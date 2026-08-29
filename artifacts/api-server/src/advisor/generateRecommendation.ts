@@ -30,8 +30,9 @@ function envNumber(name: string, fallback: number, minimum: number, maximum: num
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
 const GEMINI_TEMPERATURE = envNumber("GEMINI_TEMPERATURE", 0.4, 0, 2);
-const GEMINI_MAX_OUTPUT_TOKENS = envNumber("GEMINI_MAX_OUTPUT_TOKENS", 650, 128, 4096);
+const GEMINI_MAX_OUTPUT_TOKENS = envNumber("GEMINI_MAX_OUTPUT_TOKENS", 2048, 128, 8192);
 const GEMINI_TIMEOUT_MS = envNumber("GEMINI_TIMEOUT_MS", 45_000, 5_000, 120_000);
+
 
 interface ModelsListResponse {
   models?: Array<{
@@ -345,10 +346,11 @@ export async function generatePortfolioSummary(
         contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts, opportunities, evaluationScope) }] }],
         generationConfig: {
           temperature: GEMINI_TEMPERATURE,
-          maxOutputTokens: 800,
+          maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
           responseMimeType: "application/json",
           responseSchema: PORTFOLIO_SUMMARY_RESPONSE_SCHEMA,
         },
+
       }),
     },
   );

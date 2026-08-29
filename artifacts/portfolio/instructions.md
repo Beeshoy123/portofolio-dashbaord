@@ -141,28 +141,34 @@ pnpm rebuild  # Critical for Windows: compiles native modules like esbuild
 
 **Step 3: BACKEND FIRST - Terminal 1 (REQUIRED - runs on port 8080)**
 ⚠️ **START THIS FIRST - Frontend won't work without it!**
+
 ```bash
 cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server'
-# Clear inherited values so dotenv loads the repository Supabase configuration.
-unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY
+# CRITICAL: Clear all inherited environment variables so dotenv reliably loads .secrets/api-server.env
+unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY PORTFOLIO_OWNER_USER_ID USE_POOLER
 PORT=8080 node --enable-source-maps ./dist/index.mjs
 ```
-✅ Wait for this output before starting frontend:
+*(Or simply double-click `start-backend.bat` from the root folder)*
+
+✅ **Verify this EXACT output in terminal before starting frontend:**
 ```
+Loaded environment from G:\tp\ai\portofolio-dashbaord\.secrets\api-server.env
+{ chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' } Using database host
 Server listening port: 8080
 gold-price-cache: scraped fresh prices
 ```
-✅ Also confirm the backend log says `Using database host` with the Supabase host, not `localhost`.
+⚠️ **CRITICAL CHECK**: Ensure the log says `{ chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' }`, NOT `localhost` or `127.0.0.1`. If it says `localhost`, an inherited `DATABASE_URL` was present — stop the process, run the `unset` command above, and restart.
 
-The backend automatically loads `../../.secrets/api-server.env`. That file must contain the real
-`DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` values. Do not put these secrets in
-`artifacts/portfolio/.env` or commit them to the repository.
+The backend automatically loads `../../.secrets/api-server.env`. That file contains the real
+`DATABASE_URL`, `SUPABASE_URL`, and `SUPABASE_SERVICE_ROLE_KEY` values for your Supabase project.
 
 **Step 4: FRONTEND - Terminal 2 (runs on port 3001)**
 ```bash
 cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio'
 PORT=3001 pnpm run dev
 ```
+*(Or double-click `start-frontend.bat` from the root folder)*
+
 
 **App URL:** http://localhost:3001/
 ⚠️ **BOTH servers must be running simultaneously**
@@ -183,7 +189,7 @@ PORT=3001 pnpm run dev
 | SmartAdvisor Token Limit Issue (Groq API) | SmartAdvisor API request too large for Groq model | See [SmartAdvisor Token Limit Issue](#smartadvisor-token-limit-issue-new-2026-08-16) |
 | "The server does not support SSL connections" | Database can't connect to Supabase over SSL (Windows firewall issue) | See [Database SSL Connection Issue](#database-ssl-connection-issue-new-2026-08-16) |
 | "Couldn't load your portfolio. HTTP 500 Internal Server Error" | Backend API not running OR database SSL error | **Start backend FIRST**: `cd artifacts/api-server && PORT=8080 node --enable-source-maps ./dist/index.mjs` (see [QUICKEST START](#-quickest-start-60-seconds)) |
-| Dashboard shows zeros or "database is empty" | An inherited `DATABASE_URL` points to an empty local database | In the backend terminal run `unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY`, then restart the backend so it loads `../../.secrets/api-server.env` |
+| Dashboard shows zeros or "database is empty" (0 EGP) | Inherited `DATABASE_URL` points to empty local DB instead of Supabase | See [Dashboard Shows Empty / 0 EGP](#dashboard-shows-no-data-found--the-database-is-empty-or-zeros-new---2026-08-30) |
 | "running scripts is disabled on this system" | Using PowerShell instead of Git Bash | **Set Git Bash as default terminal in VS Code** (see [QUICKEST START](#-quickest-start-60-seconds)) |
 | "Cannot find native binding" | Native modules not compiled | `pnpm install --shamefully-hoist --force` |
 | "Cannot find package esbuild" | pnpm using nested modules | Add `--shamefully-hoist` flag |
@@ -191,6 +197,53 @@ PORT=3001 pnpm run dev
 | "sh is not recognized" | Preinstall script uses `sh` | Use `pnpm install --ignore-scripts` or Git Bash |
 | Port already in use | Another app on same port | `PORT=4000 pnpm run dev` |
 | EPERM: operation not permitted (esbuild) | Antivirus/Windows blocking file ops | Close other terminals; try `pnpm install --prefer-offline` |
+
+---
+
+## Dashboard Shows "No data found — the database is empty" or Zeros (NEW - 2026-08-30)
+
+### Problem
+The frontend loads at `http://localhost:3001/` with a yellow alert banner:
+> ⚠️ **No data found — the database is empty. Every widget below is showing placeholder zeros, not real figures.**
+
+The overall portfolio value displays `0 EGP`, even though all tables and transactions are present in Supabase.
+
+### Root Cause
+1. The backend configuration uses `dotenv` with `override: false`.
+2. If any previous terminal session or system environment set `DATABASE_URL` (for example, pointing to a local PostgreSQL instance `localhost:5432` where tables are empty), the backend uses that inherited variable instead of reading the Supabase connection string from `.secrets/api-server.env`.
+3. When the backend queries `localhost:5432`, `gold_settings` and `portfolio_settings` are empty, causing `/api/portfolio` to return `404 NOT_SEEDED`.
+4. The frontend detects `404 NOT_SEEDED` and renders the empty portfolio layout with placeholder zeros and the warning banner.
+
+### Solution (Step-by-Step)
+
+#### Step 1: Stop the Running Backend
+In your backend terminal, press `Ctrl + C` (or kill the process on port 8080).
+
+#### Step 2: Clear Inherited Variables & Restart with Git Bash
+Run in Git Bash:
+```bash
+cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server'
+unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY PORTFOLIO_OWNER_USER_ID USE_POOLER
+PORT=8080 node --enable-source-maps ./dist/index.mjs
+```
+*(Or simply double-click `start-backend.bat` from the root directory, which unsets these variables automatically)*
+
+#### Step 3: Verify the Backend Output
+Confirm the backend terminal prints:
+```
+Loaded environment from G:\tp\ai\portofolio-dashbaord\.secrets\api-server.env
+{ chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' } Using database host
+Server listening port: 8080
+```
+✅ **Verify that `chosenDatabaseUrl` says `aws-1-eu-west-1.pooler.supabase.com`, NOT `localhost` or `127.0.0.1`.**
+
+#### Step 4: Refresh Frontend
+1. Open http://localhost:3001/ in your browser and press `Ctrl + F5`.
+2. Sign in with Supabase credentials if prompted.
+3. The dashboard will now display your real portfolio data (Gold: 20g, Funds, 25 Certificates, etc.) and the yellow warning banner will disappear.
+
+### Status
+**RESOLVED** - Follow Step 2 whenever starting the backend.
 
 ---
 
@@ -396,7 +449,7 @@ This suggests the issue is at the OS/network level, not the connection string.
 - Try running on WiFi, different PC, or mobile hotspot to isolate if it's network-specific
 
 ### Status
-**BLOCKED** - Database connectivity required to proceed. Need to implement one of the above solutions before portfolio can load.
+**RESOLVED (2026-08-22)** — The direct Supabase connection had IPv6/firewall SSL negotiation issues on Windows. The connection was migrated to the IPv4-compatible **Supabase Session Pooler** (`aws-1-eu-west-1.pooler.supabase.com:5432`). SSL normalization in `lib/db/src/index.ts` automatically disables custom SSL for the pooler host while keeping secure connections intact.
 
 ⚠️ **BACKEND MUST RUN FIRST - Frontend depends on it for portfolio data**
 
