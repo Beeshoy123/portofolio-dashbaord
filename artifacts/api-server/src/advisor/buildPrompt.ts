@@ -65,7 +65,7 @@ DO_NOT_ACT_REASONS: when decision is watch_and_wait or hold, list 1-3 short reas
 
 export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are not a licensed financial advisor.
 
-Write ONE concise overall portfolio read in 4-6 sentences. Use only the verdict-level data provided. State the counts of Strong, Mixed, Weak, and Insufficient Data holdings. Name holdings that clearly carry the portfolio or drag it down when their signal is notably different from the rest. Do not repeat every holding's details; this is an overall conclusion, not a re-listing of evidence. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If average coverage is low, or if flagged holdings, reversal risk, or trend divergences represent more than a small fraction of total holdings, you must mention this as a reason for lower confidence in the overall summary — do not just report the counts, explain what they mean for how much to trust the read. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now. If data is missing, say so plainly.
+Write ONE concise overall portfolio read in 4-6 sentences. Use only the verdict-level data provided. State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a holding-count read of "mostly Strong" but a large value percentage sits in Weak, or vice versa), you MUST call this out explicitly in the summary — this is the single most decision-relevant signal in the whole prompt, since it means a small-looking problem is actually large in money terms, or a large-looking problem is actually a small position. Name holdings that clearly carry the portfolio or drag it down when their signal is notably different from the rest. Do not repeat every holding's details; this is an overall conclusion, not a re-listing of evidence. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If average coverage is low, or if flagged holdings, reversal risk, or trend divergences represent more than a small fraction of total holdings, you must mention this as a reason for lower confidence in the overall summary — do not just report the counts, explain what they mean for how much to trust the read. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now. If data is missing, say so plainly.
 `;
 
 export const OPPORTUNITY_ANALYSIS_SYSTEM_INSTRUCTIONS = `You are a financial explainer helping an Egyptian investor identify portfolio diversification opportunities. Your job is to explain PRE-CALCULATED opportunity facts, not discover them yourself.
@@ -102,7 +102,51 @@ export function buildPortfolioSummaryPrompt(
   const reversalRiskCount = verdicts.filter((v) => v.technical_signal?.reversal_risk === "elevated").length;
   const divergenceCount = verdicts.filter((v) => v.flags && v.flags.includes("technical_divergence")).length;
 
-  const aggregateLine = `- Flags raised: ${flaggedCount} of ${totalCount} holdings | Avg coverage: ${avgCoverageStr} | Reversal risk: ${reversalRiskCount} holdings | Diverging from trend: ${divergenceCount} holdings`;
+  const counts = verdicts.reduce(
+    (result, verdict) => {
+      if (verdict.signal === "Strong") result.strong++;
+      else if (verdict.signal === "Mixed") result.mixed++;
+      else if (verdict.signal === "Weak") result.weak++;
+      else if (verdict.signal === "Insufficient Data") result.insufficientData++;
+      return result;
+    },
+    { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
+  );
+
+  const valueSums = verdicts.reduce(
+    (acc, verdict) => {
+      const val = verdict.holding_current_value_egp;
+      if (typeof val === "number" && Number.isFinite(val) && val > 0) {
+        acc.totalValue += val;
+        if (verdict.signal === "Strong") acc.strongValue += val;
+        else if (verdict.signal === "Mixed") acc.mixedValue += val;
+        else if (verdict.signal === "Weak") acc.weakValue += val;
+        else if (verdict.signal === "Insufficient Data") acc.insufficientValue += val;
+      }
+      return acc;
+    },
+    { totalValue: 0, strongValue: 0, mixedValue: 0, weakValue: 0, insufficientValue: 0 },
+  );
+
+  const countParts: string[] = [];
+  if (counts.strong > 0) countParts.push(`${counts.strong} Strong`);
+  if (counts.mixed > 0) countParts.push(`${counts.mixed} Mixed`);
+  if (counts.weak > 0) countParts.push(`${counts.weak} Weak`);
+  if (counts.insufficientData > 0) countParts.push(`${counts.insufficientData} Insufficient Data`);
+  const countStr = countParts.length > 0 ? countParts.join(", ") : "0 holdings";
+
+  let valueStr = "unavailable (holding values not provided)";
+  if (valueSums.totalValue > 0) {
+    const valueParts: string[] = [];
+    if (valueSums.strongValue > 0) valueParts.push(`${((valueSums.strongValue / valueSums.totalValue) * 100).toFixed(1)}% in Strong holdings`);
+    if (valueSums.mixedValue > 0) valueParts.push(`${((valueSums.mixedValue / valueSums.totalValue) * 100).toFixed(1)}% in Mixed holdings`);
+    if (valueSums.weakValue > 0) valueParts.push(`${((valueSums.weakValue / valueSums.totalValue) * 100).toFixed(1)}% in Weak holdings`);
+    if (valueSums.insufficientValue > 0) valueParts.push(`${((valueSums.insufficientValue / valueSums.totalValue) * 100).toFixed(1)}% in Insufficient Data`);
+    valueStr = valueParts.length > 0 ? valueParts.join(", ") : "0%";
+  }
+
+  const distributionLine = `- Signal distribution: By holding count: ${countStr}. By portfolio value: ${valueStr}.`;
+  const aggregateLine = `- Aggregate metrics: Flags raised: ${flaggedCount} of ${totalCount} holdings | Avg coverage: ${avgCoverageStr} | Reversal risk: ${reversalRiskCount} holdings | Diverging from trend: ${divergenceCount} holdings`;
 
   // Use passed opportunities data if available, otherwise fall back to filtering verdicts
   let opportunityLines: string[];
@@ -133,7 +177,7 @@ export function buildPortfolioSummaryPrompt(
     "- Include only actual watchlist evidence; do not invent sectors or holdings.",
   ].join("\n");
 
-  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}\n${aggregateLine}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
+  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}\n${distributionLine}\n${aggregateLine}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nWrite ONLY valid JSON matching this shape:\n{"summary":"..."}`;
 }
 
 function formatGroupForPrompt(group: ComparisonGroup): string {

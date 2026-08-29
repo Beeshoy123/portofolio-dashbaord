@@ -32,6 +32,7 @@ async function runMigration() {
       '018_technical_reversal_risk.sql',
       '019_advisor_watch_triggers.sql',
       '020_portfolio_summary_aggregates.sql',
+      '021_portfolio_summary_value_weights.sql',
     ];
     const client = await pool.connect();
     

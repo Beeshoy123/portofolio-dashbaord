@@ -182,6 +182,44 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           const avgCoveragePercent = counts.coverageCount > 0
             ? Number((counts.coverageSum / counts.coverageCount).toFixed(1))
             : null;
+
+          // Compute value-weighted signal distribution across holdings with known position value.
+          // Note: Holdings with unknown value (null) are excluded from the value-weighted total,
+          // not from the equal-weighted counts above.
+          const valueSums = verdicts.reduce(
+            (acc, verdict) => {
+              const val = verdict.holding_current_value_egp;
+              if (typeof val === "number" && Number.isFinite(val) && val > 0) {
+                acc.totalValue += val;
+                if (verdict.signal === "Strong") acc.strongValue += val;
+                else if (verdict.signal === "Mixed") acc.mixedValue += val;
+                else if (verdict.signal === "Weak") acc.weakValue += val;
+                else if (verdict.signal === "Insufficient Data") acc.insufficientValue += val;
+              }
+              return acc;
+            },
+            {
+              totalValue: 0,
+              strongValue: 0,
+              mixedValue: 0,
+              weakValue: 0,
+              insufficientValue: 0,
+            },
+          );
+
+          const strongValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.strongValue / valueSums.totalValue) * 100).toFixed(1))
+            : null;
+          const mixedValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.mixedValue / valueSums.totalValue) * 100).toFixed(1))
+            : null;
+          const weakValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.weakValue / valueSums.totalValue) * 100).toFixed(1))
+            : null;
+          const insufficientValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.insufficientValue / valueSums.totalValue) * 100).toFixed(1))
+            : null;
+
           try {
             // Discover opportunities periodically (every 5th run) to balance freshness vs. performance
             // Each run evaluates ~59 entities instead of ~8-10 held ones, so we throttle to reduce load
@@ -208,8 +246,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             };
             await pool.query(
               `INSERT INTO portfolio_summaries
-                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                ON CONFLICT (run_id) DO NOTHING`,
               [
                 runId,
@@ -223,6 +261,10 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 avgCoveragePercent,
                 counts.reversalRiskCount,
                 counts.divergenceCount,
+                strongValuePercent,
+                mixedValuePercent,
+                weakValuePercent,
+                insufficientValuePercent,
               ],
             );
           } catch (error) {
@@ -402,6 +444,7 @@ router.get("/api/portfolio-summary", async (req, res) => {
     
     let query = `SELECT summary_text, strong_count, mixed_count, weak_count, insufficient_data_count,
                         flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count,
+                        strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent,
                         model_used, generated_at 
                  FROM portfolio_summaries`;
     const params: (number | undefined)[] = [];
@@ -423,6 +466,10 @@ router.get("/api/portfolio-summary", async (req, res) => {
       avg_coverage_percent: number | string | null;
       reversal_risk_count: number | null;
       divergence_count: number | null;
+      strong_value_percent: number | string | null;
+      mixed_value_percent: number | string | null;
+      weak_value_percent: number | string | null;
+      insufficient_value_percent: number | string | null;
       model_used: string;
       generated_at: string;
     }>(query, params.filter((p) => p !== undefined));
@@ -443,6 +490,10 @@ router.get("/api/portfolio-summary", async (req, res) => {
       avg_coverage_percent: summary.avg_coverage_percent !== null ? Number(summary.avg_coverage_percent) : null,
       reversal_risk_count: summary.reversal_risk_count !== null ? Number(summary.reversal_risk_count) : 0,
       divergence_count: summary.divergence_count !== null ? Number(summary.divergence_count) : 0,
+      strong_value_percent: summary.strong_value_percent !== null ? Number(summary.strong_value_percent) : null,
+      mixed_value_percent: summary.mixed_value_percent !== null ? Number(summary.mixed_value_percent) : null,
+      weak_value_percent: summary.weak_value_percent !== null ? Number(summary.weak_value_percent) : null,
+      insufficient_value_percent: summary.insufficient_value_percent !== null ? Number(summary.insufficient_value_percent) : null,
       model_used: summary.model_used,
       generated_at: summary.generated_at,
     });

@@ -41,6 +41,10 @@ type PortfolioSummary = {
   avg_coverage_percent?: number | null;
   reversal_risk_count?: number | null;
   divergence_count?: number | null;
+  strong_value_percent?: number | null;
+  mixed_value_percent?: number | null;
+  weak_value_percent?: number | null;
+  insufficient_value_percent?: number | null;
   model_used: string;
   generated_at: string;
 };
@@ -310,12 +314,32 @@ export function AiBotWorkspace() {
             <>
               <div className="ai-bot-summary-section">
                 <h4 className="ai-bot-summary-title">Holdings Status</h4>
-                <p className="ai-bot-summary-holdings">
-                  Portfolio currently has <span className="ai-bot-label-strong">{portfolioSummary.strong_count} Strong</span>, 
-                  <span className="ai-bot-label-mixed">{portfolioSummary.mixed_count} Mixed</span>, 
-                  <span className="ai-bot-label-weak">{portfolioSummary.weak_count} Weak</span> holdings
-                  {portfolioSummary.insufficient_data_count > 0 && <span className="ai-bot-label-insufficient">, {portfolioSummary.insufficient_data_count} Insufficient Data</span>}
-                </p>
+                <div className="ai-bot-summary-breakdown" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div className="ai-bot-summary-row">
+                    <span className="text-xs font-semibold text-muted-foreground mr-1.5">By count:</span>
+                    <span className="ai-bot-summary-holdings">
+                      <span className="ai-bot-label-strong">{portfolioSummary.strong_count} Strong</span>,{' '}
+                      <span className="ai-bot-label-mixed">{portfolioSummary.mixed_count} Mixed</span>,{' '}
+                      <span className="ai-bot-label-weak">{portfolioSummary.weak_count} Weak</span>
+                      {portfolioSummary.insufficient_data_count > 0 && <span className="ai-bot-label-insufficient">, {portfolioSummary.insufficient_data_count} Insufficient Data</span>}
+                    </span>
+                  </div>
+                  {portfolioSummary.strong_value_percent !== null && portfolioSummary.strong_value_percent !== undefined ? (
+                    <div className="ai-bot-summary-row">
+                      <span className="text-xs font-semibold text-muted-foreground mr-1.5">By value:</span>
+                      <span className="ai-bot-summary-holdings">
+                        <span className="ai-bot-label-strong">{Number(portfolioSummary.strong_value_percent).toFixed(1)}% Strong</span>,{' '}
+                        <span className="ai-bot-label-mixed">{Number(portfolioSummary.mixed_value_percent).toFixed(1)}% Mixed</span>,{' '}
+                        <span className="ai-bot-label-weak">{Number(portfolioSummary.weak_value_percent).toFixed(1)}% Weak</span>
+                        {Number(portfolioSummary.insufficient_value_percent) > 0 && <span className="ai-bot-label-insufficient">, {Number(portfolioSummary.insufficient_value_percent).toFixed(1)}% Insufficient Data</span>}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">
+                      Value-weighted view unavailable — holding values not available for this run
+                    </p>
+                  )}
+                </div>
                 <div className="ai-bot-summary-aggregates" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', fontSize: '11px', opacity: 0.85 }}>
                   <span className="ai-bot-aggregate-pill">⚑ {portfolioSummary.flagged_count ?? 0} flagged</span>
                   {portfolioSummary.avg_coverage_percent !== null && portfolioSummary.avg_coverage_percent !== undefined && (

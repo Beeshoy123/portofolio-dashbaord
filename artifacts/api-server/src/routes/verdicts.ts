@@ -50,12 +50,18 @@ router.get("/portfolio-summary", async (req, res) => {
       avg_coverage_percent: number | string | null;
       reversal_risk_count: number | null;
       divergence_count: number | null;
+      strong_value_percent: number | string | null;
+      mixed_value_percent: number | string | null;
+      weak_value_percent: number | string | null;
+      insufficient_value_percent: number | string | null;
       model_used: string;
       generated_at: string;
     }>(
       `SELECT id, run_id, summary_text, strong_count, mixed_count, weak_count,
               insufficient_data_count, flagged_count, avg_coverage_percent,
-              reversal_risk_count, divergence_count, model_used, generated_at
+              reversal_risk_count, divergence_count,
+              strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent,
+              model_used, generated_at
        FROM portfolio_summaries
        WHERE run_id = $1`,
       [runId],
@@ -77,6 +83,10 @@ router.get("/portfolio-summary", async (req, res) => {
       avg_coverage_percent: summary.avg_coverage_percent !== null ? Number(summary.avg_coverage_percent) : null,
       reversal_risk_count: summary.reversal_risk_count !== null ? Number(summary.reversal_risk_count) : 0,
       divergence_count: summary.divergence_count !== null ? Number(summary.divergence_count) : 0,
+      strong_value_percent: summary.strong_value_percent !== null ? Number(summary.strong_value_percent) : null,
+      mixed_value_percent: summary.mixed_value_percent !== null ? Number(summary.mixed_value_percent) : null,
+      weak_value_percent: summary.weak_value_percent !== null ? Number(summary.weak_value_percent) : null,
+      insufficient_value_percent: summary.insufficient_value_percent !== null ? Number(summary.insufficient_value_percent) : null,
       model_used: summary.model_used,
       generated_at: summary.generated_at,
     });
