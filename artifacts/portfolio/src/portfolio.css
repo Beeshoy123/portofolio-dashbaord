@@ -646,6 +646,10 @@ html[lang="ar"] .sort-popover {
 .ai-bot-verdict-weak { background: rgba(224, 90, 80, .14); color: #f08078; }
 .ai-bot-verdict-insufficient-data { background: rgba(100, 150, 180, .14); color: #7aa3c4; }
 .ai-bot-verdict-peers { margin: 0 0 10px; color: #a8c5be; font-size: 12px; font-weight: 600; }
+.ai-bot-verdict-flags { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; }
+.ai-bot-flag-chip { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; letter-spacing: .02em; }
+.ai-bot-flag-info { background: rgba(100, 150, 180, .14); color: #8bb5d6; border: 1px solid rgba(100, 150, 180, .25); }
+.ai-bot-flag-warning { background: rgba(217, 154, 43, .14); color: #e7b85b; border: 1px solid rgba(217, 154, 43, .28); }
 .ai-bot-panel p { color: #9ab3ad; font-size: 11px; line-height: 1.6; }
 .ai-bot-inline-signal { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); color: #78948f; font-size: 10px; }
 .ai-bot-inline-signal b { color: #d5e5e0; }

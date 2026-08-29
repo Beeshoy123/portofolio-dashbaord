@@ -30,7 +30,7 @@ type Snapshot = {
 
 type Candle = { date: string; open: number; high: number; low: number; close: number };
 type TechnicalSignal = { ticker: string; trend: string; confidence: number | string | null; candle_date: string | null; patterns: Array<{ name: string; direction: string }>; reversal_risk?: "none" | "watch" | "elevated"; candles: Candle[] };
-type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; comparables_beaten?: number; comparables_total?: number; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
+type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; comparables_beaten?: number; comparables_total?: number; flags?: string[]; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
 type Recommendation = { ticker: string; recommendation_text: string; model_used: string; generated_at: string };
 type PortfolioSummary = {
   summary_text: string;
@@ -49,6 +49,30 @@ type PortfolioSummary = {
   model_used: string;
   generated_at: string;
 };
+
+const VERDICT_FLAG_MAP: Record<string, { label: string; category: 'info' | 'warning' }> = {
+  thin_comparable_sample: { label: 'Thin sample', category: 'info' },
+  underperforming_comparables: { label: 'Underperforming peers', category: 'warning' },
+  incomplete_comparison_data: { label: 'Incomplete data', category: 'info' },
+  risk_mismatch: { label: 'Risk mismatch', category: 'warning' },
+  technical_divergence: { label: 'Diverging from trend', category: 'warning' },
+  reversal_risk_elevated: { label: 'Reversal risk', category: 'warning' },
+  no_comparable_return_data: { label: 'No peer returns', category: 'warning' },
+  missing_return_1y_return: { label: 'Missing 1Y return', category: 'info' },
+  missing_return_6m_return: { label: 'Missing 6M return', category: 'info' },
+  missing_return_3m_return: { label: 'Missing 3M return', category: 'info' },
+};
+
+function getVerdictFlagMeta(flag: string): { label: string; category: 'info' | 'warning' } {
+  if (VERDICT_FLAG_MAP[flag]) {
+    return VERDICT_FLAG_MAP[flag];
+  }
+  const label = flag.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
+  return {
+    label,
+    category: flag.includes('warning') || flag.includes('risk') || flag.includes('underperforming') || flag.includes('divergence') ? 'warning' : 'info',
+  };
+}
 
 async function json<T>(url: string): Promise<T> {
   const headers = new Headers();
@@ -312,6 +336,18 @@ export function AiBotWorkspace() {
               {verdict.comparables_total !== undefined && verdict.comparables_total > 0 && (
                 <div className="ai-bot-verdict-peers">
                   Beat {verdict.comparables_beaten ?? 0} of {verdict.comparables_total} peers
+                </div>
+              )}
+              {verdict.flags && verdict.flags.length > 0 && (
+                <div className="ai-bot-verdict-flags">
+                  {verdict.flags.map((flag) => {
+                    const meta = getVerdictFlagMeta(flag);
+                    return (
+                      <span key={flag} className={`ai-bot-flag-chip ai-bot-flag-${meta.category}`}>
+                        {meta.label}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
               <p>{verdict.data_quality?.comparable_with_return_count ?? 0} of {verdict.data_quality?.comparable_count ?? 0} comparable results have usable returns.</p>

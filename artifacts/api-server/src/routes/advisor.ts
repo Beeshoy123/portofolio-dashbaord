@@ -9,7 +9,7 @@
 import { Router, Request, Response } from "express";
 import { type PoolClient } from "pg";
 import { pool } from "../lib/dbPool";
-import { judgeAllHoldings } from "../judge/comparisonJudge";
+import { judgeAllHoldings, findOpportunities, type OpportunitiesAnalysis } from "../judge/comparisonJudge";
 import { generateRecommendation } from "../advisor/generateRecommendation";
 import { checkTimeStop } from "../judge/timeStop";
 import { checkThesis } from "../judge/thesisCheck";
@@ -239,9 +239,93 @@ router.post("/generate", async (req: Request, res: Response) => {
   }
 });
 
-// Get all opportunities
+const OPPORTUNITY_RATE_LIMIT_MS = 60_000;
+let lastOpportunityRefreshTime = 0;
+const lastOpportunityRefreshByRun = new Map<number, number>();
+
+function checkOpportunityRateLimit(runId?: number): { allowed: boolean; retryAfterSeconds: number } {
+  const now = Date.now();
+  const globalElapsed = now - lastOpportunityRefreshTime;
+  if (globalElapsed < OPPORTUNITY_RATE_LIMIT_MS) {
+    const retryAfter = Math.ceil((OPPORTUNITY_RATE_LIMIT_MS - globalElapsed) / 1000);
+    return { allowed: false, retryAfterSeconds: retryAfter };
+  }
+  if (runId !== undefined) {
+    const runTime = lastOpportunityRefreshByRun.get(runId) ?? 0;
+    const runElapsed = now - runTime;
+    if (runElapsed < OPPORTUNITY_RATE_LIMIT_MS) {
+      const retryAfter = Math.ceil((OPPORTUNITY_RATE_LIMIT_MS - runElapsed) / 1000);
+      return { allowed: false, retryAfterSeconds: retryAfter };
+    }
+  }
+  return { allowed: true, retryAfterSeconds: 0 };
+}
+
+function recordOpportunityRefresh(runId?: number): void {
+  const now = Date.now();
+  lastOpportunityRefreshTime = now;
+  if (runId !== undefined) {
+    lastOpportunityRefreshByRun.set(runId, now);
+  }
+}
+
+// On-demand force refresh of opportunities
+router.post("/opportunities/refresh", async (req: Request, res: Response) => {
+  try {
+    const rawRunId = req.body?.runId ?? req.query.runId;
+    let runId = parseRunId(rawRunId);
+    if (runId === null) {
+      runId = await getLatestRunId();
+    }
+    if (runId === null) {
+      return res.status(400).json({ error: "No bot runs available for opportunity analysis" });
+    }
+
+    const rateLimit = checkOpportunityRateLimit(runId);
+    if (!rateLimit.allowed) {
+      return res.status(429).json({
+        error: `Opportunity refresh rate limit exceeded. Please wait ${rateLimit.retryAfterSeconds} seconds before requesting another scan.`,
+        retryAfterSeconds: rateLimit.retryAfterSeconds,
+      });
+    }
+
+    const opportunities = await findOpportunities(runId);
+    recordOpportunityRefresh(runId);
+
+    res.json(opportunities);
+  } catch (err) {
+    console.error("[advisor] POST /opportunities/refresh failed:", err);
+    res.status(500).json({ error: "Failed to perform on-demand opportunity analysis" });
+  }
+});
+
+// Get all opportunities (or force on-demand refresh if force=true)
 router.get("/opportunities", async (req: Request, res: Response) => {
   try {
+    const isForce = req.query.force === "true";
+    if (isForce) {
+      let runId = parseRunId(req.query.runId);
+      if (runId === null) {
+        runId = await getLatestRunId();
+      }
+      if (runId === null) {
+        return res.status(400).json({ error: "No bot runs available for opportunity analysis" });
+      }
+
+      const rateLimit = checkOpportunityRateLimit(runId);
+      if (!rateLimit.allowed) {
+        return res.status(429).json({
+          error: `Opportunity refresh rate limit exceeded. Please wait ${rateLimit.retryAfterSeconds} seconds before requesting another scan.`,
+          retryAfterSeconds: rateLimit.retryAfterSeconds,
+        });
+      }
+
+      const opportunities = await findOpportunities(runId);
+      recordOpportunityRefresh(runId);
+
+      return res.json(opportunities);
+    }
+
     const runId = parseRunId(req.query.runId);
     if (runId === null) return res.status(400).json({ error: "runId is required" });
 
@@ -505,7 +589,17 @@ router.get("/alerts-context/:ticker", async (req: Request, res: Response) => {
 export default router;
 
 function parseRunId(value: unknown): number | null {
+  if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return value;
   if (typeof value !== "string" || !/^\d+$/.test(value)) return null;
   const runId = Number(value);
   return Number.isSafeInteger(runId) && runId > 0 ? runId : null;
 }
+
+async function getLatestRunId(): Promise<number | null> {
+  const result = await pool.query<{ id: number }>(
+    `SELECT id FROM bot_runs ORDER BY id DESC LIMIT 1`
+  );
+  if (result.rows.length === 0) return null;
+  return Number(result.rows[0].id);
+}
+
