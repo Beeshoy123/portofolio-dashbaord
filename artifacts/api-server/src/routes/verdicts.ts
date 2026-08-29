@@ -38,9 +38,24 @@ router.get("/portfolio-summary", async (req, res) => {
   }
 
   try {
-    const result = await pool.query(
+    const result = await pool.query<{
+      id: number;
+      run_id: number;
+      summary_text: string;
+      strong_count: number;
+      mixed_count: number;
+      weak_count: number;
+      insufficient_data_count: number;
+      flagged_count: number | null;
+      avg_coverage_percent: number | string | null;
+      reversal_risk_count: number | null;
+      divergence_count: number | null;
+      model_used: string;
+      generated_at: string;
+    }>(
       `SELECT id, run_id, summary_text, strong_count, mixed_count, weak_count,
-              insufficient_data_count, model_used, generated_at
+              insufficient_data_count, flagged_count, avg_coverage_percent,
+              reversal_risk_count, divergence_count, model_used, generated_at
        FROM portfolio_summaries
        WHERE run_id = $1`,
       [runId],
@@ -49,7 +64,22 @@ router.get("/portfolio-summary", async (req, res) => {
       res.status(404).json({ error: "No portfolio summary found for this run" });
       return;
     }
-    res.json(result.rows[0]);
+    const summary = result.rows[0];
+    res.json({
+      id: summary.id,
+      run_id: summary.run_id,
+      summary_text: summary.summary_text,
+      strong_count: summary.strong_count,
+      mixed_count: summary.mixed_count,
+      weak_count: summary.weak_count,
+      insufficient_data_count: summary.insufficient_data_count,
+      flagged_count: summary.flagged_count !== null ? Number(summary.flagged_count) : 0,
+      avg_coverage_percent: summary.avg_coverage_percent !== null ? Number(summary.avg_coverage_percent) : null,
+      reversal_risk_count: summary.reversal_risk_count !== null ? Number(summary.reversal_risk_count) : 0,
+      divergence_count: summary.divergence_count !== null ? Number(summary.divergence_count) : 0,
+      model_used: summary.model_used,
+      generated_at: summary.generated_at,
+    });
   } catch (error) {
     console.error("[/api/portfolio-summary]", error);
     res.status(500).json({ error: "Failed to fetch portfolio summary" });

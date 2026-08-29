@@ -31,8 +31,19 @@ type Snapshot = {
 type Candle = { date: string; open: number; high: number; low: number; close: number };
 type TechnicalSignal = { ticker: string; trend: string; confidence: number | string | null; candle_date: string | null; patterns: Array<{ name: string; direction: string }>; reversal_risk?: "none" | "watch" | "elevated"; candles: Candle[] };
 type Verdict = { holding_ticker: string; holding_return_percent: number | null; signal: string; coverage_percent: number | null; technical_signal?: { trend: string; confidence: number | null; patterns: Array<{ name: string; direction: string }> } | null; data_quality?: { comparable_with_return_count: number; comparable_count: number } };
-type Recommendation = { ticker: string; recommendation_text: string; generated_at: string; model_used: string };
-type PortfolioSummary = { summary_text: string; strong_count: number; mixed_count: number; weak_count: number; insufficient_data_count: number; model_used: string; generated_at: string };
+type PortfolioSummary = {
+  summary_text: string;
+  strong_count: number;
+  mixed_count: number;
+  weak_count: number;
+  insufficient_data_count: number;
+  flagged_count?: number | null;
+  avg_coverage_percent?: number | null;
+  reversal_risk_count?: number | null;
+  divergence_count?: number | null;
+  model_used: string;
+  generated_at: string;
+};
 
 async function json<T>(url: string): Promise<T> {
   const headers = new Headers();
@@ -305,6 +316,14 @@ export function AiBotWorkspace() {
                   <span className="ai-bot-label-weak">{portfolioSummary.weak_count} Weak</span> holdings
                   {portfolioSummary.insufficient_data_count > 0 && <span className="ai-bot-label-insufficient">, {portfolioSummary.insufficient_data_count} Insufficient Data</span>}
                 </p>
+                <div className="ai-bot-summary-aggregates" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px', fontSize: '11px', opacity: 0.85 }}>
+                  <span className="ai-bot-aggregate-pill">⚑ {portfolioSummary.flagged_count ?? 0} flagged</span>
+                  {portfolioSummary.avg_coverage_percent !== null && portfolioSummary.avg_coverage_percent !== undefined && (
+                    <span className="ai-bot-aggregate-pill">📊 avg {Number(portfolioSummary.avg_coverage_percent).toFixed(1)}% coverage</span>
+                  )}
+                  <span className="ai-bot-aggregate-pill">↩ {portfolioSummary.reversal_risk_count ?? 0} reversal risk</span>
+                  <span className="ai-bot-aggregate-pill">⚠ {portfolioSummary.divergence_count ?? 0} diverging</span>
+                </div>
               </div>
               
               {opportunities.length > 0 && (

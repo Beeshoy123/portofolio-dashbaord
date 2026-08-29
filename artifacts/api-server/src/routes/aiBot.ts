@@ -149,10 +149,39 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               else if (verdict.signal === "Mixed") result.mixed++;
               else if (verdict.signal === "Weak") result.weak++;
               else if (verdict.signal === "Insufficient Data") result.insufficientData++;
+
+              if (verdict.flags && verdict.flags.length > 0) {
+                result.flaggedCount++;
+              }
+              if (typeof verdict.coverage_percent === "number" && Number.isFinite(verdict.coverage_percent)) {
+                result.coverageSum += verdict.coverage_percent;
+                result.coverageCount++;
+              }
+              if (verdict.technical_signal?.reversal_risk === "elevated") {
+                result.reversalRiskCount++;
+              }
+              if (verdict.flags && verdict.flags.includes("technical_divergence")) {
+                result.divergenceCount++;
+              }
+
               return result;
             },
-            { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
+            {
+              strong: 0,
+              mixed: 0,
+              weak: 0,
+              insufficientData: 0,
+              flaggedCount: 0,
+              coverageSum: 0,
+              coverageCount: 0,
+              reversalRiskCount: 0,
+              divergenceCount: 0,
+            },
           );
+
+          const avgCoveragePercent = counts.coverageCount > 0
+            ? Number((counts.coverageSum / counts.coverageCount).toFixed(1))
+            : null;
           try {
             // Discover opportunities periodically (every 5th run) to balance freshness vs. performance
             // Each run evaluates ~59 entities instead of ~8-10 held ones, so we throttle to reduce load
@@ -179,8 +208,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             };
             await pool.query(
               `INSERT INTO portfolio_summaries
-                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used)
-               VALUES ($1, $2, $3, $4, $5, $6, $7)
+                (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                ON CONFLICT (run_id) DO NOTHING`,
               [
                 runId,
@@ -190,6 +219,10 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 counts.weak,
                 counts.insufficientData,
                 portfolioSummary.model_used,
+                counts.flaggedCount,
+                avgCoveragePercent,
+                counts.reversalRiskCount,
+                counts.divergenceCount,
               ],
             );
           } catch (error) {
@@ -367,7 +400,9 @@ router.get("/api/portfolio-summary", async (req, res) => {
   try {
     const runId = req.query.runId ? Number(req.query.runId) : undefined;
     
-    let query = `SELECT summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, generated_at 
+    let query = `SELECT summary_text, strong_count, mixed_count, weak_count, insufficient_data_count,
+                        flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count,
+                        model_used, generated_at 
                  FROM portfolio_summaries`;
     const params: (number | undefined)[] = [];
     
@@ -384,6 +419,10 @@ router.get("/api/portfolio-summary", async (req, res) => {
       mixed_count: number;
       weak_count: number;
       insufficient_data_count: number;
+      flagged_count: number | null;
+      avg_coverage_percent: number | string | null;
+      reversal_risk_count: number | null;
+      divergence_count: number | null;
       model_used: string;
       generated_at: string;
     }>(query, params.filter((p) => p !== undefined));
@@ -400,6 +439,10 @@ router.get("/api/portfolio-summary", async (req, res) => {
       mixed_count: summary.mixed_count,
       weak_count: summary.weak_count,
       insufficient_data_count: summary.insufficient_data_count,
+      flagged_count: summary.flagged_count !== null ? Number(summary.flagged_count) : 0,
+      avg_coverage_percent: summary.avg_coverage_percent !== null ? Number(summary.avg_coverage_percent) : null,
+      reversal_risk_count: summary.reversal_risk_count !== null ? Number(summary.reversal_risk_count) : 0,
+      divergence_count: summary.divergence_count !== null ? Number(summary.divergence_count) : 0,
       model_used: summary.model_used,
       generated_at: summary.generated_at,
     });
