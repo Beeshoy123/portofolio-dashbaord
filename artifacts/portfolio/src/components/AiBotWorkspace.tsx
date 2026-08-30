@@ -1142,7 +1142,18 @@ export function AiBotWorkspace() {
 
                           {!isCollapsed && (
                             group.entries && group.entries.length > 0 ? (
-                              group.entries.map((peer) => {
+                              [...group.entries]
+                                .sort((a, b) => {
+                                  const gapA = a.gap_percent !== null && a.gap_percent !== undefined ? Number(a.gap_percent) : null;
+                                  const gapB = b.gap_percent !== null && b.gap_percent !== undefined ? Number(b.gap_percent) : null;
+                                  if (gapA !== null && gapB !== null) {
+                                    return gapA - gapB;
+                                  }
+                                  if (gapA !== null) return -1;
+                                  if (gapB !== null) return 1;
+                                  return a.ticker.localeCompare(b.ticker);
+                                })
+                                .map((peer) => {
                                 const hasReturn = peer.return_percent !== null && peer.return_percent !== undefined;
                                 const gapMeta = formatGap(peer.gap_percent, lang);
                                 return (

@@ -2212,7 +2212,15 @@ export function initDashboardBehavior(
     if (allPending) {
       rows = `<div style="color:var(--dim);font-size:10px;font-style:italic;padding:6px 0">No return data yet — scraper hasn't captured prices for this group.</div>`;
     } else {
-      rows = group.entries.map((entry: any) => {
+      const sortedEntries = [...group.entries].sort((a: any, b: any) => {
+        if (a.gap_percent !== null && b.gap_percent !== null) {
+          return Number(a.gap_percent) - Number(b.gap_percent);
+        }
+        if (a.gap_percent !== null) return -1;
+        if (b.gap_percent !== null) return 1;
+        return String(a.ticker).localeCompare(String(b.ticker));
+      });
+      rows = sortedEntries.map((entry: any) => {
         if (entry.return_percent === null) {
           return `<div class="comparison-evidence-row comparison-evidence-pending">
             <span class="comparison-ticker">${entry.ticker}</span>

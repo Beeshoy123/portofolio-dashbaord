@@ -195,12 +195,20 @@ function buildGroup(
   });
 
   if (entries.length === 0) return null;
+  const sortedEntries = [...entries].sort((a, b) => {
+    if (a.gap_percent !== null && b.gap_percent !== null) {
+      return a.gap_percent - b.gap_percent;
+    }
+    if (a.gap_percent !== null) return -1;
+    if (b.gap_percent !== null) return 1;
+    return a.ticker.localeCompare(b.ticker);
+  });
   return {
     group_type: groupType,
-    entries,
-    you_beat_count: entries.filter((entry) => entry.gap_percent !== null && entry.gap_percent > 0).length,
-    you_lose_count: entries.filter((entry) => entry.gap_percent !== null && entry.gap_percent < 0).length,
-    incomplete_count: entries.filter((entry) => entry.gap_percent === null).length,
+    entries: sortedEntries,
+    you_beat_count: sortedEntries.filter((entry) => entry.gap_percent !== null && entry.gap_percent > 0).length,
+    you_lose_count: sortedEntries.filter((entry) => entry.gap_percent !== null && entry.gap_percent < 0).length,
+    incomplete_count: sortedEntries.filter((entry) => entry.gap_percent === null).length,
   };
 }
 
