@@ -42,49 +42,62 @@ export async function fetchHistoricalReturns(yahooTicker: string): Promise<Histo
     return_1y_percent: null,
   };
 
-  try {
-    const now = Math.floor(Date.now() / 1000);
-    const oneYearAgo = new Date();
-    oneYearAgo.setUTCFullYear(oneYearAgo.getUTCFullYear() - 1);
-    const rangeStart = Math.floor(oneYearAgo.getTime() / 1000) - 45 * 24 * 60 * 60;
-    const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooTicker)}`);
-    url.searchParams.set("period1", String(rangeStart));
-    url.searchParams.set("period2", String(now));
-    url.searchParams.set("interval", "1d");
-    url.searchParams.set("events", "history");
+  const tickerCandidates = [yahooTicker];
+  if (yahooTicker === "^CASE30") tickerCandidates.push("^EGX30", "EGX30.CA");
+  else if (yahooTicker === "^EGX70EWI.CA") tickerCandidates.push("EGX70.CA", "^EGX70");
+  else if (yahooTicker === "^EGX100EWI.CA") tickerCandidates.push("EGX100.CA", "^EGX100");
 
-    const response = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (Node.js Scraper)" },
-      signal: AbortSignal.timeout(30_000),
-    });
-    if (!response.ok) {
-      console.warn(`[historicalReturns] ${yahooTicker}: HTTP ${response.status}`);
-      return empty;
+  for (const ticker of tickerCandidates) {
+    try {
+      const now = Math.floor(Date.now() / 1000);
+      const oneYearAgo = new Date();
+      oneYearAgo.setUTCFullYear(oneYearAgo.getUTCFullYear() - 1);
+      const rangeStart = Math.floor(oneYearAgo.getTime() / 1000) - 45 * 24 * 60 * 60;
+      const url = new URL(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}`);
+      url.searchParams.set("period1", String(rangeStart));
+      url.searchParams.set("period2", String(now));
+      url.searchParams.set("interval", "1d");
+      url.searchParams.set("events", "history");
+
+      const response = await fetch(url, {
+        headers: { "User-Agent": "Mozilla/5.0 (Node.js Scraper)" },
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!response.ok) {
+        continue;
+      }
+
+      const payload = (await response.json()) as YahooChartResponse;
+      const result = payload.chart?.result?.[0];
+      const timestamps = result?.timestamp ?? [];
+      const closes = result?.indicators?.quote?.[0]?.close ?? [];
+      const current = [...closes].reverse().find((close) => close !== null && Number.isFinite(close)) ?? null;
+      if (current === null || timestamps.length === 0) continue;
+
+      const nowDate = new Date();
+      const thirtyDaysAgo = new Date(nowDate);
+      thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+      const yearStart = new Date(Date.UTC(nowDate.getUTCFullYear(), 0, 1));
+      const previousYear = new Date(nowDate);
+      previousYear.setUTCFullYear(previousYear.getUTCFullYear() - 1);
+
+      const ret30 = percentageChange(current, findCloseOnOrBefore(timestamps, closes, Math.floor(thirtyDaysAgo.getTime() / 1000)));
+      const retYtd = percentageChange(current, findCloseOnOrBefore(timestamps, closes, Math.floor(yearStart.getTime() / 1000)));
+      const ret1y = percentageChange(current, findCloseOnOrBefore(timestamps, closes, Math.floor(previousYear.getTime() / 1000)));
+
+      if (ret1y !== null || retYtd !== null || ret30 !== null) {
+        return {
+          return_30d_percent: ret30,
+          return_ytd_percent: retYtd,
+          return_1y_percent: ret1y,
+        };
+      }
+    } catch {
+      // try next candidate
     }
-
-    const payload = (await response.json()) as YahooChartResponse;
-    const result = payload.chart?.result?.[0];
-    const timestamps = result?.timestamp ?? [];
-    const closes = result?.indicators?.quote?.[0]?.close ?? [];
-    const current = [...closes].reverse().find((close) => close !== null && Number.isFinite(close)) ?? null;
-    if (current === null || timestamps.length === 0) return empty;
-
-    const nowDate = new Date();
-    const thirtyDaysAgo = new Date(nowDate);
-    thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
-    const yearStart = new Date(Date.UTC(nowDate.getUTCFullYear(), 0, 1));
-    const previousYear = new Date(nowDate);
-    previousYear.setUTCFullYear(previousYear.getUTCFullYear() - 1);
-
-    return {
-      return_30d_percent: percentageChange(current, findCloseOnOrBefore(timestamps, closes, Math.floor(thirtyDaysAgo.getTime() / 1000))),
-      return_ytd_percent: percentageChange(current, findCloseOnOrBefore(timestamps, closes, Math.floor(yearStart.getTime() / 1000))),
-      return_1y_percent: percentageChange(current, findCloseOnOrBefore(timestamps, closes, Math.floor(previousYear.getTime() / 1000))),
-    };
-  } catch (error) {
-    console.warn(`[historicalReturns] ${yahooTicker}: request failed`, error);
-    return empty;
   }
+
+  return empty;
 }
 
 export async function enrichHistoricalReturns(

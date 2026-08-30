@@ -736,7 +736,8 @@ html[lang="ar"] .sort-popover {
 .ai-bot-label-insufficient { background: rgba(100, 150, 180, .14); color: #7aa3c4; }
 
 .ai-bot-opportunities-list { display: flex; flex-direction: column; gap: 8px; }
-.ai-bot-opportunity-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid rgba(233, 212, 96, .24); border-radius: 8px; background: rgba(233, 212, 96, .06); }
+.ai-bot-opportunity-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid rgba(233, 212, 96, .24); border-radius: 8px; background: rgba(233, 212, 96, .06); transition: all .15s ease; }
+.ai-bot-opportunity-item:hover { background: rgba(233, 212, 96, .12); border-color: rgba(233, 212, 96, .45); }
 .ai-bot-opp-ticker { display: inline-block; min-width: 60px; font-family: monospace; font-weight: 800; color: #e7d85f; font-size: 11px; }
 .ai-bot-opp-name { flex: 1; color: #a8c5be; font-size: 11px; }
 .ai-bot-opp-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; background: rgba(85, 209, 155, .14); color: #62d9a4; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }

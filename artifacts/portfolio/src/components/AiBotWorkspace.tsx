@@ -500,11 +500,12 @@ export function AiBotWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showMarketComparison, setShowMarketComparison] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [isOpportunitiesExpanded, setIsOpportunitiesExpanded] = useState(false);
   const hasEntityDataRef = useRef(false);
 
   const toggleGroupCollapse = (groupKey: string) => {
-    setCollapsedGroups((prev) => ({
+    setExpandedGroups((prev) => ({
       ...prev,
       [groupKey]: !prev[groupKey],
     }));
@@ -1077,7 +1078,8 @@ export function AiBotWorkspace() {
                     {verdict.groups.map((group) => {
                       const totalRated = group.you_beat_count + group.you_lose_count;
                       const groupKey = `${entity?.ticker || ''}_${group.group_type}`;
-                      const isCollapsed = Boolean(collapsedGroups[groupKey]);
+                      const isExpanded = Boolean(expandedGroups[groupKey]);
+                      const isCollapsed = !isExpanded;
                       return (
                         <div key={group.group_type} className="comparison-group">
                           <div
@@ -1086,6 +1088,8 @@ export function AiBotWorkspace() {
                             onClick={() => toggleGroupCollapse(groupKey)}
                             role="button"
                             tabIndex={0}
+                            aria-expanded={isExpanded}
+                            aria-label={`${getGroupTypeLabel(group.group_type, lang)} - ${isExpanded ? (lang === 'ar' ? 'طي المجموعة' : 'Collapse group') : (lang === 'ar' ? 'توسيع المجموعة' : 'Expand group')}`}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
                                 e.preventDefault();
@@ -1096,8 +1100,9 @@ export function AiBotWorkspace() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <button
                                 type="button"
+                                tabIndex={-1}
                                 className="comparison-group-collapse-btn"
-                                aria-expanded={!isCollapsed}
+                                aria-hidden="true"
                                 title={isCollapsed ? (lang === 'ar' ? 'توسيع المجموعة' : 'Expand group') : (lang === 'ar' ? 'طي المجموعة' : 'Collapse group')}
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1275,16 +1280,84 @@ export function AiBotWorkspace() {
               
               {opportunities.length > 0 && (
                 <div className="ai-bot-opportunities-section">
-                  <h4 className="ai-bot-summary-title">{lang === 'ar' ? '🎯 الفرص' : '🎯 Opportunities'}</h4>
-                  <div className="ai-bot-opportunities-list">
-                    {opportunities.map((opp) => (
-                      <div key={opp.ticker} className="ai-bot-opportunity-item">
-                        <span className="ai-bot-opp-ticker">{opp.ticker}</span>
-                        <span className="ai-bot-opp-name">{translateEntityName(opp.name || opp.ticker, lang)}</span>
-                        <span className="ai-bot-opp-badge">{lang === 'ar' ? 'إشارة قوية' : 'Strong Signal'}</span>
-                      </div>
-                    ))}
+                  <div
+                    className="comparison-group-header"
+                    style={{ cursor: 'pointer', userSelect: 'none', marginBottom: isOpportunitiesExpanded ? '10px' : '0' }}
+                    onClick={() => setIsOpportunitiesExpanded((prev) => !prev)}
+                    role="button"
+                    tabIndex={0}
+                    aria-expanded={isOpportunitiesExpanded}
+                    aria-label={`${lang === 'ar' ? 'الفرص الاستثمارية' : 'Investment Opportunities'} - ${isOpportunitiesExpanded ? (lang === 'ar' ? 'طي القسم' : 'Collapse section') : (lang === 'ar' ? 'توسيع القسم' : 'Expand section')}`}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setIsOpportunitiesExpanded((prev) => !prev);
+                      }
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        className="comparison-group-collapse-btn"
+                        aria-hidden="true"
+                        title={!isOpportunitiesExpanded ? (lang === 'ar' ? 'توسيع الفرص' : 'Expand opportunities') : (lang === 'ar' ? 'طي الفرص' : 'Collapse opportunities')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsOpportunitiesExpanded((prev) => !prev);
+                        }}
+                      >
+                        <svg
+                          width="11"
+                          height="11"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          style={{
+                            transform: !isOpportunitiesExpanded ? (lang === 'ar' ? 'rotate(90deg)' : 'rotate(-90deg)') : 'rotate(0deg)',
+                            transition: 'transform 0.2s ease',
+                          }}
+                        >
+                          <polyline points="6 9 12 15 18 9" />
+                        </svg>
+                      </button>
+                      <h4 className="ai-bot-summary-title" style={{ margin: 0 }}>
+                        {lang === 'ar' ? '🎯 الفرص' : '🎯 Opportunities'}
+                      </h4>
+                    </div>
+                    <div className="comparison-group-summary">
+                      <span className="ai-bot-tally-chip ai-bot-tally-win">
+                        {lang === 'ar' ? `${opportunities.length} مرشحة` : `${opportunities.length} Available`}
+                      </span>
+                    </div>
                   </div>
+
+                  {isOpportunitiesExpanded && (
+                    <div className="ai-bot-opportunities-list">
+                      {opportunities.map((opp) => (
+                        <div
+                          key={opp.ticker}
+                          className="ai-bot-opportunity-item"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => {
+                            const targetIndex = allEntities.findIndex((e) => e.ticker.toUpperCase() === opp.ticker.toUpperCase());
+                            if (targetIndex !== -1) {
+                              setFilterMode('all');
+                              setSelectedIndex(targetIndex);
+                            }
+                          }}
+                          title={lang === 'ar' ? `عرض تحليل ${opp.ticker}` : `View ${opp.ticker} analysis`}
+                        >
+                          <span className="ai-bot-opp-ticker">{opp.ticker}</span>
+                          <span className="ai-bot-opp-name">{translateEntityName(opp.name || opp.ticker, lang)}</span>
+                          <span className="ai-bot-opp-badge">{lang === 'ar' ? 'إشارة قوية' : 'Strong Signal'}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               

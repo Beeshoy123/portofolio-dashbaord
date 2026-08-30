@@ -22,6 +22,7 @@ import { pool } from "../lib/dbPool";
 import { emptySnapshot, parseFundPage } from "./parseFund";
 import { parseStockPage } from "./parseStock";
 import { parseIndexPage } from "./parseIndex";
+import { enrichHistoricalReturns } from "./historicalReturns";
 import type { WatchlistEntity, ScrapedSnapshot } from "./types";
 import { parseStockAnalysis, type StockFundamentals } from "./parseStockAnalysis";
 
@@ -248,7 +249,7 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
     }
   });
 
-  // --- Indices: unchanged ---
+  // --- Indices: enriched with Yahoo Finance historical returns (1Y, 30d, YTD) ---
   if (indices.length > 0) {
     const targets = indices.map((idx) => ({
       watchlistId: idx.id,
@@ -258,14 +259,22 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
     const snapshots = await parseIndexPage(targets);
     for (const snapshot of snapshots) {
       try {
-        await saveSnapshot(snapshot, runId);
-        snapshot.raw_fetch_ok ? successCount++ : failCount++;
+        const indexEntity = indices.find((idx) => idx.id === snapshot.watchlist_id);
+        const enrichedSnapshot = await enrichHistoricalReturns(
+          snapshot,
+          indexEntity?.yahoo_ticker ?? null,
+        );
+        await saveSnapshot(enrichedSnapshot, runId);
+        enrichedSnapshot.raw_fetch_ok ? successCount++ : failCount++;
+        console.log(
+          `[index] ${indexEntity?.ticker || snapshot.watchlist_id}: ${enrichedSnapshot.raw_fetch_ok ? "OK" : "FAILED"} — 1Y return: ${enrichedSnapshot.return_1y_percent !== null ? `${enrichedSnapshot.return_1y_percent?.toFixed(1)}%` : "N/A"}`
+        );
       } catch (error) {
         failCount++;
         console.error(`[index] ${snapshot.watchlist_id}: isolated save failure —`, error);
       }
     }
-    console.log(`[index] fetched ${snapshots.length} indices from shared page`);
+    console.log(`[index] fetched & enriched ${snapshots.length} indices`);
   }
 
   console.log(`\nSnapshots done. ${successCount} succeeded, ${failCount} failed out of ${watchlist.length}.`);

@@ -49,9 +49,13 @@ function numeric(value: string | number | null): number | null {
 
 function returnFor(snapshot: SnapshotRow | undefined, period: ReturnPeriod): number | null {
   if (!snapshot) return null;
-  if (period === "return_1y") return numeric(snapshot.return_1y_percent);
-  // The current scraper does not populate 6m/3m yet; do not substitute a different period.
-  return null;
+  if (period === "return_1y") {
+    return numeric(snapshot.return_1y_percent) ?? numeric(snapshot.return_ytd_percent);
+  }
+  if (period === "return_6m" || period === "return_3m") {
+    return numeric(snapshot.return_30d_percent) ?? numeric(snapshot.return_ytd_percent);
+  }
+  return numeric(snapshot.return_1y_percent) ?? numeric(snapshot.return_ytd_percent);
 }
 
 function riskTier(riskLevel: string | null): "Low" | "Medium" | "High" | null {

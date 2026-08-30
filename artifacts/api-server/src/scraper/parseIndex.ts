@@ -131,6 +131,16 @@ function extractYtdPercentNear(fullText: string, label: string): number | null {
   return null;
 }
 
+function extract1yPercentNear(fullText: string, label: string): number | null {
+  const positions = findAllOccurrences(fullText, label);
+  for (const idx of positions) {
+    const window = fullText.slice(idx + label.length, idx + label.length + 250);
+    const match = window.match(/(?:1[Yy]|1-Year|1\s*Year|12[Mm]|52[Ww]|1\s*سنة)\s*:?\s*([-+]\d+(?:\.\d+)?)%/i);
+    if (match) return parseFloat(match[1]);
+  }
+  return null;
+}
+
 async function fetchSixtySessionMove(slug: string): Promise<number | null> {
   try {
     const response = await fetch(`https://foudalens.com/en/indices/${slug}/analysis`, {
@@ -189,6 +199,7 @@ export async function parseIndexPage(
       const points = extractPointsNear(bodyText, t.label);
       const changePercent = extractChangePercentNear(bodyText, t.label);
       const ytdPercent = extractYtdPercentNear(bodyText, t.label);
+      const oneYearPercent = extract1yPercentNear(bodyText, t.label);
       const gotData = points !== null;
 
       if (!gotData) {
@@ -203,7 +214,7 @@ export async function parseIndexPage(
         return_30d_percent: null, // FoudaLens exposes no exact 30-day return on this page.
         return_60d_percent: sixtySessionMoves[index],
         return_ytd_percent: ytdPercent,
-        return_1y_percent: null,
+        return_1y_percent: oneYearPercent,
         cagr_percent: null,
         total_score: null,
         risk_level: null,
