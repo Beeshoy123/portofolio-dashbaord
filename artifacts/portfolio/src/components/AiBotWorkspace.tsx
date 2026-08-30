@@ -890,8 +890,8 @@ export function AiBotWorkspace() {
         <div className="ai-bot-engine-header"><div><h3>Smart Advisor</h3><p>Final recommendation based on the completed analysis.</p></div><Brain /></div>
         <article className="ai-bot-panel ai-bot-advice-panel">
           {recommendation ? (
-            <>
-              {/* Feature 1: Decision Pill & Confidence Header */}
+            <div className="ai-bot-advice-report-card">
+              {/* 3.1: Decision Pill & Confidence Header */}
               {(() => {
                 const inferredDecision = entity?.is_held
                   ? (verdict?.signal === 'Weak' ? 'consider_rotation' : verdict?.signal === 'Mixed' ? 'watch_and_wait' : 'hold')
@@ -920,7 +920,7 @@ export function AiBotWorkspace() {
                 );
               })()}
 
-              {/* Feature 2: AI Recommendation Synthesis & Evidence / Risk Bullets */}
+              {/* 3.2: Core Advisory Synthesis & Evidence / Risk Bullets */}
               <div className="ai-bot-advice-section ai-bot-advice-narrative-section">
                 <span className="comparison-holding-eyebrow">Advisory Thesis</span>
                 <p className="ai-bot-recommendation">
@@ -943,7 +943,7 @@ export function AiBotWorkspace() {
                 {recommendation.structured?.risks && recommendation.structured.risks.length > 0 && (
                   <div className="ai-bot-portfolio-list-section">
                     <span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--risks">
-                      Downside Risks & Considerations
+                      Downside Risks &amp; Considerations
                     </span>
                     <ul className="ai-bot-portfolio-list ai-bot-portfolio-list--risks">
                       {recommendation.structured.risks.map((item, i) => (
@@ -957,22 +957,178 @@ export function AiBotWorkspace() {
                   {recommendation.model_used} · {new Date(recommendation.generated_at).toLocaleDateString()}
                 </small>
               </div>
-            </>
+
+              {/* 3.3: Watch Trigger & Next Review Horizon */}
+              {(recommendation.structured?.watch_trigger || recommendation.structured?.next_review_days != null) && (
+                <div className="ai-bot-advice-section ai-bot-advice-trigger-section">
+                  <span className="comparison-holding-eyebrow">Watch Trigger &amp; Review Horizon</span>
+                  {recommendation.structured?.watch_trigger && (
+                    <div className="ai-bot-trigger-box">
+                      <strong>⚡ Trigger Condition</strong>
+                      <p>{recommendation.structured.watch_trigger}</p>
+                    </div>
+                  )}
+                  {recommendation.structured?.next_review_days != null && (
+                    <div className="ai-bot-review-horizon">
+                      🗓️ Next review in <strong>{recommendation.structured.next_review_days} day{recommendation.structured.next_review_days === 1 ? '' : 's'}</strong>
+                    </div>
+                  )}
+                  <p className="ai-bot-verdict-caption">
+                    Concrete threshold that must trigger before adjusting position size or exiting.
+                  </p>
+                </div>
+              )}
+
+              {/* 3.4: Behavioral Guardrails — "Why NOT to Act Yet" */}
+              {recommendation.structured?.do_not_act_reasons && recommendation.structured.do_not_act_reasons.length > 0 && (
+                <div className="ai-bot-advice-section ai-bot-advice-guardrails-section">
+                  <span className="comparison-holding-eyebrow">Behavioral Guardrails</span>
+                  <div className="ai-bot-guardrail-box">
+                    <strong>🛑 Reasons NOT to Act Yet</strong>
+                    <ul className="ai-bot-guardrail-list">
+                      {recommendation.structured.do_not_act_reasons.map((reason, i) => (
+                        <li key={i}>{reason}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="ai-bot-verdict-caption">
+                    Risk guardrails designed to prevent impulsive trades before signal confirmation.
+                  </p>
+                </div>
+              )}
+
+              {/* 3.5: Automated Safety & Alert Checks — Time Stop, Thesis, Drawdown */}
+              {(entityTimeStop || entityThesis || portfolioDrawdown) && (
+                <div className="ai-bot-advice-section ai-bot-advice-safety-section">
+                  <span className="comparison-holding-eyebrow">Automated Safety Checks</span>
+                  <div className="ai-bot-safety-grid">
+
+                    {/* Time Stop */}
+                    {entityTimeStop && (
+                      <div className={`ai-bot-safety-card ${entityTimeStop.is_stagnant ? 'ai-bot-safety-alert' : 'ai-bot-safety-ok'}`}>
+                        <span>Time Stop</span>
+                        <strong>
+                          {entityTimeStop.is_stagnant
+                            ? `⏱️ Stagnant: ${entityTimeStop.days_in_current_state}d`
+                            : '✅ Active Momentum'}
+                        </strong>
+                        {entityTimeStop.is_stagnant && entityTimeStop.message && (
+                          <em>{entityTimeStop.message}</em>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Thesis Integrity */}
+                    {entityThesis && (
+                      <div className={`ai-bot-safety-card ${entityThesis.has_reversal ? 'ai-bot-safety-alert' : 'ai-bot-safety-ok'}`}>
+                        <span>Thesis Integrity</span>
+                        <strong>
+                          {entityThesis.has_reversal ? '⚠️ Signal Degraded' : '✅ Thesis Intact'}
+                        </strong>
+                        {entityThesis.has_reversal && entityThesis.prior_signal && entityThesis.current_signal && (
+                          <em>{entityThesis.prior_signal} → {entityThesis.current_signal}</em>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Drawdown */}
+                    {portfolioDrawdown && (
+                      <div className={`ai-bot-safety-card ${(portfolioDrawdown.is_elevated || Math.abs(portfolioDrawdown.current_drawdown_percent ?? portfolioDrawdown.drawdown_percent ?? 0) >= 10) ? 'ai-bot-safety-alert' : 'ai-bot-safety-ok'}`}>
+                        <span>Drawdown Risk</span>
+                        <strong>
+                          📉 {Math.abs(portfolioDrawdown.current_drawdown_percent ?? portfolioDrawdown.drawdown_percent ?? 0).toFixed(1)}% Drawdown
+                        </strong>
+                        {portfolioDrawdown.is_elevated && <em>Elevated — review position</em>}
+                      </div>
+                    )}
+
+                  </div>
+                  <p className="ai-bot-verdict-caption">
+                    Automated risk monitors evaluated on every pipeline cycle to protect capital.
+                  </p>
+                </div>
+              )}
+
+              {/* 3.6: Watchlist & Opportunity Candidate Hub (for unheld entities) */}
+              {!entity?.is_held && (
+                <div className="ai-bot-advice-section ai-bot-advice-watchlist-section">
+                  <span className="comparison-holding-eyebrow">Watchlist Evaluation</span>
+                  {(strongUnheldMatch || verdict?.signal === 'Strong') ? (
+                    <div className="ai-bot-watchlist-opportunity">
+                      <strong>💡 Opportunity Candidate</strong>
+                      <p>{opportunityReason}</p>
+                      {matchingSector && (
+                        <div className="ai-bot-sector-gap-row">
+                          <span>Sector Gap</span>
+                          <strong>{matchingSector.sector}</strong>
+                          <em>{Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% current allocation</em>
+                        </div>
+                      )}
+                      <p className="ai-bot-verdict-caption">
+                        Surfaced because this unheld asset exhibits outperformance relative to its peer group and may offer favorable portfolio rotation or diversification potential.
+                      </p>
+                    </div>
+                  ) : verdict?.signal === 'Weak' ? (
+                    <div className="ai-bot-watchlist-status ai-bot-watchlist-weak">
+                      <strong>⛔ Not Recommended</strong>
+                      <p>Underperforming its peer group. Not recommended for portfolio inclusion at this time.</p>
+                    </div>
+                  ) : verdict?.signal === 'Mixed' ? (
+                    <div className="ai-bot-watchlist-status ai-bot-watchlist-mixed">
+                      <strong>👁️ Monitor Only</strong>
+                      <p>Mixed peer performance. Wait for trend confirmation before considering entry.</p>
+                    </div>
+                  ) : verdict?.signal === 'Insufficient Data' ? (
+                    <div className="ai-bot-watchlist-status ai-bot-watchlist-info">
+                      <strong>📊 Insufficient Data</strong>
+                      <p>Not enough peer comparison history to formulate an entry thesis.</p>
+                    </div>
+                  ) : (
+                    <div className="ai-bot-watchlist-status ai-bot-watchlist-info">
+                      <strong>📋 No Active Thesis</strong>
+                      <p>No active entry or rotation thesis for this watchlist asset.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ) : entity?.is_held ? (
             <p>Recommendation is not available for this run yet.</p>
           ) : (strongUnheldMatch || verdict?.signal === 'Strong') ? (
-            <>
-              <p className="ai-bot-opportunity-label">💡 Opportunity Candidate</p>
+            <div className="ai-bot-watchlist-opportunity">
+              <strong>💡 Opportunity Candidate</strong>
               <p>{opportunityReason}</p>
-            </>
+              {matchingSector && (
+                <div className="ai-bot-sector-gap-row">
+                  <span>Sector Gap</span>
+                  <strong>{matchingSector.sector}</strong>
+                  <em>{Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% current allocation</em>
+                </div>
+              )}
+              <p className="ai-bot-verdict-caption">
+                Surfaced because this unheld asset exhibits outperformance relative to its peer group and may offer favorable portfolio rotation or diversification potential.
+              </p>
+            </div>
           ) : verdict?.signal === 'Weak' ? (
-            <p>Watchlist asset underperforming its peer group. Not recommended for portfolio inclusion at this time.</p>
+            <div className="ai-bot-watchlist-status ai-bot-watchlist-weak">
+              <strong>⛔ Not Recommended</strong>
+              <p>Watchlist asset underperforming its peer group. Not recommended for portfolio inclusion at this time.</p>
+            </div>
           ) : verdict?.signal === 'Mixed' ? (
-            <p>Watchlist asset showing mixed peer performance. Monitor for trend confirmation before considering entry.</p>
+            <div className="ai-bot-watchlist-status ai-bot-watchlist-mixed">
+              <strong>👁️ Monitor Only</strong>
+              <p>Watchlist asset showing mixed peer performance. Monitor for trend confirmation before considering entry.</p>
+            </div>
           ) : verdict?.signal === 'Insufficient Data' ? (
-            <p>Insufficient peer comparison history to formulate an entry thesis.</p>
+            <div className="ai-bot-watchlist-status ai-bot-watchlist-info">
+              <strong>📊 Insufficient Data</strong>
+              <p>Insufficient peer comparison history to formulate an entry thesis.</p>
+            </div>
           ) : (
-            <p>No active entry or rotation thesis for this watchlist asset.</p>
+            <div className="ai-bot-watchlist-status ai-bot-watchlist-info">
+              <strong>📋 No Active Thesis</strong>
+              <p>No active entry or rotation thesis for this watchlist asset.</p>
+            </div>
           )}
         </article>
       </section>

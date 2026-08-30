@@ -717,9 +717,72 @@ html[lang="ar"] .sort-popover {
 .ai-bot-decision-watch { background: rgba(217, 154, 43, .14); color: #e7b85b; }
 .ai-bot-decision-rebalance { background: rgba(224, 110, 70, .14); color: #f09060; }
 
+/* Per-entity advisor decision pill variants */
+.ai-bot-decision-entry    { background: rgba(85, 209, 155, .16); color: #62d9a4; border: 1px solid rgba(85, 209, 155, .35); }
+.ai-bot-decision-rotation { background: rgba(224, 110, 70, .16); color: #f09060; border: 1px solid rgba(224, 110, 70, .35); }
+
 /* Row containing the pill + confidence label */
 .ai-bot-portfolio-decision-row { display: flex; align-items: center; gap: 12px; margin: 14px 0 10px; }
 .ai-bot-portfolio-confidence { color: #78948f; font-size: 11px; font-weight: 600; }
+
+/* ── Smart Advisor Report Card (3.2 — step layout) ─────────────────── */
+.ai-bot-advice-report-card { display: flex; flex-direction: column; gap: 0; }
+.ai-bot-advice-section { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.ai-bot-advice-section:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+
+/* Confidence badge — appears inline next to the decision pill */
+.ai-bot-confidence-badge   { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+.ai-bot-confidence-high    { background: rgba(85, 209, 155, .12); color: #62d9a4; border: 1px solid rgba(85, 209, 155, .30); }
+.ai-bot-confidence-medium  { background: rgba(217, 154, 43, .12); color: #e7b85b; border: 1px solid rgba(217, 154, 43, .30); }
+.ai-bot-confidence-low     { background: rgba(224, 90, 80, .12);  color: #f08078; border: 1px solid rgba(224, 90, 80, .30); }
+.ai-bot-confidence-unrated { background: rgba(100, 150, 180, .12); color: #8bb5d6; border: 1px solid rgba(100, 150, 180, .30); }
+
+/* ── 3.3 Watch Trigger & Review Horizon ────────────────────────────── */
+.ai-bot-trigger-box { padding: 10px 12px; border-radius: 8px; background: rgba(100, 150, 180, .08); border: 1px solid rgba(100, 150, 180, .25); margin-top: 10px; }
+.ai-bot-trigger-box strong { display: block; font-size: 11px; color: #8bb5d6; margin-bottom: 4px; }
+.ai-bot-trigger-box p { margin: 0; color: #dceae6 !important; font-size: 11px !important; line-height: 1.55 !important; }
+.ai-bot-review-horizon { display: flex; align-items: center; gap: 6px; margin-top: 10px; padding: 7px 10px; border-radius: 6px; background: rgba(255, 255, 255, .03); border: 1px solid rgba(255, 255, 255, .08); color: #a8c5be; font-size: 11px; }
+.ai-bot-review-horizon strong { color: #dceae6; font-weight: 700; }
+
+/* ── 3.4 Behavioral Guardrails ──────────────────────────────────────── */
+.ai-bot-guardrail-box { padding: 10px 12px; border-radius: 8px; background: rgba(100, 150, 180, .08); border: 1px solid rgba(100, 150, 180, .25); margin-top: 10px; }
+.ai-bot-guardrail-box strong { display: block; font-size: 11px; color: #8bb5d6; margin-bottom: 6px; }
+.ai-bot-guardrail-list { margin: 0; padding-left: 16px; list-style: disc; }
+.ai-bot-guardrail-list li { color: #a8c5be; font-size: 11px; line-height: 1.55; margin-bottom: 3px; }
+
+/* ── 3.5 Automated Safety Checks grid ──────────────────────────────── */
+.ai-bot-safety-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
+.ai-bot-safety-card { padding: 9px 10px; border-radius: 8px; background: rgba(255, 255, 255, .03); border: 1px solid var(--edge, rgba(255,255,255,.1)); }
+.ai-bot-safety-card span  { display: block; font-size: 9px; color: var(--dim, #78948f); text-transform: uppercase; letter-spacing: .05em; font-weight: 700; }
+.ai-bot-safety-card strong { display: block; margin-top: 4px; font-size: 11px; color: var(--ink, #dceae6); font-weight: 700; }
+.ai-bot-safety-card em { display: block; margin-top: 3px; font-size: 10px; font-style: normal; color: #78948f; }
+.ai-bot-safety-ok    { border-color: rgba(85, 209, 155, .25); background: rgba(85, 209, 155, .05); }
+.ai-bot-safety-ok strong { color: #62d9a4; }
+.ai-bot-safety-alert { border-color: rgba(217, 154, 43, .30); background: rgba(217, 154, 43, .07); }
+.ai-bot-safety-alert strong { color: #e7b85b; }
+
+/* ── 3.6 Watchlist & Opportunity Candidate Hub ──────────────────────── */
+.ai-bot-watchlist-opportunity { padding: 10px 12px; border-radius: 8px; background: rgba(233, 212, 96, .07); border: 1px solid rgba(233, 212, 96, .28); margin-top: 10px; }
+.ai-bot-watchlist-opportunity > strong { display: block; font-size: 12px; color: #e7d85f; font-weight: 800; margin-bottom: 6px; }
+.ai-bot-watchlist-opportunity > p { margin: 0 0 8px; color: #dceae6 !important; font-size: 11px !important; line-height: 1.55 !important; }
+
+.ai-bot-sector-gap-row { display: flex; align-items: center; gap: 8px; margin: 8px 0 6px; padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); font-size: 10px; flex-wrap: wrap; }
+.ai-bot-sector-gap-row span { color: #78948f; text-transform: uppercase; letter-spacing: .05em; font-weight: 700; font-size: 9px; }
+.ai-bot-sector-gap-row strong { color: #e7d85f; font-weight: 700; }
+.ai-bot-sector-gap-row em { color: #a8c5be; font-style: normal; margin-left: auto; }
+
+.ai-bot-watchlist-status { padding: 10px 12px; border-radius: 8px; margin-top: 10px; }
+.ai-bot-watchlist-status strong { display: block; font-size: 11px; font-weight: 800; margin-bottom: 5px; }
+.ai-bot-watchlist-status p { margin: 0; font-size: 11px !important; line-height: 1.55 !important; }
+.ai-bot-watchlist-weak  { background: rgba(224, 90, 80, .07); border: 1px solid rgba(224, 90, 80, .25); }
+.ai-bot-watchlist-weak strong { color: #f08078; }
+.ai-bot-watchlist-weak p { color: #b89080 !important; }
+.ai-bot-watchlist-mixed { background: rgba(217, 154, 43, .07); border: 1px solid rgba(217, 154, 43, .25); }
+.ai-bot-watchlist-mixed strong { color: #e7b85b; }
+.ai-bot-watchlist-mixed p { color: #c4a870 !important; }
+.ai-bot-watchlist-info  { background: rgba(100, 150, 180, .07); border: 1px solid rgba(100, 150, 180, .22); }
+.ai-bot-watchlist-info strong { color: #8bb5d6; }
+.ai-bot-watchlist-info p { color: #8ba8b8 !important; }
 
 /* Evidence / Risks lists */
 .ai-bot-portfolio-list-section { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .06); }
