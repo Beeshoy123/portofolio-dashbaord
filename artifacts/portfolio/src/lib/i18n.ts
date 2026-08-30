@@ -685,11 +685,11 @@ export const T: Record<Lang, Record<string, string>> = {
     'ai.state.failed'     : 'فشل',
     'ai.waiting_refresh'  : 'في انتظار التحديث الأول',
     'ai.refresh_prices'   : 'تحديث الأسعار',
-    'ai.stage.prices'     : '1. الأسعار',
-    'ai.stage.chart_reader': '2. قارئ الرسم البياني',
-    'ai.stage.judge'      : '3. حكم المقارنة',
-    'ai.stage.alerts'     : '4. التنبيهات',
-    'ai.stage.advisor'    : '5. المستشار',
+    'ai.stage.prices'     : '١. الأسعار',
+    'ai.stage.chart_reader': '٢. قارئ الرسم البياني',
+    'ai.stage.judge'      : '٣. حكم المقارنة',
+    'ai.stage.alerts'     : '٤. التنبيهات',
+    'ai.stage.advisor'    : '٥. المستشار',
   },
 };
 
@@ -719,10 +719,16 @@ export const ENTITY_NAME_MAP: Record<string, { en: string; ar: string }> = {
   'BFA': { en: 'Beltone Fadda Fund', ar: 'صندوق بلتون فضة' },
   'BMM': { en: 'Beltone Meya Meya Fund', ar: 'صندوق بلتون مية مية' },
 
-  // Other Funds
+  // Other Funds & Core Assets
+  'ABR': { en: 'Bareeq Fund', ar: 'صندوق بريق' },
   'BAR': { en: 'Bareeq Fund', ar: 'صندوق بريق' },
   'BAREEQ': { en: 'Bareeq Fund', ar: 'صندوق بريق' },
+  'RE': { en: 'Beltone Real Estate Fund', ar: 'صندوق بلتون العقاري' },
   'AZG': { en: 'Azimut Gold Fund', ar: 'صندوق أزيموت للذهب' },
+  'AZS': { en: 'Azimut Savings Fund', ar: 'صندوق أزيموت للادخار' },
+  'GOLD': { en: 'Gold 24K', ar: 'ذهب 24ق' },
+  'CERTS': { en: 'Certificates', ar: 'شهادات' },
+  'NBE': { en: 'NBE Certificates', ar: 'شهادات البنك الأهلي' },
 
   // Stocks (Original Watchlist)
   'TMGH': { en: 'Talaat Moustafa Group', ar: 'مجموعة طلعت مصطفى (TMG)' },
@@ -792,6 +798,31 @@ export function translateEntityName(tickerOrName?: string | null, lang: Lang = '
 
   // Substring matching
   if (lang === 'ar') {
+    // Funds
+    if (/bareeq|abr\b/i.test(key)) return 'صندوق بريق';
+    if (/beltone real estate|bre\b/i.test(key)) return 'صندوق بلتون العقاري';
+    if (/beltone egx70|b70\b/i.test(key)) return 'صندوق بلتون إيجي إكس 70';
+    if (/beltone wafra|bwa\b/i.test(key)) return 'صندوق بلتون وفرة';
+    if (/beltone financial|bfi\b/i.test(key)) return 'صندوق بلتون المالي';
+    if (/beltone consumers|bco\b/i.test(key)) return 'صندوق بلتون للاستهلاك';
+    if (/beltone industrial|bin\b/i.test(key)) return 'صندوق بلتون الصناعي';
+    if (/beltone sabayek|bsb\b/i.test(key)) return 'صندوق بلتون سبائك';
+    if (/beltone fadda|bfa\b/i.test(key)) return 'صندوق بلتون فضة';
+    if (/beltone meya meya|bmm\b/i.test(key)) return 'صندوق بلتون مية مية';
+    if (/ci exporters|cex\b/i.test(key)) return 'صندوق سي آي للمصدرين';
+    if (/ci telecoms|cti\b/i.test(key)) return 'صندوق سي آي للاتصالات وتكنولوجيا المعلومات';
+    if (/ci real estate|cre\b/i.test(key)) return 'صندوق سي آي العقاري';
+    if (/ci financial|cff\b/i.test(key)) return 'صندوق سي آي للخدمات المالية والتكنولوجيا المالية';
+    if (/ci consumer|ccb\b/i.test(key)) return 'صندوق سي آي للاستهلاك والاحتياجات الأساسية';
+    if (/misr sharia|cms\b/i.test(key)) return 'صندوق مصر للأسهم المتوافقة مع الشريعة';
+    if (/ci ipos|cip\b/i.test(key)) return 'صندوق سي آي للطروحات الأولية';
+    if (/misr equity|ci30\b/i.test(key)) return 'صندوق مصر للأسهم';
+    if (/ci gold|cgo\b/i.test(key)) return 'صندوق سي آي للذهب';
+    if (/ci 20hd|c2o\b/i.test(key)) return 'صندوق سي آي 20 ذو العائد الدوري';
+    if (/azimut gold|azg\b/i.test(key)) return 'صندوق أزيموت للذهب';
+    if (/azimut savings|azs\b/i.test(key)) return 'صندوق أزيموت للادخار';
+
+    // Stocks
     if (/talaat moustafa|tmg/i.test(key)) return 'مجموعة طلعت مصطفى (TMG)';
     if (/commercial international bank|cib/i.test(key)) return 'البنك التجاري الدولي (CIB)';
     if (/palm hills/i.test(key)) return 'بالم هيلز للتعمير';
@@ -825,11 +856,13 @@ export function translateEntityName(tickerOrName?: string | null, lang: Lang = '
     if (/valmore/i.test(key)) return 'فالمور القابضة';
     if (/housing & development|hdbk/i.test(key)) return 'بنك التعمير والإسكان';
     if (/alexandria container/i.test(key)) return 'الإسكندرية لتداول الحاويات';
-    if (/beltone real estate/i.test(key)) return 'صندوق بلتون العقاري';
-    if (/bareeq/i.test(key)) return 'صندوق بريق';
+
+    // Indices & Core
     if (/egx30/i.test(key)) return 'مؤشر إيجي إكس 30';
     if (/egx70/i.test(key)) return 'مؤشر إيجي إكس 70 متساوي الأوزان';
     if (/egx100/i.test(key)) return 'مؤشر إيجي إكس 100 متساوي الأوزان';
+    if (/gold\s*24k/i.test(key)) return 'ذهب 24ق';
+    if (/certificates|nbe cert/i.test(key)) return 'شهادات البنك الأهلي';
   }
 
   return key;

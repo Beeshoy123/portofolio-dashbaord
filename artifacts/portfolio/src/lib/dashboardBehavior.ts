@@ -778,6 +778,10 @@ export function initDashboardBehavior(
     const scraperBtnLabel = el("scraper-btn-label");
     if (scraperBtnLabel) scraperBtnLabel.textContent = t('ai.refresh_prices');
 
+    if (lastPipelineStages) {
+      updateAiPipeline(lastPipelineStages);
+    }
+
     // Notify React components (AiBotWorkspace) of language switch
     window.dispatchEvent(new CustomEvent('portfolio-lang-changed', { detail: { lang } }));
   }
@@ -1529,8 +1533,8 @@ export function initDashboardBehavior(
 
     const schema = manualFormSchema[entity] ?? manualFormSchema.fund;
     const fundOptions = [
-      { value: "abr", label: "Bareeq (ABR)" },
-      { value: "re", label: "Real Estate (RE)" },
+      { value: "abr", label: currentLang === 'ar' ? "صندوق بريق (ABR)" : "Bareeq (ABR)" },
+      { value: "re", label: currentLang === 'ar' ? "صندوق بلتون العقاري (RE)" : "Real Estate (RE)" },
     ];
 
     form.innerHTML = `
