@@ -963,28 +963,28 @@ ${buildUsdRealityCard(p, d, usdReality)}
             <div style="font-size:10.5px;color:var(--dim)" data-i18n="ai.subtitle">Automated analysis of your portfolio health and allocation</div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:auto">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-inline-start:auto">
           <div style="display:flex;align-items:center;gap:8px;font-size:10px;color:var(--dim);white-space:nowrap">
             <span id="ai-engine-state" style="display:inline-flex;align-items:center;gap:5px;color:var(--pnl-up);font-weight:700">
-              <span style="font-size:14px;line-height:0">●</span> Ready
+              <span style="font-size:14px;line-height:0">●</span> <span data-i18n="ai.state.ready">Ready</span>
             </span>
-            <span id="ai-engine-updated">Waiting for first refresh</span>
+            <span id="ai-engine-updated" data-i18n="ai.waiting_refresh">Waiting for first refresh</span>
           </div>
           <button
             id="scraper-run-btn"
             onclick="runPriceChecker()"
             style="display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0">
-            🔄 <span id="scraper-btn-label">Refresh prices</span>
+            🔄 <span id="scraper-btn-label" data-i18n="ai.refresh_prices">Refresh prices</span>
           </button>
         </div>
       </div>
 
       <div id="ai-engine-pipeline" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin-bottom:16px">
-        <div id="ai-stage-price" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">1. Prices</b><span>Waiting</span></div>
-        <div id="ai-stage-chart-reader" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">2. Chart Reader</b><span>Waiting</span></div>
-        <div id="ai-stage-judge" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">3. Comparison Judge</b><span>Waiting</span></div>
-        <div id="ai-stage-alerts" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">4. Alerts</b><span>Waiting</span></div>
-        <div id="ai-stage-advisor" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px">5. Advisor</b><span>Waiting</span></div>
+        <div id="ai-stage-price" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px" data-i18n="ai.stage.prices">1. Prices</b><span data-i18n="ai.state.waiting">Waiting</span></div>
+        <div id="ai-stage-chart-reader" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px" data-i18n="ai.stage.chart_reader">2. Chart Reader</b><span data-i18n="ai.state.waiting">Waiting</span></div>
+        <div id="ai-stage-judge" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px" data-i18n="ai.stage.judge">3. Comparison Judge</b><span data-i18n="ai.state.waiting">Waiting</span></div>
+        <div id="ai-stage-alerts" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px" data-i18n="ai.stage.alerts">4. Alerts</b><span data-i18n="ai.state.waiting">Waiting</span></div>
+        <div id="ai-stage-advisor" style="padding:8px 9px;border:1px solid var(--edge);border-radius:7px;background:var(--bg);font-size:9.5px;color:var(--dim)"><b style="display:block;color:var(--ink);font-size:10px" data-i18n="ai.stage.advisor">5. Advisor</b><span data-i18n="ai.state.waiting">Waiting</span></div>
       </div>
 
       <!-- Status line shown while scraper runs or after it completes -->

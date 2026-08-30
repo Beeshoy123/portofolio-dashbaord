@@ -773,6 +773,13 @@ export function initDashboardBehavior(
         ? t(sortKeyMap[currentSortKey])
         : t('sort.default');
     }
+
+    // Refresh AI engine updated & scraper button label
+    const scraperBtnLabel = el("scraper-btn-label");
+    if (scraperBtnLabel) scraperBtnLabel.textContent = t('ai.refresh_prices');
+
+    // Notify React components (AiBotWorkspace) of language switch
+    window.dispatchEvent(new CustomEvent('portfolio-lang-changed', { detail: { lang } }));
   }
 
   win.toggleLang = () => {
@@ -1303,13 +1310,22 @@ export function initDashboardBehavior(
     }
   };
 
+  let lastPipelineStages: Record<string, string> = {};
+
   function updateAiPipeline(stages: Record<string, string>): void {
+    lastPipelineStages = stages;
     const stageMap: Record<string, string> = {
       priceChecker: "ai-stage-price",
       chartReader: "ai-stage-chart-reader",
       comparisonJudge: "ai-stage-judge",
       alerts: "ai-stage-alerts",
       smartAdvisor: "ai-stage-advisor",
+    };
+    const stageStateLabels: Record<string, Record<Lang, string>> = {
+      waiting: { en: 'Waiting', ar: 'في الانتظار' },
+      running: { en: 'Running', ar: 'جارٍ التشغيل' },
+      completed: { en: 'Completed', ar: 'مكتمل' },
+      failed: { en: 'Failed', ar: 'فشل' },
     };
     const colors: Record<string, string> = {
       waiting: "var(--dim)",
@@ -1321,7 +1337,7 @@ export function initDashboardBehavior(
       const element = el(elementId);
       if (!element) continue;
       const state = stages[stage] ?? "waiting";
-      const stateLabel = state.charAt(0).toUpperCase() + state.slice(1);
+      const stateLabel = stageStateLabels[state]?.[currentLang] ?? (state.charAt(0).toUpperCase() + state.slice(1));
       const stateElement = element.querySelector("span");
       if (stateElement) stateElement.textContent = stateLabel;
       element.style.borderColor = colors[state] ?? "var(--edge)";
@@ -1339,15 +1355,20 @@ export function initDashboardBehavior(
     const tableEl = el("price-checker-table");
 
     if (btn) btn.disabled = true;
-    if (label) label.textContent = "Running…";
-    if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Fetching';
+    if (label) label.textContent = currentLang === 'ar' ? 'جارٍ التشغيل…' : 'Running…';
+    if (engineState) engineState.innerHTML = `<span style="font-size:14px;line-height:0">●</span> ${currentLang === 'ar' ? 'جارٍ الجلب' : 'Fetching'}`;
     if (engineState) (engineState as HTMLElement).style.color = "var(--warning-border)";
-    if (engineUpdated) engineUpdated.textContent = "Price checker is running";
+    if (engineUpdated) engineUpdated.textContent = currentLang === 'ar' ? 'فاحص الأسعار قيد التشغيل' : 'Price checker is running';
     updateAiPipeline({ priceChecker: "running", chartReader: "waiting", comparisonJudge: "waiting", alerts: "waiting", smartAdvisor: "waiting" });
-    if (statusEl) { statusEl.style.display = "block"; statusEl.textContent = "⏳ Fetching prices from FoudaLens — this takes 1–2 minutes…"; }
+    if (statusEl) {
+      statusEl.style.display = "block";
+      statusEl.textContent = currentLang === 'ar'
+        ? '⏳ جارٍ جلب الأسعار من FoudaLens — يستغرق ذلك دقيقة أو دقيقتين…'
+        : '⏳ Fetching prices from FoudaLens — this takes 1–2 minutes…';
+    }
     if (resultsEl && tableEl) {
       resultsEl.style.display = "block";
-      tableEl.innerHTML = `<div style="padding:18px 8px;color:var(--dim);font-size:11px">Connecting to the price checker…</div>`;
+      tableEl.innerHTML = `<div style="padding:18px 8px;color:var(--dim);font-size:11px">${currentLang === 'ar' ? 'جارٍ الاتصال بفاحص الأسعار…' : 'Connecting to the price checker…'}</div>`;
     }
 
     try {
@@ -1362,13 +1383,13 @@ export function initDashboardBehavior(
           if (responseText.trim()) errorMessage = responseText.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
         }
         if (runResp.status !== 409) {
-          if (statusEl) statusEl.textContent = `❌ Run failed (${runResp.status}): ${errorMessage}`;
-          if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
+          if (statusEl) statusEl.textContent = currentLang === 'ar' ? `❌ فشل التشغيل (${runResp.status}): ${errorMessage}` : `❌ Run failed (${runResp.status}): ${errorMessage}`;
+          if (engineState) engineState.innerHTML = `<span style="font-size:14px;line-height:0">●</span> ${currentLang === 'ar' ? 'فشل' : 'Failed'}`;
           if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
-          if (engineUpdated) engineUpdated.textContent = "Refresh failed";
+          if (engineUpdated) engineUpdated.textContent = currentLang === 'ar' ? 'فشل التحديث' : 'Refresh failed';
           return;
         }
-        if (statusEl) statusEl.textContent = "⏳ A price refresh is already running — waiting for it to finish…";
+        if (statusEl) statusEl.textContent = currentLang === 'ar' ? '⏳ تحديث الأسعار قيد التشغيل بالفعل — في انتظار اكتماله…' : '⏳ A price refresh is already running — waiting for it to finish…';
       }
 
       // The scraper runs in the API background because the full watchlist can
@@ -1395,7 +1416,9 @@ export function initDashboardBehavior(
         }
         if (statusEl && runStatus.running) {
           const elapsedMinutes = Math.floor((Date.now() - startedAt) / 60000);
-          statusEl.textContent = `⏳ Fetching prices from FoudaLens… ${fetchedCount} fetched · ${elapsedMinutes} min elapsed`;
+          statusEl.textContent = currentLang === 'ar'
+            ? `⏳ جارٍ جلب الأسعار من FoudaLens… تم جلب ${fetchedCount} · مضى ${elapsedMinutes} دقيقة`
+            : `⏳ Fetching prices from FoudaLens… ${fetchedCount} fetched · ${elapsedMinutes} min elapsed`;
         }
         if (Date.now() - startedAt > 10 * 60 * 1000) {
           throw new Error("Scraper status polling timed out. Check again shortly.");
@@ -1403,10 +1426,10 @@ export function initDashboardBehavior(
       } while (runStatus.running);
 
       if (runStatus.error || runStatus.stages.priceChecker === "failed") {
-        if (statusEl) statusEl.textContent = `❌ Run failed: ${runStatus.error ?? "Price Checker failed"}`;
-        if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
+        if (statusEl) statusEl.textContent = currentLang === 'ar' ? `❌ فشل التشغيل: ${runStatus.error ?? 'فشل فاحص الأسعار'}` : `❌ Run failed: ${runStatus.error ?? "Price Checker failed"}`;
+        if (engineState) engineState.innerHTML = `<span style="font-size:14px;line-height:0">●</span> ${currentLang === 'ar' ? 'فشل' : 'Failed'}`;
         if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
-        if (engineUpdated) engineUpdated.textContent = "Refresh failed";
+        if (engineUpdated) engineUpdated.textContent = currentLang === 'ar' ? 'فشل التحديث' : 'Refresh failed';
         return;
       }
 
@@ -1415,18 +1438,24 @@ export function initDashboardBehavior(
         ? `/api/scraper/snapshots?runId=${encodeURIComponent(runStatus.runId)}`
         : "/api/scraper/snapshots";
       const snapResp = await authenticatedFetch(snapshotsUrl, { signal: scraperController.signal });
-      if (!snapResp.ok) { if (statusEl) statusEl.textContent = "❌ Could not load snapshots after run."; return; }
+      if (!snapResp.ok) { if (statusEl) statusEl.textContent = currentLang === 'ar' ? '❌ تعذر تحميل اللقطات بعد التشغيل.' : '❌ Could not load snapshots after run.'; return; }
       const { snapshots, lastRunAt } = (await snapResp.json()) as { snapshots: any[]; lastRunAt: string | null };
 
       if (statusEl) {
-        const ts = lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now";
+        const ts = lastRunAt ? new Date(lastRunAt).toLocaleTimeString(currentLang === 'ar' ? 'ar-EG' : 'en-US') : (currentLang === 'ar' ? 'الآن' : 'just now');
         const ok = snapshots.filter((s: any) => s.raw_fetch_ok).length;
-        const outcome = runStatus.stages.priceChecker === "completed" && runStatus.stages.chartReader === "completed" && runStatus.stages.comparisonJudge === "completed" && runStatus.stages.alerts === "completed" && runStatus.stages.smartAdvisor === "completed" ? "✅ Done" : "⚠️ Partial";
-        statusEl.textContent = `${outcome} at ${ts} · ${ok}/${snapshots.length} entities fetched successfully`;
+        const outcome = runStatus.stages.priceChecker === "completed" && runStatus.stages.chartReader === "completed" && runStatus.stages.comparisonJudge === "completed" && runStatus.stages.alerts === "completed" && runStatus.stages.smartAdvisor === "completed"
+          ? (currentLang === 'ar' ? '✅ تم بنجاح' : '✅ Done')
+          : (currentLang === 'ar' ? '⚠️ جزئي' : '⚠️ Partial');
+        statusEl.textContent = currentLang === 'ar'
+          ? `${outcome} في ${ts} · تم جلب ${ok}/${snapshots.length} أصل بنجاح`
+          : `${outcome} at ${ts} · ${ok}/${snapshots.length} entities fetched successfully`;
       }
-      if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Completed';
+      if (engineState) engineState.innerHTML = `<span style="font-size:14px;line-height:0">●</span> ${currentLang === 'ar' ? 'مكتمل' : 'Completed'}`;
       if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-up)";
-      if (engineUpdated) engineUpdated.textContent = `Updated ${lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : "just now"}`;
+      if (engineUpdated) engineUpdated.textContent = currentLang === 'ar'
+        ? `تم التحديث ${lastRunAt ? new Date(lastRunAt).toLocaleTimeString('ar-EG') : 'الآن'}`
+        : `Updated ${lastRunAt ? new Date(lastRunAt).toLocaleTimeString() : 'just now'}`;
 
       if (tableEl && resultsEl) renderPriceCheckerTable(snapshots, tableEl, resultsEl);
       window.dispatchEvent(new CustomEvent("ai-bot-snapshots-updated", {
@@ -1444,13 +1473,13 @@ export function initDashboardBehavior(
       await loadComparisonJudge();
     } catch (err: any) {
       if (scraperController.signal.aborted) return;
-      if (statusEl) statusEl.textContent = `❌ Network error: ${err?.message ?? "Unknown"}`;
-      if (engineState) engineState.innerHTML = '<span style="font-size:14px;line-height:0">●</span> Failed';
+      if (statusEl) statusEl.textContent = currentLang === 'ar' ? `❌ خطأ في الشبكة: ${err?.message ?? 'غير معروف'}` : `❌ Network error: ${err?.message ?? "Unknown"}`;
+      if (engineState) engineState.innerHTML = `<span style="font-size:14px;line-height:0">●</span> ${currentLang === 'ar' ? 'فشل' : 'Failed'}`;
       if (engineState) (engineState as HTMLElement).style.color = "var(--pnl-down)";
-      if (engineUpdated) engineUpdated.textContent = "Connection failed";
+      if (engineUpdated) engineUpdated.textContent = currentLang === 'ar' ? 'فشل الاتصال' : 'Connection failed';
     } finally {
       if (btn) btn.disabled = false;
-      if (label) label.textContent = "Refresh prices";
+      if (label) label.textContent = t('ai.refresh_prices');
     }
   };
 
