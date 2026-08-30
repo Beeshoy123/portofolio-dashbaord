@@ -692,3 +692,196 @@ export const T: Record<Lang, Record<string, string>> = {
     'ai.stage.advisor'    : '5. المستشار',
   },
 };
+
+// ── Entity, Sector & Asset Class Localization ─────────────────────────────
+
+export const ENTITY_NAME_MAP: Record<string, { en: string; ar: string }> = {
+  // Funds (CI Capital)
+  'CEX': { en: 'CI Exporters Fund', ar: 'صندوق سي آي للمصدرين' },
+  'CTI': { en: 'CI Telecoms & IT Fund', ar: 'صندوق سي آي للاتصالات وتكنولوجيا المعلومات' },
+  'CRE': { en: 'CI Real Estate Fund', ar: 'صندوق سي آي العقاري' },
+  'CFF': { en: 'CI Financial & Fintech Fund', ar: 'صندوق سي آي للخدمات المالية والتكنولوجيا المالية' },
+  'CCB': { en: 'CI Consumer & Basic Needs Fund', ar: 'صندوق سي آي للاستهلاك والاحتياجات الأساسية' },
+  'CMS': { en: 'Misr Sharia Equity Fund', ar: 'صندوق مصر للأسهم المتوافقة مع الشريعة' },
+  'CIP': { en: 'CI IPOs Fund', ar: 'صندوق سي آي للطروحات الأولية' },
+  'CI30': { en: 'Misr Equity Fund', ar: 'صندوق مصر للأسهم' },
+  'CGO': { en: 'CI Gold Fund', ar: 'صندوق سي آي للذهب' },
+  'C2O': { en: 'CI 20HD Fund', ar: 'صندوق سي آي 20 ذو العائد الدوري' },
+
+  // Funds (Beltone)
+  'B70': { en: 'Beltone EGX70 Fund', ar: 'صندوق بلتون إيجي إكس 70' },
+  'BRE': { en: 'Beltone Real Estate Fund', ar: 'صندوق بلتون العقاري' },
+  'BWA': { en: 'Beltone Wafra Fund', ar: 'صندوق بلتون وفرة' },
+  'BFI': { en: 'Beltone Financial Fund', ar: 'صندوق بلتون المالي' },
+  'BCO': { en: 'Beltone Consumers Fund', ar: 'صندوق بلتون للاستهلاك' },
+  'BIN': { en: 'Beltone Industrial Fund', ar: 'صندوق بلتون الصناعي' },
+  'BSB': { en: 'Beltone Sabayek Fund', ar: 'صندوق بلتون سبائك' },
+  'BFA': { en: 'Beltone Fadda Fund', ar: 'صندوق بلتون فضة' },
+  'BMM': { en: 'Beltone Meya Meya Fund', ar: 'صندوق بلتون مية مية' },
+
+  // Other Funds
+  'BAR': { en: 'Bareeq Fund', ar: 'صندوق بريق' },
+  'BAREEQ': { en: 'Bareeq Fund', ar: 'صندوق بريق' },
+  'AZG': { en: 'Azimut Gold Fund', ar: 'صندوق أزيموت للذهب' },
+
+  // Stocks (Original Watchlist)
+  'TMGH': { en: 'Talaat Moustafa Group', ar: 'مجموعة طلعت مصطفى (TMG)' },
+  'PHDC': { en: 'Palm Hills Developments', ar: 'بالم هيلز للتعمير' },
+  'MASR': { en: 'Madinet Nasr for Housing', ar: 'مدينة نصر للإسكان والتعمير' },
+  'COMI': { en: 'Commercial International Bank', ar: 'البنك التجاري الدولي (CIB)' },
+  'QNBE': { en: 'QNB Egypt', ar: 'بنك قطر الوطني مصر (QNB)' },
+  'SWDY': { en: 'Elsewedy Electric', ar: 'السويدي إليكتريك' },
+  'ESRS': { en: 'Ezz Steel', ar: 'حديد عز' },
+  'ETEL': { en: 'Telecom Egypt', ar: 'المصرية للاتصالات' },
+  'FWRY': { en: 'Fawry', ar: 'فوري لتكنولوجيا البنوك والمدفوعات' },
+  'PHAR': { en: 'EIPICO', ar: 'إيبيكو للأدوية' },
+  'CLHO': { en: 'Cleopatra Hospitals Group', ar: 'مجموعة مستشفيات كليوباترا' },
+  'ISPH': { en: 'Ibn Sina Pharma', ar: 'ابن سينا فارما' },
+  'EFID': { en: 'Edita Food Industries', ar: 'إيديتا للصناعات الغذائية' },
+  'JUFO': { en: 'Juhayna', ar: 'جهينة للصناعات الغذائية' },
+
+  // Stocks (EGX30 Expansion)
+  'ABUK': { en: 'Abou Kir Fertilizers', ar: 'أبوقير للأسمدة والصناعات الكيماوية' },
+  'ADIB': { en: 'Abu Dhabi Islamic Bank-Egypt', ar: 'مصرف أبوظبي الإسلامي - مصر' },
+  'AMOC': { en: 'Alexandria Mineral Oils', ar: 'الإسكندرية للزيوت المعدنية (أموك)' },
+  'ARCC': { en: 'Arabian Cement Company', ar: 'شركة أسمنت العربية' },
+  'BTFH': { en: 'Beltone Holding', ar: 'بلتون القابضة' },
+  'EAST': { en: 'Eastern Company', ar: 'إيسترن كومباني (الشرقية للدخان)' },
+  'HRHO': { en: 'EFG Holding', ar: 'إي إف جي القابضة (هيرميس)' },
+  'EFIH': { en: 'E-finance For Digital and Financial Investments', ar: 'إي فاينانس للاستثمارات المالية والرقمية' },
+  'EGAL': { en: 'Egypt Aluminum', ar: 'مصر للألومنيوم' },
+  'EGCH': { en: 'Egyptian Chemical Industries (Kima)', ar: 'الصناعات الكيماوية المصرية (كيما)' },
+  'EMFD': { en: 'Emaar Misr for Development', ar: 'إعمار مصر للتنمية' },
+  'GBCO': { en: 'GB Corp', ar: 'جي بي كورب (غبور أوتو)' },
+  'HELI': { en: 'Heliopolis Housing', ar: 'مصر الجديدة للإسكان والتعمير' },
+  'MCQE': { en: 'Misr Cement (Qena)', ar: 'مصر للأسمنت (قنا)' },
+  'ORAS': { en: 'Orascom Construction PLC', ar: 'أوراسكوم للإنشاءات' },
+  'ORHD': { en: 'Orascom Development Egypt', ar: 'أوراسكوم للتنمية مصر' },
+  'OIH': { en: 'Orascom Investment Holding', ar: 'أوراسكوم للاستثمار القابضة' },
+  'ORWE': { en: 'Oriental Weavers', ar: 'النساجون الشرقيون' },
+  'CCAP': { en: 'QALAA Holdings', ar: 'القلعة للاستشارات المالية' },
+  'RAYA': { en: 'Raya Holding', ar: 'راية القابضة للاستثمارات المالية' },
+  'RMDA': { en: 'Rameda (10th of Ramadan Pharmaceutical)', ar: 'راميدا (العاشر من رمضان للأدوية)' },
+  'VLMR': { en: 'Valmore Holding', ar: 'فالمور القابضة' },
+  'HDBK': { en: 'Housing & Development Bank', ar: 'بنك التعمير والإسكان' },
+  'ALCN': { en: 'Alexandria Container & Cargo Handling', ar: 'الإسكندرية لتداول الحاويات والبضائع' },
+
+  // Indices
+  'EGX30': { en: 'EGX30 Index', ar: 'مؤشر إيجي إكس 30' },
+  'EGX70': { en: 'EGX70 EWI Index', ar: 'مؤشر إيجي إكس 70 متساوي الأوزان' },
+  'EGX100': { en: 'EGX100 EWI Index', ar: 'مؤشر إيجي إكس 100 متساوي الأوزان' },
+};
+
+export function translateEntityName(tickerOrName?: string | null, lang: Lang = 'en'): string {
+  if (!tickerOrName) return '';
+  const key = String(tickerOrName).trim();
+  const upper = key.toUpperCase();
+
+  // Direct ticker lookup
+  if (ENTITY_NAME_MAP[upper]) {
+    return lang === 'ar' ? ENTITY_NAME_MAP[upper].ar : ENTITY_NAME_MAP[upper].en;
+  }
+
+  // Lookup by exact English name
+  const lower = key.toLowerCase();
+  for (const entry of Object.values(ENTITY_NAME_MAP)) {
+    if (entry.en.toLowerCase() === lower || entry.ar === key) {
+      return lang === 'ar' ? entry.ar : entry.en;
+    }
+  }
+
+  // Substring matching
+  if (lang === 'ar') {
+    if (/talaat moustafa|tmg/i.test(key)) return 'مجموعة طلعت مصطفى (TMG)';
+    if (/commercial international bank|cib/i.test(key)) return 'البنك التجاري الدولي (CIB)';
+    if (/palm hills/i.test(key)) return 'بالم هيلز للتعمير';
+    if (/madinet nasr/i.test(key)) return 'مدينة نصر للإسكان والتعمير';
+    if (/elsewedy/i.test(key)) return 'السويدي إليكتريك';
+    if (/ezz steel/i.test(key)) return 'حديد عز';
+    if (/telecom egypt/i.test(key)) return 'المصرية للاتصالات';
+    if (/fawry/i.test(key)) return 'فوري للمدفوعات الإلكترونية';
+    if (/edita/i.test(key)) return 'إيديتا للصناعات الغذائية';
+    if (/juhayna/i.test(key)) return 'جهينة للصناعات الغذائية';
+    if (/abou kir/i.test(key)) return 'أبوقير للأسمدة';
+    if (/abu dhabi islamic/i.test(key)) return 'مصرف أبوظبي الإسلامي - مصر';
+    if (/alexandria mineral/i.test(key)) return 'الإسكندرية للزيوت المعدنية (أموك)';
+    if (/arabian cement/i.test(key)) return 'أسمنت العربية';
+    if (/eastern company/i.test(key)) return 'الشرقية للدخان (إيسترن كومباني)';
+    if (/efg holding|hermes/i.test(key)) return 'المجموعة المالية هيرميس (إي إف جي)';
+    if (/e-finance/i.test(key)) return 'إي فاينانس للاستثمارات الرقمية';
+    if (/egypt aluminum/i.test(key)) return 'مصر للألومنيوم';
+    if (/kima/i.test(key)) return 'كيما (الصناعات الكيماوية)';
+    if (/emaar/i.test(key)) return 'إعمار مصر للتنمية';
+    if (/gb corp|ghabbour/i.test(key)) return 'جي بي كورب (غبور)';
+    if (/heliopolis housing/i.test(key)) return 'مصر الجديدة للإسكان';
+    if (/misr cement/i.test(key)) return 'مصر للأسمنت (قنا)';
+    if (/orascom construction/i.test(key)) return 'أوراسكوم للإنشاءات';
+    if (/orascom development/i.test(key)) return 'أوراسكوم للتنمية مصر';
+    if (/orascom investment/i.test(key)) return 'أوراسكوم للاستثمار';
+    if (/oriental weavers/i.test(key)) return 'النساجون الشرقيون';
+    if (/qalaa/i.test(key)) return 'القلعة للاستشارات المالية';
+    if (/raya/i.test(key)) return 'راية القابضة';
+    if (/rameda/i.test(key)) return 'راميدا للأدوية';
+    if (/valmore/i.test(key)) return 'فالمور القابضة';
+    if (/housing & development|hdbk/i.test(key)) return 'بنك التعمير والإسكان';
+    if (/alexandria container/i.test(key)) return 'الإسكندرية لتداول الحاويات';
+    if (/beltone real estate/i.test(key)) return 'صندوق بلتون العقاري';
+    if (/bareeq/i.test(key)) return 'صندوق بريق';
+    if (/egx30/i.test(key)) return 'مؤشر إيجي إكس 30';
+    if (/egx70/i.test(key)) return 'مؤشر إيجي إكس 70 متساوي الأوزان';
+    if (/egx100/i.test(key)) return 'مؤشر إيجي إكس 100 متساوي الأوزان';
+  }
+
+  return key;
+}
+
+export const SECTOR_MAP: Record<string, { en: string; ar: string }> = {
+  'real estate': { en: 'Real Estate', ar: 'العقارات' },
+  'banks/financial': { en: 'Banks/Financial', ar: 'البنوك والخدمات المالية' },
+  'export & industry': { en: 'Export & Industry', ar: 'التصدير والصناعة' },
+  'telecom/tech': { en: 'Telecom/Tech', ar: 'الاتصالات والتكنولوجيا' },
+  'consumer & basic needs': { en: 'Consumer & Basic Needs', ar: 'السلع الاستهلاكية والاحتياجات الأساسية' },
+  'sharia-compliant equity': { en: 'Sharia-Compliant Equity', ar: 'الأسهم المتوافقة مع الشريعة' },
+  'new issuances/ipos': { en: 'New Issuances/IPOs', ar: 'الطروحات الجديدة والاكتتابات' },
+  'broad index/diversified': { en: 'Broad Index/Diversified', ar: 'المؤشرات العامة والأسهم المتنوعة' },
+  'precious metals': { en: 'Precious Metals', ar: 'المعادن النفيسة' },
+  'pharma/healthcare': { en: 'Pharma/Healthcare', ar: 'الأدوية والرعاية الصحية' },
+  'chemicals & fertilizers': { en: 'Chemicals & Fertilizers', ar: 'البتروكيماويات والأسمدة' },
+  'oil & gas': { en: 'Oil & Gas', ar: 'النفط والغاز' },
+  'building materials': { en: 'Building Materials', ar: 'مواد البناء' },
+  'transportation': { en: 'Transportation', ar: 'النقل واللوجستيات' },
+};
+
+export function translateSector(sector?: string | null, lang: Lang = 'en'): string {
+  if (!sector) return lang === 'ar' ? 'غير مصنف' : 'Unclassified';
+  const key = sector.trim().toLowerCase();
+  if (SECTOR_MAP[key]) {
+    return lang === 'ar' ? SECTOR_MAP[key].ar : SECTOR_MAP[key].en;
+  }
+  return sector;
+}
+
+export function translateEntityType(type?: string | null, lang: Lang = 'en'): string {
+  if (!type) return '';
+  if (lang === 'ar') {
+    switch (type.toLowerCase()) {
+      case 'fund': return 'صندوق';
+      case 'stock': return 'سهم';
+      case 'index': return 'مؤشر';
+      case 'funds': return 'صناديق';
+      case 'stocks': return 'أسهم';
+      case 'indices': return 'مؤشرات';
+      default: return type;
+    }
+  }
+  switch (type.toLowerCase()) {
+    case 'fund': return 'Fund';
+    case 'stock': return 'Stock';
+    case 'index': return 'Index';
+    case 'funds': return 'Funds';
+    case 'stocks': return 'Stocks';
+    case 'indices': return 'Indices';
+    default: return type;
+  }
+}
+

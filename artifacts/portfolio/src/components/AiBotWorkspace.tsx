@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Activity, ArrowLeft, ArrowRight, Brain, Gauge, List, RefreshCw, TrendingDown, TrendingUp, X } from 'lucide-react';
 import { Dialog, DialogContent } from './ui/dialog';
 import { supabase } from '../lib/supabaseClient';
-import { type Lang, getSavedLang } from '../lib/i18n';
+import { type Lang, getSavedLang, translateEntityName, translateSector } from '../lib/i18n';
 
 type Snapshot = {
   ticker: string;
@@ -441,7 +441,7 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
                       <strong>{snapshot.ticker}</strong>
                       {snapshot.is_held && <em>{lang === 'ar' ? 'محتفظ به' : 'HELD'}</em>}
                     </td>
-                    <td>{snapshot.name}</td>
+                    <td>{translateEntityName(snapshot.name || snapshot.ticker, lang)}</td>
                     <td>{snapshot.nav_or_price === null ? '—' : Number(snapshot.nav_or_price).toLocaleString()}</td>
                     <td className={Number(snapshot.return_30d_percent) >= 0 ? 'ai-positive' : 'ai-negative'}>{value(snapshot.return_30d_percent, '%')}</td>
                     <td className={Number(snapshot.return_ytd_percent) >= 0 ? 'ai-positive' : 'ai-negative'}>{value(snapshot.return_ytd_percent, '%')}</td>
@@ -635,8 +635,8 @@ export function AiBotWorkspace() {
 
   const opportunityReason = matchingSector
     ? (lang === 'ar'
-        ? `يسد فجوة في قطاع ${matchingSector.sector} (يمثل حالياً ${Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% فقط من المحفظة)`
-        : `Fills gap in ${matchingSector.sector} (currently only ${Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% of portfolio)`)
+        ? `يسد فجوة في قطاع ${translateSector(matchingSector.sector, lang)} (يمثل حالياً ${Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% فقط من المحفظة)`
+        : `Fills gap in ${translateSector(matchingSector.sector, lang)} (currently only ${Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% of portfolio)`)
     : verdict?.coverage_percent !== null && verdict?.coverage_percent !== undefined
       ? (lang === 'ar'
           ? `إشارة قوية بتغطية مقارنة بنسبة ${Number(verdict.coverage_percent).toFixed(1)}%.`
@@ -760,7 +760,7 @@ export function AiBotWorkspace() {
         <div className="ai-bot-entity-current">
           <span>{lang === 'ar' ? `أصل ${selectedIndex + 1} من ${displayedEntities.length}` : `Entity ${selectedIndex + 1} of ${displayedEntities.length}`}</span>
           <strong>{entity?.ticker || '—'}</strong>
-          <small>{entity?.name || (lang === 'ar' ? 'لم يتم تحديد أي أصل' : 'No entity selected')}</small>
+          <small>{entity?.name ? translateEntityName(entity.name, lang) : (lang === 'ar' ? 'لم يتم تحديد أي أصل' : 'No entity selected')}</small>
         </div>
         <button
           type="button"
@@ -841,7 +841,7 @@ export function AiBotWorkspace() {
               <span>{lang === 'ar' ? 'عائد سنة واحدة' : '1 year return'}</span>
             </div>
             <div className="ai-bot-price-details">
-              <span>{lang === 'ar' ? 'القطاع' : 'Sector'} <b>{entity.sector ?? (lang === 'ar' ? 'غير مصنف' : 'Unclassified')}</b></span>
+              <span>{lang === 'ar' ? 'القطاع' : 'Sector'} <b>{translateSector(entity.sector, lang)}</b></span>
               <span>{lang === 'ar' ? 'التقييم' : 'Score'} <b>{entity.total_score === null ? '—' : `${Number(entity.total_score).toFixed(0)}/100`}</b></span>
               <span>{lang === 'ar' ? 'تم التحديث' : 'Updated'} <b>{entity.scraped_at ? new Date(entity.scraped_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US') : '—'}</b></span>
             </div>
@@ -890,7 +890,7 @@ export function AiBotWorkspace() {
                   <div>
                     <span className="comparison-holding-eyebrow">{lang === 'ar' ? 'الأصل المُقيَّم' : 'Evaluated Asset'}</span>
                     <h4 className="comparison-holding-name">
-                      {verdict.holding_name || entity.name || verdict.holding_ticker} <span>({verdict.holding_ticker})</span>
+                      {translateEntityName(verdict.holding_name || entity.name || verdict.holding_ticker, lang)} <span>({verdict.holding_ticker})</span>
                     </h4>
                     <div className="comparison-holding-meta">
                       <span><b>{formatPeriodLabel(verdict.return_period, lang)}:</b> <strong>{pct(verdict.holding_return_percent)}</strong></span>
@@ -1066,6 +1066,7 @@ export function AiBotWorkspace() {
                                   className={`comparison-evidence-row ${!hasReturn ? 'comparison-evidence-pending' : ''}`}
                                 >
                                   <strong className="comparison-ticker">{peer.ticker}</strong>
+                                  <span className="comparison-peer-name" style={{ fontSize: '9px', color: 'var(--dim)', marginInlineStart: '4px' }}>{translateEntityName(peer.ticker, lang)}</span>
                                   {hasReturn ? (
                                     <>
                                       <span className={`comparison-return ${Number(peer.return_percent) >= 0 ? 'ai-positive' : 'ai-negative'}`}>
@@ -1198,7 +1199,7 @@ export function AiBotWorkspace() {
                     {opportunities.map((opp) => (
                       <div key={opp.ticker} className="ai-bot-opportunity-item">
                         <span className="ai-bot-opp-ticker">{opp.ticker}</span>
-                        <span className="ai-bot-opp-name">{opp.name}</span>
+                        <span className="ai-bot-opp-name">{translateEntityName(opp.name || opp.ticker, lang)}</span>
                         <span className="ai-bot-opp-badge">{lang === 'ar' ? 'إشارة قوية' : 'Strong Signal'}</span>
                       </div>
                     ))}
