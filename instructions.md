@@ -310,3 +310,209 @@ optional convenience wrappers only. The standalone runtime is:
 The standalone API uses SSL for remote Supabase/Postgres hosts and disables
 SSL automatically for local PostgreSQL hosts. A local database is optional if
 you use a remote Supabase Postgres connection through `DATABASE_URL`.
+
+---
+
+## Environment Setup
+
+### 1. Create `.env` files for both frontend and backend
+
+**Backend (.env in `artifacts/api-server/`):**
+```env
+DATABASE_URL=postgresql://username:password@db.supabase.co:5432/postgres
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+GOOGLE_GENAI_API_KEY=your-gemini-api-key
+PORT=8080
+NODE_ENV=development
+```
+
+**Frontend (.env in `artifacts/portfolio/`):**
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+```
+
+### 2. Get Your Supabase Credentials
+1. Go to your Supabase project dashboard
+2. Click **Settings** → **Database**
+3. Copy connection string → paste into `DATABASE_URL`
+4. Go to **Settings** → **API**
+5. Copy **URL** and **Anon Key** → paste into the .env files
+
+### 3. Get Your Google Gemini API Key
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Create a new API key
+3. Paste into `GOOGLE_GENAI_API_KEY` in api-server `.env`
+
+---
+
+## Key Features
+
+### Smart Advisor Panel (Right Sidebar)
+- **Auto-generates** AI recommendations when dashboard loads
+- **Shows alerts**: Time Stop (stagnant positions), Thesis Check (signal reversed), Drawdown alerts
+- **Manual refresh** button to generate new recommendations
+- **Auto-refreshes** every 5 minutes
+
+### Price Refresh
+- Click "Refresh Prices" in the dashboard to run the scraper
+- Fetches fund NAVs from FoudaLens (works ✅)
+- Fetches stock prices from Yahoo Finance (requires yahoo_ticker mapping — **see `to do list.md`**)
+
+### Comparison Judge
+- Analyzes portfolio rotation verdicts
+- Compares holdings against benchmarks
+- Generates buy/sell/hold signals
+
+---
+
+## ⚠️ Stock Data Issue
+
+**Problem:** Egyptian stocks (ETEL, EGCH, AMOC, etc.) show dashes in price column
+- FoudaLens works for Canadian funds but not Egyptian stocks
+- Stock prices must come from Yahoo Finance
+
+**Solution:** See [`to do list.md`](to%20do%20list.md) for the 3 steps to map Egyptian tickers to Yahoo Finance
+
+**File created:** `artifacts/api-server/src/judge/enrichReturnsFromYahoo.ts` handles the Yahoo integration
+
+---
+
+## Smart Advisor Integration Progress
+
+### ✅ Step 1: Database Tables (COMPLETED)
+Created schema for AI recommendation storage:
+- **File:** `lib/db/src/schema/advisor.ts` - Drizzle ORM schema
+- **SQL:** `migrations/006_advisor_recommendations.sql` - Direct SQL migration
+- **Table:** `advisor_recommendations` with fields:
+  - `id` (serial primary key)
+  - `watchlist_id` (foreign key to comparison_watchlist)
+  - `recommendation_text` (AI-generated advice)
+  - `model_used` (e.g., 'gemini-2.0-flash')
+  - `generated_at` & `updated_at` (timestamps)
+
+**To apply in Supabase:**
+```sql
+CREATE TABLE IF NOT EXISTS "advisor_recommendations" (
+  "id" serial PRIMARY KEY,
+  "watchlist_id" integer NOT NULL REFERENCES "comparison_watchlist"("id") ON DELETE CASCADE,
+  "recommendation_text" text NOT NULL,
+  "model_used" text NOT NULL,
+  "generated_at" timestamp with time zone NOT NULL DEFAULT now(),
+  "updated_at" timestamp with time zone NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS "idx_advisor_recommendations_watchlist_generated"
+  ON "advisor_recommendations"("watchlist_id", "generated_at" DESC);
+CREATE INDEX IF NOT EXISTS "idx_advisor_recommendations_generated_at"
+  ON "advisor_recommendations"("generated_at" DESC);
+```
+
+### ✅ Step 2: Frontend UI Component (COMPLETED)
+Built Smart Advisor dashboard panel with:
+- **File:** `src/components/SmartAdvisorPanel.tsx`
+- **Integration:** Added to `src/App.tsx` as a sidebar panel (w-96)
+- **Features:**
+  - Display AI-generated recommendations for each holding
+  - Real-time alerts (Time Stop, Thesis Check, Portfolio Drawdown)
+  - Refresh button to manually trigger `POST /api/advisor/generate`
+  - Auto-refresh every 5 minutes
+  - Error handling with user feedback
+  - Loading states
+  - Styled with shadcn/ui Card component to match the rest of the app
+
+### ✅ Step 4: Auto-generation Wiring (COMPLETED)
+Smart Advisor now automatically generates recommendations when:
+- **Dashboard first loads** — if no recommendations exist yet
+- **Cooldown period passes** — once per hour max (configurable in SmartAdvisorPanel.tsx)
+- **User clicks Generate button** — manual trigger always available
+
+**Implementation details:**
+- Uses `localStorage` to track `advisor_last_generation_time`
+- Prevents spam with 1-hour cooldown between auto-generations
+- Shows "Last generated" timestamp and "Next auto-generation" countdown
+- Maintains manual "Generate" button for on-demand updates
+
+---
+
+## Database Migrations
+
+Before using the dashboard, apply these migrations in Supabase SQL editor:
+
+### 1. Smart Advisor Table (Required for recommendations)
+```sql
+-- Copy the SQL from migrations/006_advisor_recommendations.sql
+-- Paste into Supabase SQL editor and execute
+```
+
+### 2. Stock Yahoo Ticker Mapping (Required for stock prices)
+```sql
+-- Add yahoo_ticker column if missing
+ALTER TABLE comparison_watchlist
+ADD COLUMN IF NOT EXISTS yahoo_ticker VARCHAR(20);
+
+-- Then populate with Egyptian stock mappings (see to do list.md)
+```
+
+---
+
+## Troubleshooting
+
+### "Cannot find @tailwindcss/oxide"
+**Cause:** Windows + pnpm native module issue
+**Fix:**
+```bash
+cd g:\tp\ai\portofolio-dashbaord
+rm -r node_modules pnpm-lock.yaml
+pnpm install --no-frozen-lockfile
+```
+
+### "Port 3000 already in use"
+**Fix:** Change port in the start command:
+```bash
+PORT=3001 pnpm run dev
+```
+
+### "Port 8080 already in use"
+**Fix:** Kill the existing process or use a different port:
+```bash
+PORT=8081 pnpm run start
+```
+
+### "Cannot connect to Supabase"
+**Check:**
+1. Is `DATABASE_URL` in `.env` correct?
+2. Is your Supabase project active?
+3. Is your IP whitelisted in Supabase firewall settings?
+4. Try: `psql $DATABASE_URL -c "SELECT 1"` to test connection
+
+### "AI recommendations not generating"
+**Check:**
+1. Is `GOOGLE_GENAI_API_KEY` set in backend `.env`?
+2. Is API key valid on Google AI Studio?
+3. Check backend logs for errors
+
+### "Stock prices still showing dashes"
+**Solution:** Complete the 3 steps in [`to do list.md`](to%20do%20list.md) to set up yahoo_ticker mappings
+
+---
+
+## Quick Reference
+
+| Component | Port | Status | Start Command |
+|-----------|------|--------|----------------|
+| Frontend | 3001 | ✅ | `cd portfolio && PORT=3001 pnpm run dev` |
+| Backend | 8080 | ✅ | `cd api-server && PORT=8080 pnpm run start` |
+| Supabase | 5432 | ✅ | Use DATABASE_URL in .env |
+
+---
+
+## Important Files
+
+- **Frontend App:** `artifacts/portfolio/src/App.tsx`
+- **Smart Advisor Component:** `artifacts/portfolio/src/components/SmartAdvisorPanel.tsx`
+- **Backend Server:** `artifacts/api-server/src/index.ts`
+- **Scraper Logic:** `artifacts/api-server/src/scraper/runScraper.ts`
+- **Yahoo Enrichment:** `artifacts/api-server/src/judge/enrichReturnsFromYahoo.ts`
+- **Next Steps:** `to do list.md` (MUST READ after startup)
+
