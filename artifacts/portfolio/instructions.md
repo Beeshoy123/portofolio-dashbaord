@@ -1,5 +1,39 @@
 # Portfolio Dashboard - Development Instructions
 
+> 🚨 **MANDATORY ABSOLUTE RULE: CONNECT TO SUPABASE DATABASE ON STARTUP**
+> 
+> **Whenever starting or restarting this application, the backend MUST connect to the remote Supabase PostgreSQL database (`aws-1-eu-west-1.pooler.supabase.com`). It MUST NEVER connect to empty local PostgreSQL or default to `localhost` / `0 EGP`.**
+> 
+> ### The 4-Step Mandatory Startup Protocol:
+> 1. **ALWAYS UNSET INHERITED ENVIRONMENT VARIABLES** before starting the backend:
+>    ```bash
+>    cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server'
+>    unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY PORTFOLIO_OWNER_USER_ID USE_POOLER
+>    PORT=8080 node --enable-source-maps ./dist/index.mjs
+>    ```
+>    *(Or execute `start-backend.bat` / `start-local.bat`, which performs this automatically).*
+> 
+> 2. **ALWAYS VERIFY THE STARTUP LOG OUTPUT**:
+>    You **MUST** confirm the backend console explicitly prints:
+>    ```
+>    Loaded environment from G:\tp\ai\portofolio-dashbaord\.secrets\api-server.env
+>    { chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' } Using database host
+>    Server listening port: 8080
+>    ```
+>    ❌ **IF IT SAYS `chosenDatabaseUrl: 'localhost'` OR `127.0.0.1`**: **KILL THE PROCESS IMMEDIATELY.** It will show `0 EGP` / empty database state. Unset the variables and restart.
+> 
+> 3. **START FRONTEND**:
+>    ```bash
+>    cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio'
+>    PORT=3001 pnpm run dev
+>    ```
+>    *(Or execute `start-frontend.bat`)*
+> 
+> 4. **VERIFY LIVE DATA ON DASHBOARD**:
+>    Open `http://localhost:3001/`. Confirm live portfolio data (gold holdings, funds, certificates, and transactions) loads from Supabase and NOT a placeholder warning.
+
+---
+
 ## 📚 IMPORTANT: CHECK MEMORY FILES FIRST
 
 **Before starting development, check if there are active notes about this project:**

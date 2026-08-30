@@ -41,6 +41,22 @@ async function mapWithConcurrency<T, R>(
   return results;
 }
 
+function formatStructuredRecommendation(row: any) {
+  if (!row.decision && !row.confidence && !row.evidence && !row.watch_trigger) {
+    return null;
+  }
+  return {
+    decision: row.decision,
+    confidence: row.confidence !== null && row.confidence !== undefined ? Number(row.confidence) : 0,
+    summary: row.recommendation_text,
+    evidence: Array.isArray(row.evidence) ? row.evidence : [],
+    risks: Array.isArray(row.risks) ? row.risks : [],
+    next_review_days: row.next_review_days !== null && row.next_review_days !== undefined ? Number(row.next_review_days) : 14,
+    watch_trigger: row.watch_trigger || '',
+    do_not_act_reasons: Array.isArray(row.do_not_act_reasons) ? row.do_not_act_reasons : [],
+  };
+}
+
 // Get latest recommendation for a specific ticker
 router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
   try {
@@ -51,7 +67,9 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
     }
 
     const result = await pool.query(
-      `SELECT ar.id, ar.recommendation_text, ar.model_used, ar.generated_at
+      `SELECT ar.id, ar.recommendation_text, ar.model_used, ar.generated_at,
+              ar.decision, ar.confidence, ar.evidence, ar.risks, ar.next_review_days,
+              ar.watch_trigger, ar.do_not_act_reasons
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
       WHERE cw.ticker = $1 AND ar.run_id = $2
@@ -64,7 +82,15 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
       return res.status(404).json({ error: "No recommendation found for this ticker" });
     }
 
-    res.json(result.rows[0]);
+    const row = result.rows[0];
+    res.json({
+      id: row.id,
+      ticker: ticker.toUpperCase(),
+      recommendation_text: row.recommendation_text,
+      model_used: row.model_used,
+      generated_at: row.generated_at,
+      structured: formatStructuredRecommendation(row),
+    });
   } catch (err) {
     console.error("[advisor] GET recommendations/:ticker failed:", err);
     res.status(500).json({ error: "Failed to fetch recommendation" });
@@ -80,7 +106,9 @@ router.get("/recommendations", async (req: Request, res: Response) => {
     const params = [runId];
     const result = await pool.query(
       `SELECT DISTINCT ON (cw.ticker) 
-              cw.ticker, ar.recommendation_text, ar.model_used, ar.generated_at
+              cw.ticker, ar.recommendation_text, ar.model_used, ar.generated_at,
+              ar.decision, ar.confidence, ar.evidence, ar.risks, ar.next_review_days,
+              ar.watch_trigger, ar.do_not_act_reasons
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
        WHERE cw.is_held = true
@@ -95,7 +123,15 @@ router.get("/recommendations", async (req: Request, res: Response) => {
       , params
     );
 
-    res.json(result.rows);
+    const rows = result.rows.map((row) => ({
+      ticker: row.ticker,
+      recommendation_text: row.recommendation_text,
+      model_used: row.model_used,
+      generated_at: row.generated_at,
+      structured: formatStructuredRecommendation(row),
+    }));
+
+    res.json(rows);
   } catch (err) {
     console.error("[advisor] GET recommendations failed:", err);
     res.status(500).json({ error: "Failed to fetch recommendations" });

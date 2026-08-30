@@ -305,3 +305,20 @@ Add dark-theme styles for the Smart Advisor report card:
    - Unheld candidate with Strong signal (check Opportunity Candidate badge and sector gap details).
    - Unheld asset with Mixed/Weak signal (check contextual watchlist guidance).
 
+---
+
+## 5. Comprehensive Audit Findings & Applied Enhancements
+
+### Finding 1: Backend Structured Recommendation Columns Selection (Fixed)
+- **Issue:** Migrations 014 & 019 created the columns `decision`, `confidence`, `evidence`, `risks`, `next_review_days`, `watch_trigger`, and `do_not_act_reasons` on `advisor_recommendations`, but the backend SQL queries in `GET /api/advisor/recommendations` and `GET /api/advisor/recommendations/:ticker` only selected raw `recommendation_text`, `model_used`, and `generated_at`.
+- **Fix:** Updated `artifacts/api-server/src/routes/advisor.ts` to query all structured columns and format them into the typed `structured` payload.
+
+### Finding 2: Alerts Summary API Shape Compatibility (Fixed)
+- **Issue:** `/api/alerts/summary` returns a map keyed by ticker (`alerts: { [ticker]: { timeStop, thesis } }`) and a portfolio object (`portfolio: { drawdown }`), while the original plan assumed flat top-level arrays.
+- **Fix:** Enhanced `AlertsSummary` in `AiBotWorkspace.tsx` to support both dictionary/portfolio map lookups and legacy flat arrays with case-insensitive ticker matching.
+
+### Finding 3: Alert Attribute Fallbacks & Null Safety (Fixed)
+- **Issue:** Stagnation days and alert states can be returned under `stagnant_days` / `days_in_current_state` and `is_alert` / `is_elevated`.
+- **Fix:** Added coalescing (`days_in_current_state ?? stagnant_days ?? 0` and `is_elevated || is_alert`) plus optional chaining on opportunities matching.
+
+

@@ -98,34 +98,41 @@ type Recommendation = {
 
 type TimeStopAlert = {
   watchlist_id?: number;
-  ticker: string;
+  ticker?: string;
   is_stagnant: boolean;
-  days_in_current_state: number;
-  threshold_days: number;
+  days_in_current_state?: number;
+  stagnant_days?: number | null;
+  threshold_days?: number;
   message?: string;
 };
 
 type ThesisAlert = {
   watchlist_id?: number;
-  ticker: string;
+  ticker?: string;
   has_reversal: boolean;
+  signal_degraded?: boolean;
   prior_signal?: string;
   current_signal?: string;
   message?: string;
 };
 
 type DrawdownAlert = {
-  current_drawdown_percent: number;
-  drawdown_percent?: number;
+  current_drawdown_percent?: number | null;
+  drawdown_percent?: number | null;
   peak_value?: number;
   current_value?: number;
   is_elevated?: boolean;
+  is_alert?: boolean;
 };
 
 type AlertsSummary = {
-  timeStops: TimeStopAlert[];
-  theses: ThesisAlert[];
-  drawdown: DrawdownAlert | null;
+  timeStops?: TimeStopAlert[];
+  theses?: ThesisAlert[];
+  drawdown?: DrawdownAlert | null;
+  alerts?: Record<string, { timeStop?: TimeStopAlert; thesis?: ThesisAlert }>;
+  portfolio?: {
+    drawdown?: DrawdownAlert | null;
+  };
 };
 type PortfolioSummary = {
   summary_text: string;
@@ -413,9 +420,19 @@ export function AiBotWorkspace() {
   const signal = entity ? signals.find((item) => item.ticker === entity.ticker) : undefined;
   const verdict = entity ? verdicts.find((item) => item.holding_ticker === entity.ticker) : undefined;
   const recommendation = entity ? recommendations.find((item) => item.ticker === entity.ticker) : undefined;
-  const entityTimeStop = entity && alertsData ? alertsData.timeStops?.find((ts) => ts.ticker.toUpperCase() === entity.ticker.toUpperCase()) : undefined;
-  const entityThesis = entity && alertsData ? alertsData.theses?.find((t) => t.ticker.toUpperCase() === entity.ticker.toUpperCase()) : undefined;
-  const portfolioDrawdown = alertsData?.drawdown;
+  const entityAlertGroup = entity && alertsData?.alerts
+    ? (alertsData.alerts[entity.ticker] ||
+       alertsData.alerts[entity.ticker.toUpperCase()] ||
+       alertsData.alerts[entity.ticker.toLowerCase()] ||
+       Object.entries(alertsData.alerts).find(([k]) => k.toUpperCase() === entity.ticker.toUpperCase())?.[1])
+    : undefined;
+  const entityTimeStop = entity && alertsData
+    ? (entityAlertGroup?.timeStop ?? alertsData.timeStops?.find((ts) => ts.ticker?.toUpperCase() === entity.ticker.toUpperCase()))
+    : undefined;
+  const entityThesis = entity && alertsData
+    ? (entityAlertGroup?.thesis ?? alertsData.theses?.find((t) => t.ticker?.toUpperCase() === entity.ticker.toUpperCase()))
+    : undefined;
+  const portfolioDrawdown = alertsData?.portfolio?.drawdown ?? alertsData?.drawdown;
   const trendDown = signal?.trend === 'downtrend';
 
   // Analyze strong unheld entities as opportunities
@@ -451,14 +468,14 @@ export function AiBotWorkspace() {
 
   const strongUnheldMatch = entity && !entity.is_held
     ? opportunitiesData?.strong_unheld?.find(
-        (item) => item.holding_ticker.toUpperCase() === entity.ticker.toUpperCase()
+        (item) => item.holding_ticker?.toUpperCase() === entity.ticker?.toUpperCase()
       )
     : undefined;
 
   const matchingSector = strongUnheldMatch
     ? opportunitiesData?.underrepresented_sectors?.find((sec) =>
         sec.strong_candidates?.some(
-          (cand) => cand.holding_ticker.toUpperCase() === entity.ticker.toUpperCase()
+          (cand) => cand.holding_ticker?.toUpperCase() === entity.ticker?.toUpperCase()
         )
       )
     : undefined;
@@ -1009,7 +1026,7 @@ export function AiBotWorkspace() {
                         <span>Time Stop</span>
                         <strong>
                           {entityTimeStop.is_stagnant
-                            ? `⏱️ Stagnant: ${entityTimeStop.days_in_current_state}d`
+                            ? `⏱️ Stagnant: ${entityTimeStop.days_in_current_state ?? entityTimeStop.stagnant_days ?? 0}d`
                             : '✅ Active Momentum'}
                         </strong>
                         {entityTimeStop.is_stagnant && entityTimeStop.message && (
@@ -1020,10 +1037,10 @@ export function AiBotWorkspace() {
 
                     {/* Thesis Integrity */}
                     {entityThesis && (
-                      <div className={`ai-bot-safety-card ${entityThesis.has_reversal ? 'ai-bot-safety-alert' : 'ai-bot-safety-ok'}`}>
+                      <div className={`ai-bot-safety-card ${(entityThesis.has_reversal || entityThesis.signal_degraded) ? 'ai-bot-safety-alert' : 'ai-bot-safety-ok'}`}>
                         <span>Thesis Integrity</span>
                         <strong>
-                          {entityThesis.has_reversal ? '⚠️ Signal Degraded' : '✅ Thesis Intact'}
+                          {(entityThesis.has_reversal || entityThesis.signal_degraded) ? '⚠️ Signal Degraded' : '✅ Thesis Intact'}
                         </strong>
                         {entityThesis.has_reversal && entityThesis.prior_signal && entityThesis.current_signal && (
                           <em>{entityThesis.prior_signal} → {entityThesis.current_signal}</em>
@@ -1033,12 +1050,12 @@ export function AiBotWorkspace() {
 
                     {/* Drawdown */}
                     {portfolioDrawdown && (
-                      <div className={`ai-bot-safety-card ${(portfolioDrawdown.is_elevated || Math.abs(portfolioDrawdown.current_drawdown_percent ?? portfolioDrawdown.drawdown_percent ?? 0) >= 10) ? 'ai-bot-safety-alert' : 'ai-bot-safety-ok'}`}>
+                      <div className={`ai-bot-safety-card ${(portfolioDrawdown.is_elevated || portfolioDrawdown.is_alert || Math.abs(portfolioDrawdown.current_drawdown_percent ?? portfolioDrawdown.drawdown_percent ?? 0) >= 10) ? 'ai-bot-safety-alert' : 'ai-bot-safety-ok'}`}>
                         <span>Drawdown Risk</span>
                         <strong>
                           📉 {Math.abs(portfolioDrawdown.current_drawdown_percent ?? portfolioDrawdown.drawdown_percent ?? 0).toFixed(1)}% Drawdown
                         </strong>
-                        {portfolioDrawdown.is_elevated && <em>Elevated — review position</em>}
+                        {(portfolioDrawdown.is_elevated || portfolioDrawdown.is_alert) && <em>Elevated — review position</em>}
                       </div>
                     )}
 
