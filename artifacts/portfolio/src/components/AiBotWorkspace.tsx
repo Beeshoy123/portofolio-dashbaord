@@ -166,6 +166,7 @@ type OpportunitiesAnalysis = {
     holding_return_percent: number | null;
     signal: string;
     coverage_percent?: number | null;
+    absolute_return_positive?: boolean;
   }>;
   underrepresented_sectors: Array<{
     sector: string;
@@ -176,6 +177,7 @@ type OpportunitiesAnalysis = {
       holding_return_percent: number | null;
       signal: string;
       coverage_percent?: number | null;
+      absolute_return_positive?: boolean;
     }>;
   }>;
 };
@@ -630,6 +632,12 @@ export function AiBotWorkspace() {
     if (opportunitiesData?.strong_unheld && opportunitiesData.strong_unheld.length > 0) {
       return opportunitiesData.strong_unheld.map((v) => {
         const snap = allEntities.find((e) => e.ticker === v.holding_ticker);
+        const returnPercent = v.holding_return_percent !== null && v.holding_return_percent !== undefined
+          ? v.holding_return_percent
+          : (snap?.return_1y_percent !== undefined && snap?.return_1y_percent !== null ? Number(snap.return_1y_percent) : null);
+        const isPositive = v.absolute_return_positive !== undefined
+          ? v.absolute_return_positive
+          : (returnPercent !== null && !isNaN(returnPercent) && returnPercent > 0);
         return {
           ticker: v.holding_ticker,
           name: snap?.name || v.holding_name || v.holding_ticker,
@@ -637,13 +645,22 @@ export function AiBotWorkspace() {
           sector: snap?.sector || null,
           score: snap?.total_score ?? null,
           signal: v.signal,
+          return_percent: returnPercent,
+          absolute_return_positive: isPositive,
         };
+      }).sort((a, b) => {
+        if (a.absolute_return_positive === b.absolute_return_positive) return 0;
+        return a.absolute_return_positive ? -1 : 1;
       });
     }
     const strongUnheld = verdicts
       .filter((v) => v.signal === 'Strong' && !allEntities.find((e) => e.ticker === v.holding_ticker && e.is_held))
       .map((v) => {
         const snap = allEntities.find((e) => e.ticker === v.holding_ticker);
+        const returnPercent = v.holding_return_percent !== null && v.holding_return_percent !== undefined
+          ? v.holding_return_percent
+          : (snap?.return_1y_percent !== undefined && snap?.return_1y_percent !== null ? Number(snap.return_1y_percent) : null);
+        const isPositive = returnPercent !== null && !isNaN(returnPercent) && returnPercent > 0;
         return {
           ticker: v.holding_ticker,
           name: snap?.name || v.holding_ticker,
@@ -651,7 +668,13 @@ export function AiBotWorkspace() {
           sector: snap?.sector || null,
           score: snap?.total_score ?? null,
           signal: v.signal,
+          return_percent: returnPercent,
+          absolute_return_positive: isPositive,
         };
+      })
+      .sort((a, b) => {
+        if (a.absolute_return_positive === b.absolute_return_positive) return 0;
+        return a.absolute_return_positive ? -1 : 1;
       });
     return strongUnheld;
   }, [opportunitiesData, verdicts, allEntities]);
@@ -1365,6 +1388,11 @@ export function AiBotWorkspace() {
                           <span className="ai-bot-opp-ticker">{opp.ticker}</span>
                           <span className="ai-bot-opp-name">{translateEntityName(opp.name || opp.ticker, lang)}</span>
                           <span className="ai-bot-opp-badge">{lang === 'ar' ? 'إشارة قوية' : 'Strong Signal'}</span>
+                          {!opp.absolute_return_positive && (
+                            <span className="ai-bot-opp-subnote">
+                              {lang === 'ar' ? 'تفوق على النظراء لكن العائد هابط' : 'Beat peers, but down overall'}
+                            </span>
+                          )}
                         </div>
                       ))}
                     </div>
