@@ -2103,7 +2103,7 @@ export function initDashboardBehavior(
       yield: "wh-yield-bar",
       liq: "wh-liq-bar",
     };
-    const colors = { div: "var(--accent)", ef: "var(--pnl-down)", yield: "var(--pnl-up)", liq: "var(--pnl-down)" };
+    const colors = { div: "var(--pnl-down)", ef: "var(--pnl-down)", yield: "var(--pnl-up)", liq: "var(--pnl-down)" };
     setTimeout(() => {
       (Object.keys(scores) as (keyof typeof scores)[]).forEach((key) => {
         const score = scores[key];
