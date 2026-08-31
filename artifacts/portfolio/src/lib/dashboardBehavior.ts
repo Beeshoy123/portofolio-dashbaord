@@ -323,22 +323,38 @@ export function initDashboardBehavior(
       });
     }
 
-    const btns = ["total", "ai"];
     const sliderView = ["gold", "liquid", "certs"].includes(view) ? "total" : view;
-    const idx = btns.indexOf(sliderView);
     const bar = el("view-toggle-bar");
     const slider = el("view-toggle-slider");
     if (bar && slider) {
-      const btnWidth = bar.offsetWidth / 2;
-      const offset = 3 + idx * btnWidth + "px";
-      if (currentLang === 'ar') {
-        slider.style.right = offset;
-        slider.style.left  = "";
+      const barRect = bar.getBoundingClientRect();
+      if (sliderView === "total") {
+        // Slider covers Overall button + chevron arrow together
+        const totalBtn  = el("view-btn-total");
+        const chevron   = el("segment-chevron");
+        const startEl   = currentLang === 'ar' ? (chevron || totalBtn) : totalBtn;
+        const endEl     = currentLang === 'ar' ? totalBtn : (chevron || totalBtn);
+        if (startEl && endEl) {
+          const startRect = startEl.getBoundingClientRect();
+          const endRect   = endEl.getBoundingClientRect();
+          const left      = startRect.left - barRect.left - 3;
+          const right     = barRect.right  - endRect.right - 3;
+          slider.style.left  = left + "px";
+          slider.style.right = right + "px";
+          slider.style.width = "";
+        }
       } else {
-        slider.style.left  = offset;
-        slider.style.right = "";
+        // Slider covers only the AI Insights button
+        const aiBtn = el("view-btn-ai");
+        if (aiBtn) {
+          const aiRect = aiBtn.getBoundingClientRect();
+          const left   = aiRect.left  - barRect.left - 3;
+          const right  = barRect.right - aiRect.right - 3;
+          slider.style.left  = left + "px";
+          slider.style.right = right + "px";
+          slider.style.width = "";
+        }
       }
-      slider.style.width = btnWidth - 4 + "px";
     }
 
     const hcfg = HERO_CFG[view] || HERO_CFG.total;

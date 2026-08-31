@@ -964,7 +964,13 @@ html[lang="ar"] .settings-dropdown { right: auto; left: 0; }
   align-items: center;
   color: var(--dim);
   font-size: 12px;
-  transition: transform .15s ease;
+  transition: transform .15s ease, color .15s;
+  position: relative; z-index: 1;
+}
+/* Chevron turns white when Overall tab is active (slider is behind it) */
+#view-btn-total.active ~ #segment-chevron,
+.view-toggle-bar:has(#view-btn-total.active) #segment-chevron {
+  color: #fff;
 }
 .segment-toggle.open { transform: rotate(180deg); }
 
