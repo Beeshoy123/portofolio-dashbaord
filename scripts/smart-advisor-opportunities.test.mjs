@@ -209,21 +209,79 @@ test("analyzePortfolioOpportunities correctly computes absolute_return_positive 
       comparables_beaten: 5,
       comparables_total: 5,
     },
+    {
+      // Moderate confidence: coverage 60%, win rate 70% (7/10)
+      holding_ticker: "MOD_CONF",
+      holding_name: "Moderate Confidence Performer",
+      holding_asset_role: "stock",
+      holding_return_percent: 15.0,
+      holding_current_value_egp: null,
+      holding_risk_tier: "Medium",
+      technical_signal: null,
+      is_held: false,
+      data_quality: {
+        holding_snapshot_status: "fresh",
+        holding_snapshot_age_hours: 1,
+        comparable_count: 10,
+        comparable_with_return_count: 6,
+      },
+      return_period: "return_1y",
+      groups: [],
+      signal: "Strong",
+      coverage_percent: 60,
+      flags: [],
+      data_completeness_warning: false,
+      fundamentals_flags_found: false,
+      comparables_beaten: 7,
+      comparables_total: 10,
+    },
+    {
+      // Low confidence: coverage 40% (< 50)
+      holding_ticker: "LOW_CONF",
+      holding_name: "Low Confidence Performer",
+      holding_asset_role: "stock",
+      holding_return_percent: 25.0,
+      holding_current_value_egp: null,
+      holding_risk_tier: "High",
+      technical_signal: null,
+      is_held: false,
+      data_quality: {
+        holding_snapshot_status: "fresh",
+        holding_snapshot_age_hours: 1,
+        comparable_count: 10,
+        comparable_with_return_count: 4,
+      },
+      return_period: "return_1y",
+      groups: [],
+      signal: "Strong",
+      coverage_percent: 40,
+      flags: [],
+      data_completeness_warning: false,
+      fundamentals_flags_found: false,
+      comparables_beaten: 8,
+      comparables_total: 10,
+    },
   ];
 
   const analysis = analyzePortfolioOpportunities(verdicts);
 
-  // Check that all 4 strong unheld candidates are preserved (not filtered out)
-  assert.equal(analysis.strong_unheld_entities.length, 4);
+  // Check that all 6 strong unheld candidates are preserved (not filtered out)
+  assert.equal(analysis.strong_unheld_entities.length, 6);
 
-  // Check absolute_return_positive boolean values
+  // Check absolute_return_positive boolean values and confidence tiers
   const byTicker = Object.fromEntries(
     analysis.strong_unheld_entities.map((e) => [e.ticker, e])
   );
   assert.equal(byTicker.UP_STRONG_1.absolute_return_positive, true);
+  assert.equal(byTicker.UP_STRONG_1.confidence_tier, "high");
   assert.equal(byTicker.UP_STRONG_2.absolute_return_positive, true);
+  assert.equal(byTicker.UP_STRONG_2.confidence_tier, "high");
   assert.equal(byTicker.DOWN_STRONG.absolute_return_positive, false);
+  assert.equal(byTicker.DOWN_STRONG.confidence_tier, "high");
   assert.equal(byTicker.NULL_STRONG.absolute_return_positive, false);
+  assert.equal(byTicker.NULL_STRONG.confidence_tier, "high");
+  assert.equal(byTicker.MOD_CONF.confidence_tier, "moderate");
+  assert.equal(byTicker.LOW_CONF.confidence_tier, "low");
 
   // Check fundamentals_flags extracted properly
   assert.deepEqual(byTicker.UP_STRONG_1.fundamentals_flags, [
@@ -234,15 +292,21 @@ test("analyzePortfolioOpportunities correctly computes absolute_return_positive 
   assert.deepEqual(byTicker.DOWN_STRONG.fundamentals_flags, []);
   assert.deepEqual(byTicker.NULL_STRONG.fundamentals_flags, []);
 
-  // Check sorting: positive ones must appear before non-positive ones, preserving relative order
+  // Check multi-level sorting:
+  // 1. High confidence: UP_STRONG_1, UP_STRONG_2 (positive return), then DOWN_STRONG, NULL_STRONG (non-positive)
+  // 2. Moderate confidence: MOD_CONF
+  // 3. Low confidence: LOW_CONF
   assert.deepEqual(
     analysis.strong_unheld_entities.map((e) => e.ticker),
-    ["UP_STRONG_1", "UP_STRONG_2", "DOWN_STRONG", "NULL_STRONG"]
+    ["UP_STRONG_1", "UP_STRONG_2", "DOWN_STRONG", "NULL_STRONG", "MOD_CONF", "LOW_CONF"]
   );
 
-  // Check prompt builder surfaces note for negative/flat absolute return and fundamentals concerns
+  // Check prompt builder surfaces note for confidence tier, negative/flat absolute return, and fundamentals concerns
   const prompt = buildOpportunityAnalysisPrompt(analysis);
   assert.match(prompt, /DOWN_STRONG/);
+  assert.match(prompt, /confidence=high/);
+  assert.match(prompt, /confidence=moderate/);
+  assert.match(prompt, /confidence=low/);
   assert.match(prompt, /beat peers, but absolute return <= 0/);
   assert.match(prompt, /FUNDAMENTALS CONCERNS: low_return_on_equity, high_debt_load/);
 });

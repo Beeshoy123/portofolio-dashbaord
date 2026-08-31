@@ -169,8 +169,11 @@ type OpportunitiesAnalysis = {
     holding_return_percent: number | null;
     signal: string;
     coverage_percent?: number | null;
+    comparables_beaten?: number;
+    comparables_total?: number;
     absolute_return_positive?: boolean;
     fundamentals_flags?: string[];
+    confidence_tier?: "high" | "moderate" | "low";
   }>;
   underrepresented_sectors: Array<{
     sector: string;
@@ -181,8 +184,11 @@ type OpportunitiesAnalysis = {
       holding_return_percent: number | null;
       signal: string;
       coverage_percent?: number | null;
+      comparables_beaten?: number;
+      comparables_total?: number;
       absolute_return_positive?: boolean;
       fundamentals_flags?: string[];
+      confidence_tier?: "high" | "moderate" | "low";
     }>;
   }>;
 };
@@ -641,6 +647,24 @@ export function AiBotWorkspace() {
 
   // Analyze strong unheld entities as opportunities
   const opportunities = useMemo(() => {
+    const tierWeight: Record<'high' | 'moderate' | 'low', number> = {
+      high: 3,
+      moderate: 2,
+      low: 1,
+    };
+
+    const getConfidenceTier = (
+      coverage: number | null | undefined,
+      beaten: number | undefined,
+      total: number | undefined,
+    ): 'high' | 'moderate' | 'low' => {
+      const cov = coverage ?? 0;
+      const winRate = total && total > 0 && beaten !== undefined ? beaten / total : 0;
+      if (cov >= 70 && winRate >= 0.75) return 'high';
+      if (cov < 50 || winRate < 0.65) return 'low';
+      return 'moderate';
+    };
+
     if (opportunitiesData?.strong_unheld && opportunitiesData.strong_unheld.length > 0) {
       return opportunitiesData.strong_unheld.map((v) => {
         const snap = allEntities.find((e) => e.ticker === v.holding_ticker);
@@ -652,6 +676,12 @@ export function AiBotWorkspace() {
           : (returnPercent !== null && !isNaN(returnPercent) && returnPercent > 0);
         const matchedVerdict = verdicts.find((item) => item.holding_ticker === v.holding_ticker);
         const fundamentalsFlags = v.fundamentals_flags ?? (matchedVerdict?.holding_fundamentals?.flags?.map((f) => f.flag) ?? []);
+        const confidenceTier = v.confidence_tier ?? getConfidenceTier(
+          v.coverage_percent ?? matchedVerdict?.coverage_percent,
+          v.comparables_beaten ?? matchedVerdict?.comparables_beaten,
+          v.comparables_total ?? matchedVerdict?.comparables_total,
+        );
+
         return {
           ticker: v.holding_ticker,
           name: snap?.name || v.holding_name || v.holding_ticker,
@@ -662,8 +692,12 @@ export function AiBotWorkspace() {
           return_percent: returnPercent,
           absolute_return_positive: isPositive,
           fundamentals_flags: fundamentalsFlags,
+          confidence_tier: confidenceTier,
         };
       }).sort((a, b) => {
+        if (tierWeight[b.confidence_tier] !== tierWeight[a.confidence_tier]) {
+          return tierWeight[b.confidence_tier] - tierWeight[a.confidence_tier];
+        }
         if (a.absolute_return_positive === b.absolute_return_positive) return 0;
         return a.absolute_return_positive ? -1 : 1;
       });
@@ -677,6 +711,11 @@ export function AiBotWorkspace() {
           : (snap?.return_1y_percent !== undefined && snap?.return_1y_percent !== null ? Number(snap.return_1y_percent) : null);
         const isPositive = returnPercent !== null && !isNaN(returnPercent) && returnPercent > 0;
         const fundamentalsFlags = v.holding_fundamentals?.flags?.map((f) => f.flag) ?? [];
+        const confidenceTier = getConfidenceTier(
+          v.coverage_percent,
+          v.comparables_beaten,
+          v.comparables_total,
+        );
         return {
           ticker: v.holding_ticker,
           name: snap?.name || v.holding_ticker,
@@ -687,9 +726,13 @@ export function AiBotWorkspace() {
           return_percent: returnPercent,
           absolute_return_positive: isPositive,
           fundamentals_flags: fundamentalsFlags,
+          confidence_tier: confidenceTier,
         };
       })
       .sort((a, b) => {
+        if (tierWeight[b.confidence_tier] !== tierWeight[a.confidence_tier]) {
+          return tierWeight[b.confidence_tier] - tierWeight[a.confidence_tier];
+        }
         if (a.absolute_return_positive === b.absolute_return_positive) return 0;
         return a.absolute_return_positive ? -1 : 1;
       });
@@ -1404,7 +1447,19 @@ export function AiBotWorkspace() {
                         >
                           <span className="ai-bot-opp-ticker">{opp.ticker}</span>
                           <span className="ai-bot-opp-name">{translateEntityName(opp.name || opp.ticker, lang)}</span>
-                          <span className="ai-bot-opp-badge">{lang === 'ar' ? 'إشارة قوية' : 'Strong Signal'}</span>
+                          <span className={`ai-bot-opp-badge ai-bot-opp-badge--${opp.confidence_tier}`}>
+                            {lang === 'ar'
+                              ? (opp.confidence_tier === 'high'
+                                  ? 'إشارة قوية · ثقة عالية'
+                                  : opp.confidence_tier === 'low'
+                                    ? 'إشارة قوية · ثقة منخفضة'
+                                    : 'إشارة قوية · ثقة متوسطة')
+                              : (opp.confidence_tier === 'high'
+                                  ? 'Strong Signal · High Confidence'
+                                  : opp.confidence_tier === 'low'
+                                    ? 'Strong Signal · Low Confidence'
+                                    : 'Strong Signal · Moderate Confidence')}
+                          </span>
                           {!opp.absolute_return_positive && (
                             <span className="ai-bot-opp-subnote">
                               {lang === 'ar' ? 'تفوق على النظراء لكن العائد هابط' : 'Beat peers, but down overall'}

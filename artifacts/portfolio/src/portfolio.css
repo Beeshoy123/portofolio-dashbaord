@@ -741,6 +741,9 @@ html[lang="ar"] .sort-popover {
 .ai-bot-opp-ticker { display: inline-block; min-width: 60px; font-family: monospace; font-weight: 800; color: #e7d85f; font-size: 11px; }
 .ai-bot-opp-name { flex: 1; color: #a8c5be; font-size: 11px; }
 .ai-bot-opp-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; background: rgba(85, 209, 155, .14); color: #62d9a4; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.ai-bot-opp-badge--high { background: rgba(85, 209, 155, .24); color: #6bf2b7; border: 1px solid rgba(85, 209, 155, .45); text-shadow: 0 0 10px rgba(85, 209, 155, .3); }
+.ai-bot-opp-badge--moderate { background: rgba(85, 209, 155, .14); color: #62d9a4; border: 1px solid rgba(85, 209, 155, .25); }
+.ai-bot-opp-badge--low { background: rgba(100, 150, 180, .14); color: #8ba3b8; border: 1px solid rgba(100, 150, 180, .25); }
 .ai-bot-opp-subnote { display: inline-block; padding: 3px 8px; border-radius: 4px; background: rgba(217, 154, 43, .14); color: #e7b85b; font-size: 8px; font-weight: 700; white-space: nowrap; }
 .ai-bot-opp-fundamentals-warning { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; background: rgba(224, 90, 80, .14); color: #f08078; border: 1px solid rgba(224, 90, 80, .30); font-size: 8px; font-weight: 700; white-space: nowrap; }
 

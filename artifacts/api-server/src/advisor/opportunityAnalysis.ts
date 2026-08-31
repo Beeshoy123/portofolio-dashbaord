@@ -32,6 +32,7 @@ export interface PortfolioOpportunityAnalysis {
     risk_tier: string | null;
     absolute_return_positive: boolean;
     fundamentals_flags: string[];
+    confidence_tier: "high" | "moderate" | "low";
   }>;
   sectors_no_strong_exposure: OpportunitySector[];
   underrepresented_sectors: OpportunitySector[];
@@ -221,20 +222,47 @@ export function analyzePortfolioOpportunities(
       getRiskScore(v.holding_risk_tier) > getRiskScore(heldAvgRisk as any),
   ).length;
 
+  const tierWeight: Record<"high" | "moderate" | "low", number> = {
+    high: 3,
+    moderate: 2,
+    low: 1,
+  };
+
   const strongUnheldEntities = strongUnheld
-    .map((v) => ({
-      ticker: v.holding_ticker,
-      name: v.holding_name,
-      return_percent: v.holding_return_percent,
-      risk_tier: v.holding_risk_tier,
-      absolute_return_positive:
-        v.holding_return_percent !== null && v.holding_return_percent > 0,
-      fundamentals_flags:
-        v.holding_fundamentals?.flags?.map((f) => f.flag) ?? [],
-    }))
+    .map((v) => {
+      const coverage = v.coverage_percent ?? 0;
+      const winRate =
+        v.comparables_total > 0
+          ? v.comparables_beaten / v.comparables_total
+          : 0;
+
+      let confidenceTier: "high" | "moderate" | "low" = "moderate";
+      if (coverage >= 70 && winRate >= 0.75) {
+        confidenceTier = "high";
+      } else if (coverage < 50 || winRate < 0.65) {
+        confidenceTier = "low";
+      }
+
+      return {
+        ticker: v.holding_ticker,
+        name: v.holding_name,
+        return_percent: v.holding_return_percent,
+        risk_tier: v.holding_risk_tier,
+        absolute_return_positive:
+          v.holding_return_percent !== null && v.holding_return_percent > 0,
+        fundamentals_flags:
+          v.holding_fundamentals?.flags?.map((f) => f.flag) ?? [],
+        confidence_tier: confidenceTier,
+      };
+    })
     .sort((a, b) => {
-      if (a.absolute_return_positive === b.absolute_return_positive) return 0;
-      return a.absolute_return_positive ? -1 : 1;
+      if (tierWeight[b.confidence_tier] !== tierWeight[a.confidence_tier]) {
+        return tierWeight[b.confidence_tier] - tierWeight[a.confidence_tier];
+      }
+      if (a.absolute_return_positive !== b.absolute_return_positive) {
+        return a.absolute_return_positive ? -1 : 1;
+      }
+      return 0;
     });
 
   return {
@@ -272,7 +300,7 @@ export function buildOpportunityAnalysisPrompt(
           ? ` [FUNDAMENTALS CONCERNS: ${entity.fundamentals_flags.join(", ")}]`
           : "";
       lines.push(
-        `  - ${entity.ticker} (${entity.name}): ${returnStr}, risk=${entity.risk_tier || "unknown"}${statusNote}${fundNote}`,
+        `  - ${entity.ticker} (${entity.name}): ${returnStr}, risk=${entity.risk_tier || "unknown"}, confidence=${entity.confidence_tier}${statusNote}${fundNote}`,
       );
     }
     lines.push("");
