@@ -292,6 +292,10 @@ async function judgeHolding(
         ? "stale"
         : "fresh";
 
+  const holdingFundamentals = holding.entity_type === "stock"
+    ? buildFundamentalsSnapshot(fundamentals.get(holding.id), holding.sector)
+    : null;
+
   const verdict: HoldingVerdict = {
     holding_ticker: holding.ticker,
     holding_name: holding.name,
@@ -301,6 +305,7 @@ async function judgeHolding(
       ? numeric(holding.units_held)! * numeric(holding.fund_nav)!
       : null,
     holding_risk_tier: riskTier(holdingSnapshot?.risk_level ?? null),
+    holding_fundamentals: holdingFundamentals,
     technical_signal: technicalSignals.get(holding.id) ?? null,
     data_quality: {
       holding_snapshot_status: holdingSnapshotStatus,

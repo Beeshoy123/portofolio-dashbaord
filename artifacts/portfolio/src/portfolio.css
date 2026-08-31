@@ -742,6 +742,7 @@ html[lang="ar"] .sort-popover {
 .ai-bot-opp-name { flex: 1; color: #a8c5be; font-size: 11px; }
 .ai-bot-opp-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; background: rgba(85, 209, 155, .14); color: #62d9a4; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
 .ai-bot-opp-subnote { display: inline-block; padding: 3px 8px; border-radius: 4px; background: rgba(217, 154, 43, .14); color: #e7b85b; font-size: 8px; font-weight: 700; white-space: nowrap; }
+.ai-bot-opp-fundamentals-warning { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 4px; background: rgba(224, 90, 80, .14); color: #f08078; border: 1px solid rgba(224, 90, 80, .30); font-size: 8px; font-weight: 700; white-space: nowrap; }
 
 .ai-bot-summary-meta { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); color: #64857e; font-size: 9px; }
 

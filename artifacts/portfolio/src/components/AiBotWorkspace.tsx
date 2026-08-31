@@ -77,6 +77,9 @@ type Verdict = {
   };
   data_completeness_warning?: boolean;
   fundamentals_flags_found?: boolean;
+  holding_fundamentals?: {
+    flags?: Array<{ flag: string; detail: string }>;
+  } | null;
 };
 type StructuredRecommendation = {
   decision: 'consider_entry' | 'consider_rotation' | 'watch_and_wait' | 'hold';
@@ -167,6 +170,7 @@ type OpportunitiesAnalysis = {
     signal: string;
     coverage_percent?: number | null;
     absolute_return_positive?: boolean;
+    fundamentals_flags?: string[];
   }>;
   underrepresented_sectors: Array<{
     sector: string;
@@ -178,6 +182,7 @@ type OpportunitiesAnalysis = {
       signal: string;
       coverage_percent?: number | null;
       absolute_return_positive?: boolean;
+      fundamentals_flags?: string[];
     }>;
   }>;
 };
@@ -193,6 +198,13 @@ const VERDICT_FLAG_MAP: Record<string, { en: string; ar: string; category: 'info
   missing_return_1y_return: { en: 'Missing 1Y return', ar: 'عائد سنة مفقود', category: 'info' },
   missing_return_6m_return: { en: 'Missing 6M return', ar: 'عائد 6 أشهر مفقود', category: 'info' },
   missing_return_3m_return: { en: 'Missing 3M return', ar: 'عائد 3 أشهر مفقود', category: 'info' },
+  high_debt_load: { en: 'High debt', ar: 'ديون مرتفعة', category: 'warning' },
+  weak_short_term_liquidity: { en: 'Weak liquidity', ar: 'سيولة ضعيفة', category: 'warning' },
+  negative_free_cash_flow: { en: 'Negative FCF', ar: 'تدفق نقدي حر سالب', category: 'warning' },
+  high_pe_priced_for_growth: { en: 'High P/E', ar: 'مكرر ربحية مرتفع', category: 'warning' },
+  shareholder_dilution: { en: 'Dilution', ar: 'تخفيف الأسهم', category: 'warning' },
+  low_return_on_equity: { en: 'Low ROE', ar: 'عائد منخفض على الملكية', category: 'warning' },
+  shrinking_revenue: { en: 'Shrinking revenue', ar: 'انكماش الإيرادات', category: 'warning' },
 };
 
 function getVerdictFlagMeta(flag: string, lang: Lang): { label: string; category: 'info' | 'warning' } {
@@ -638,6 +650,8 @@ export function AiBotWorkspace() {
         const isPositive = v.absolute_return_positive !== undefined
           ? v.absolute_return_positive
           : (returnPercent !== null && !isNaN(returnPercent) && returnPercent > 0);
+        const matchedVerdict = verdicts.find((item) => item.holding_ticker === v.holding_ticker);
+        const fundamentalsFlags = v.fundamentals_flags ?? (matchedVerdict?.holding_fundamentals?.flags?.map((f) => f.flag) ?? []);
         return {
           ticker: v.holding_ticker,
           name: snap?.name || v.holding_name || v.holding_ticker,
@@ -647,6 +661,7 @@ export function AiBotWorkspace() {
           signal: v.signal,
           return_percent: returnPercent,
           absolute_return_positive: isPositive,
+          fundamentals_flags: fundamentalsFlags,
         };
       }).sort((a, b) => {
         if (a.absolute_return_positive === b.absolute_return_positive) return 0;
@@ -661,6 +676,7 @@ export function AiBotWorkspace() {
           ? v.holding_return_percent
           : (snap?.return_1y_percent !== undefined && snap?.return_1y_percent !== null ? Number(snap.return_1y_percent) : null);
         const isPositive = returnPercent !== null && !isNaN(returnPercent) && returnPercent > 0;
+        const fundamentalsFlags = v.holding_fundamentals?.flags?.map((f) => f.flag) ?? [];
         return {
           ticker: v.holding_ticker,
           name: snap?.name || v.holding_ticker,
@@ -670,6 +686,7 @@ export function AiBotWorkspace() {
           signal: v.signal,
           return_percent: returnPercent,
           absolute_return_positive: isPositive,
+          fundamentals_flags: fundamentalsFlags,
         };
       })
       .sort((a, b) => {
@@ -1391,6 +1408,16 @@ export function AiBotWorkspace() {
                           {!opp.absolute_return_positive && (
                             <span className="ai-bot-opp-subnote">
                               {lang === 'ar' ? 'تفوق على النظراء لكن العائد هابط' : 'Beat peers, but down overall'}
+                            </span>
+                          )}
+                          {opp.fundamentals_flags && opp.fundamentals_flags.length > 0 && (
+                            <span
+                              className="ai-bot-opp-fundamentals-warning"
+                              title={opp.fundamentals_flags.map((f) => getVerdictFlagMeta(f, lang).label).join(', ')}
+                            >
+                              ⚠ {lang === 'ar'
+                                ? `${opp.fundamentals_flags.length} ${opp.fundamentals_flags.length === 1 ? 'ملاحظة مالية' : 'ملاحظات مالية'}`
+                                : `${opp.fundamentals_flags.length} fundamentals concern${opp.fundamentals_flags.length === 1 ? '' : 's'}`}
                             </span>
                           )}
                         </div>

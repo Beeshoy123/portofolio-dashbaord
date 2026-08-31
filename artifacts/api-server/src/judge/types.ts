@@ -50,6 +50,7 @@ export interface HoldingVerdict {
   holding_return_percent: number | null;
   holding_current_value_egp: number | null;
   holding_risk_tier: "Low" | "Medium" | "High" | null;
+  holding_fundamentals?: FundamentalsSnapshot | null;
   technical_signal: TechnicalSignal | null;
   is_held: boolean;
   data_quality: {

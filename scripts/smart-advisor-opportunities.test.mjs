@@ -145,6 +145,26 @@ test("analyzePortfolioOpportunities correctly computes absolute_return_positive 
       holding_return_percent: 12.0,
       holding_current_value_egp: null,
       holding_risk_tier: "Medium",
+      holding_fundamentals: {
+        pe_ratio: 15,
+        forward_pe: 14,
+        debt_to_equity: 2.1,
+        current_ratio: 1.2,
+        roe_percent: 4.5,
+        free_cash_flow: 1000,
+        net_income: 2000,
+        net_income_growth_percent: 5,
+        revenue_growth_percent: 6,
+        dividend_yield_percent: 2,
+        beta: 1.1,
+        analyst_rating: null,
+        price_target_upside_percent: null,
+        shares_change_percent: null,
+        flags: [
+          { flag: "low_return_on_equity", detail: "ROE is low" },
+          { flag: "high_debt_load", detail: "D/E elevated" },
+        ],
+      },
       technical_signal: null,
       is_held: false,
       data_quality: {
@@ -205,14 +225,24 @@ test("analyzePortfolioOpportunities correctly computes absolute_return_positive 
   assert.equal(byTicker.DOWN_STRONG.absolute_return_positive, false);
   assert.equal(byTicker.NULL_STRONG.absolute_return_positive, false);
 
+  // Check fundamentals_flags extracted properly
+  assert.deepEqual(byTicker.UP_STRONG_1.fundamentals_flags, [
+    "low_return_on_equity",
+    "high_debt_load",
+  ]);
+  assert.deepEqual(byTicker.UP_STRONG_2.fundamentals_flags, []);
+  assert.deepEqual(byTicker.DOWN_STRONG.fundamentals_flags, []);
+  assert.deepEqual(byTicker.NULL_STRONG.fundamentals_flags, []);
+
   // Check sorting: positive ones must appear before non-positive ones, preserving relative order
   assert.deepEqual(
     analysis.strong_unheld_entities.map((e) => e.ticker),
     ["UP_STRONG_1", "UP_STRONG_2", "DOWN_STRONG", "NULL_STRONG"]
   );
 
-  // Check prompt builder surfaces note for negative/flat absolute return
+  // Check prompt builder surfaces note for negative/flat absolute return and fundamentals concerns
   const prompt = buildOpportunityAnalysisPrompt(analysis);
   assert.match(prompt, /DOWN_STRONG/);
   assert.match(prompt, /beat peers, but absolute return <= 0/);
+  assert.match(prompt, /FUNDAMENTALS CONCERNS: low_return_on_equity, high_debt_load/);
 });

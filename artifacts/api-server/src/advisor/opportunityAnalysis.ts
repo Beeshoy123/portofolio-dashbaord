@@ -31,6 +31,7 @@ export interface PortfolioOpportunityAnalysis {
     return_percent: number | null;
     risk_tier: string | null;
     absolute_return_positive: boolean;
+    fundamentals_flags: string[];
   }>;
   sectors_no_strong_exposure: OpportunitySector[];
   underrepresented_sectors: OpportunitySector[];
@@ -228,6 +229,8 @@ export function analyzePortfolioOpportunities(
       risk_tier: v.holding_risk_tier,
       absolute_return_positive:
         v.holding_return_percent !== null && v.holding_return_percent > 0,
+      fundamentals_flags:
+        v.holding_fundamentals?.flags?.map((f) => f.flag) ?? [],
     }))
     .sort((a, b) => {
       if (a.absolute_return_positive === b.absolute_return_positive) return 0;
@@ -264,8 +267,12 @@ export function buildOpportunityAnalysisPrompt(
       const statusNote = !entity.absolute_return_positive
         ? " (beat peers, but absolute return <= 0)"
         : "";
+      const fundNote =
+        entity.fundamentals_flags && entity.fundamentals_flags.length > 0
+          ? ` [FUNDAMENTALS CONCERNS: ${entity.fundamentals_flags.join(", ")}]`
+          : "";
       lines.push(
-        `  - ${entity.ticker} (${entity.name}): ${returnStr}, risk=${entity.risk_tier || "unknown"}${statusNote}`,
+        `  - ${entity.ticker} (${entity.name}): ${returnStr}, risk=${entity.risk_tier || "unknown"}${statusNote}${fundNote}`,
       );
     }
     lines.push("");
