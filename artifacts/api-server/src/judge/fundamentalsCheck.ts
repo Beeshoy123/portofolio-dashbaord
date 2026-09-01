@@ -15,6 +15,12 @@
 // portfolio outcomes — same caveat computeRiskTier() and the win-ratio
 // thresholds already carry elsewhere in this file. Adjust once you see
 // this against real data, same as those.
+//
+// FILE STRUCTURE:
+// ├── Types & Thresholds (FundamentalsRow, FUNDAMENTALS_FLAG_THRESHOLDS)
+// ├── Database Queries (getLatestFundamentals)
+// ├── Flag Logic (buildFundamentalsFlags, buildFundamentalsSnapshot)
+// └── Attachment Utilities (attachFundamentalsFlags)
 
 import { pool } from "../lib/dbPool";
 import type { FundamentalsFlag, FundamentalsSnapshot } from "./fundamentalsTypes";
@@ -91,6 +97,8 @@ const FUNDAMENTALS_FLAG_THRESHOLDS = {
   HIGH_DEBT_TO_EQUITY: 1.5, // commonly cited caution line; sector-dependent (banks run structurally higher — see note below)
   LOW_CURRENT_RATIO: 1.0, // below 1.0 means current liabilities exceed current assets
   HIGH_PE: 30, // above this, growth expectations are doing a lot of the work
+  LOW_ROE: 10, // rough floor for efficiently converting shareholder equity into profit; ROE norms vary meaningfully by sector — asset-heavy sectors run lower structurally, so this is a starting point to revisit once real portfolio outcomes can validate it, not a verified number
+  LOW_REVENUE_GROWTH: 0, // flag shrinking revenue; slow growth is too sector-relative to flag flat, but outright contraction is a more universally meaningful signal
   DILUTION_THRESHOLD_PERCENT: 10, // shares outstanding grew >10% YoY
 };
 
@@ -151,6 +159,26 @@ export function buildFundamentalsFlags(
     flags.push({
       flag: "high_pe_priced_for_growth",
       detail: `P/E ${f.pe_ratio.toFixed(1)} is elevated — the price already assumes strong future growth`,
+    });
+  }
+
+  if (
+    f.roe_percent !== null &&
+    f.roe_percent < FUNDAMENTALS_FLAG_THRESHOLDS.LOW_ROE
+  ) {
+    flags.push({
+      flag: "low_return_on_equity",
+      detail: `ROE ${f.roe_percent.toFixed(1)}% (below ${FUNDAMENTALS_FLAG_THRESHOLDS.LOW_ROE}% — relatively inefficient at converting shareholder equity into profit)`,
+    });
+  }
+
+  if (
+    f.revenue_growth_percent !== null &&
+    f.revenue_growth_percent < FUNDAMENTALS_FLAG_THRESHOLDS.LOW_REVENUE_GROWTH
+  ) {
+    flags.push({
+      flag: "shrinking_revenue",
+      detail: `Revenue growth ${f.revenue_growth_percent.toFixed(1)}% year-over-year — revenue is contracting, not just slowing`,
     });
   }
 

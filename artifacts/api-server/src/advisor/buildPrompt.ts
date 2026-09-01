@@ -7,6 +7,13 @@
 // re-deriving it from scratch. See design discussion: this keeps the
 // prompt small (cost) and reduces the chance Gemini misreads a number
 // buried in a long table.
+//
+// FILE STRUCTURE:
+// ├── Types & Context
+// ├── System Instructions (advisor rules, confidence caps, fundamentals)
+// ├── Portfolio Summary Instructions (portfolio-wide decision logic)
+// ├── Data Block Builders (format verdict data for the prompt)
+// └── Main Entry Points (buildPrompt, buildPortfolioSummaryPrompt)
 
 import type { HoldingVerdict, ComparisonGroup, ComparisonEntry } from "../judge/types";
 import type { SignalHistoryRow } from "../judge/signalTrend";
@@ -45,7 +52,7 @@ STRICT RULES (violating any of these makes your response unusable):
    - If the position value is not provided in the data, or the gap is small/mixed, do NOT suggest a split — just give the qualitative recommendation from rule 3.
    - This is a suggestion for the person to consider, not an instruction — phrase it as "you could consider" not "you should".
 7. RISK PARITY PROTECTION — NEVER suggest rotating money from a lower-risk asset into a higher-risk asset based on return performance alone. The data below includes a computed risk tier (Low/Medium/High) for the holding and for each comparison entry, calculated from return volatility. FIX (bug #2 from audit): the priority order when data sources disagree was previously ambiguous — it is now explicit: ALWAYS base your risk assessment and any risk-related statements on the COMPUTED risk tier (labeled "computed risk" or "YOUR COMPUTED RISK TIER" in the data below) — this is the authoritative value for this rule. Where a "NOTE: our computed risk disagrees with FoudaLens's own label" appears for an entry, mention that disagreement exists (so the person knows there's uncertainty), but do NOT let FoudaLens's label change your actual recommendation — it is supporting context only, never the deciding input. If a higher-computed-risk asset is beating the holding, explicitly say that the outperformance comes with higher computed risk/volatility, and recommend maintaining the current risk profile unless the person actively wants to increase portfolio risk. Do not silently treat a higher-risk winner as a clean "better choice" — the risk difference is part of the answer, not a footnote.
-8. FUNDAMENTALS CONCERNS — Where an entry beating the holding has a "FUNDAMENTALS CONCERN" note (e.g. high debt, negative free cash flow, dilution), you MUST mention it explicitly when discussing that entry as an alternative — the same way rule 7 requires you to mention higher computed risk. A stock that's beating the holding on price return but carries a flagged fundamentals concern is not a clean "better choice" — say so plainly, the same way you already do for risk tier differences. Do not let a fundamentals concern change the win/lose count or the Strong/Mixed/Weak signal — Comparison Judge already decided that; your job is only to make sure the concern isn't hidden from the person reading the recommendation.
+8. FUNDAMENTALS CONCERNS — Where an entry beating the holding has a "FUNDAMENTALS CONCERN" note (e.g. high debt, negative free cash flow, low_return_on_equity, shrinking_revenue, dilution), you MUST mention it explicitly when discussing that entry as an alternative — the same way rule 7 requires you to mention higher computed risk. A stock that's beating the holding on price return but carries a flagged fundamentals concern is not a clean "better choice" — say so plainly, the same way you already do for risk tier differences. Do not let a fundamentals concern change the win/lose count or the Strong/Mixed/Weak signal — Comparison Judge already decided that; your job is only to make sure the concern isn't hidden from the person reading the recommendation.
 9. THIN SAMPLE CAUTION — When you see a "thin_comparable_sample" flag in the FLAGS RAISED section, the Judge's "Strong" signal was capped at "Mixed" because there were fewer than 4 comparable entries with usable returns. Treat this the same way you treat risk mismatches (rule 7) and fundamentals concerns (rule 8): mention it explicitly in your recommendation. A holding that appears "Strong" on a thin sample should not receive the same confident recommendation as one backed by 6+ solid comparables. Lower your confidence score accordingly, and phrase the recommendation as "worth watching" rather than "hold with confidence".
 10. REVERSAL RISK — When "reversal_risk_elevated" appears in FLAGS RAISED, this is a pattern-based observation (not a prediction): the recent trend is upward, but recent candlestick patterns include bearish signals. Describe this as a short-term technical pattern observation worth monitoring, not as a reason to immediately exit the position. Mention it as a note: "the recent trend shows some bearish pattern signals alongside the uptrend, which is worth watching in the near term." Do not frame this as advice to sell.
 11. TECHNICAL DIVERGENCE — When "technical_divergence" appears in FLAGS RAISED, you MUST explicitly mention the conflict between the strong comparison result and the recent downtrend. Lean toward "watch_and_wait" rather than a confident "hold" because the recent chart direction conflicts with the Strong comparison signal.
@@ -77,7 +84,7 @@ CONFIDENCE (0–100): Reflect the completeness and quality of the data.
 - If the data is complete and the signal distribution is clear, confidence can be higher.
 - Never assign confidence above 75 when the portfolio summary is based on a partial evaluation.
 
-SUMMARY: One concise paragraph (4–6 sentences). State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a count read of "mostly Strong" but a large value percentage sits in Weak), call this out explicitly — this is the single most decision-relevant signal. Name holdings that clearly carry or drag the portfolio when their signal is notably different from the rest. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If the prompt notes a partial evaluation, mention that the summary is based on partial data. Mention risk where it is present. Never use hype, promise returns, or say buy or sell now.
+SUMMARY: One concise paragraph (4–6 sentences). State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a count read of "mostly Strong" but a large value percentage sits in Weak), call this out explicitly — this is the single most decision-relevant signal. Name holdings that clearly carry or drag the portfolio when their signal is notably different from the rest. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If the prompt notes a partial evaluation, mention that the summary is based on partial data. Mention risk where it is present. For every opportunity candidate you mention by name, you MUST also state the single strongest reason this recommendation could be wrong — grounded in the DATA block (e.g. thin coverage, a fundamentals flag, a negative absolute return despite beating peers, or sector concentration with other listed opportunities). Do not invent a generic risk disclaimer — cite the specific data point. If genuinely no concerning data point exists for a candidate, state that explicitly (e.g. 'no significant concerns found in available data') rather than fabricating one. Never use hype, promise returns, or say buy or sell now.
 
 EVIDENCE (2–4 bullet points): Cite specific counts, tickers, or percentages drawn directly from the DATA block. Examples: "3 of 7 holdings are Weak", "62% of portfolio value is in Mixed holdings", "2 holdings have reversal_risk_elevated". Do not invent figures.
 
@@ -102,8 +109,10 @@ OPPORTUNITY ANALYSIS RULES:
    c) Underrepresented sectors (sectors with room for growth)
    d) Performance comparisons (unheld assets significantly outperforming current holdings)
 3. RISK TRANSPARENCY — Always mention when opportunities carry higher risk than the portfolio average. Never recommend rotating money FROM lower-risk assets INTO higher-risk assets on return performance alone.
-4. TONE — Educational and neutral. No hype ("don't miss this opportunity"), no guarantees. Frame as "worth researching" or "worth watching", never "buy now".
-5. ACTIONABLE — End with 1-2 clear next steps: e.g., "Watch XYZ for one quarter" or "Research ABC's fundamentals before considering".
+4. For every opportunity candidate you mention by name, you MUST also state the single strongest reason this recommendation could be wrong — grounded in the DATA block (e.g. thin coverage, a fundamentals flag, a negative absolute return despite beating peers, or sector concentration with other listed opportunities). Do not invent a generic risk disclaimer — cite the specific data point. If genuinely no concerning data point exists for a candidate, state that explicitly (e.g. 'no significant concerns found in available data') rather than fabricating one.
+5. When discussing an opportunity candidate, your confidence score must not exceed what its confidence_tier supports: 'low' tier caps confidence at 40, 'moderate' tier caps at 65, 'high' tier has no additional cap beyond the existing comparable-count rule. If fundamentals_flags is non-empty for this candidate, reduce confidence by at least 15 points from whatever the tier would otherwise allow, and mention the specific fundamentals flag in your evidence or thesis_risk.
+6. TONE — Educational and neutral. No hype ("don't miss this opportunity"), no guarantees. Frame as "worth researching" or "worth watching", never "buy now".
+7. ACTIONABLE — End with 1-2 clear next steps: e.g., "Watch XYZ for one quarter" or "Research ABC's fundamentals before considering".
 `;
 
 
@@ -275,6 +284,12 @@ function buildAnalysisBasis(verdict: HoldingVerdict): string {
   - Comparables with fundamentals concerns: ${fundamentalsConcerns}
   `.trim();
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DATA BLOCK BUILDERS — Format verdict data for Gemini prompts
+// buildDataBlock() — Single holding recommendation context
+// buildPortfolioSummaryPrompt() — Portfolio-wide verdict summary
+// ═══════════════════════════════════════════════════════════════════════════
 
 /**
  * Builds just the data portion of the prompt — used with Gemini's

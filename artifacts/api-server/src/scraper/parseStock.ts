@@ -253,18 +253,18 @@ async function tryNextData(
 
   return {
     watchlist_id: watchlistId,
-    nav_or_price: price,
-    return_30d_percent: null, // not confirmed present anywhere yet
+    nav_or_price: price ?? null,
+    return_30d_percent: null,
     return_ytd_percent: null,
     return_1y_percent: null,
     cagr_percent: null,
-    total_score: score,
+    total_score: score ?? null,
     risk_level: null,
-    signal: signal,
-    pe_ratio: peRatio,
-    dividend_yield_percent: dividendYield,
-    market_cap: marketCap,
-    sector_rank: sectorRank,
+    signal: signal ?? null,
+    pe_ratio: peRatio ?? null,
+    dividend_yield_percent: dividendYield ?? null,
+    market_cap: marketCap ?? null,
+    sector_rank: sectorRank ?? null,
     raw_fetch_ok: true,
   };
 }
@@ -284,7 +284,7 @@ async function tryOptimizedBrowser(
     // Block heavy, unnecessary asset types — this is the "optimization"
     // over a naive Playwright fetch: images/fonts/stylesheets add load
     // time but contain none of the data we need.
-    await page.route("**/*", (route) => {
+    await page.route("**/*", (route: any) => {
       const type = route.request().resourceType();
       if (["image", "font", "stylesheet", "media"].includes(type)) {
         return route.abort();

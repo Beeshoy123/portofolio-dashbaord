@@ -7,10 +7,10 @@ import WebSocket from "ws";
 // WebSocket global. Realtime is not used by this API, but it still needs a
 // compatible constructor to let the auth client initialize.
 const runtime = globalThis as typeof globalThis & {
-  WebSocket?: typeof WebSocket;
+  WebSocket?: any;
 };
 if (!runtime.WebSocket) {
-  runtime.WebSocket = WebSocket;
+  runtime.WebSocket = WebSocket as any;
 }
 
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {

@@ -118,6 +118,42 @@
 - Use **memory files** (`/memories/`) for session-specific notes and investigation progress
 - When investigation concludes, move the solution TO this instructions.md
 
+---
+
+## 🔍 AI PIPELINE DEBUGGING GUIDE (Fast-Track Navigation)
+
+**To make future debugging even faster, use these three memory files in order:**
+
+### **Step 1: Identify the Issue Path**
+Check `/memories/session/debugging-tips.md` for the investigation path that matches your issue:
+- **Frontend not showing recommendations?** → Path: SmartAdvisorPanel.tsx → routes/advisor.ts → generateRecommendation.ts
+- **Verdicts showing wrong signal?** → Path: comparisonJudge.ts signal computation
+- **Portfolio value breakdown missing?** → Path: getPortfolioValueBreakdown() in comparisonJudge.ts
+- **Alerts not triggering?** → Path: timeStop.ts, thesisCheck.ts
+- **Opportunity analysis failing?** → Path: opportunityAnalysis.ts
+
+### **Step 2: Jump to Exact Code Location**
+Use `/memories/session/ai-pipeline-sections.md` to find the exact line in each file:
+- File has a quick search table for each component
+- Example: "comparisonJudge.ts → Signal Computation → search for 'let signal: "Strong"' (line ~310)"
+- Each file has section headers like `// ═════════ SECTION NAME` for Ctrl+F navigation
+
+### **Step 3: Understand the Why**
+Refer to `/memories/repo/ai-pipeline-architecture.md` for system design context:
+- Why verdicts compute the way they do (MIN_RELIABLE_COMPARABLES threshold, signal capping)
+- Database schema and what each table contains
+- Complete pipeline flow (5 engines in order)
+- Key patterns and gotchas you'll encounter
+
+### **Quick Reference Table: Memory File Contents**
+| Memory File | Use When | Contains |
+|------------|----------|----------|
+| `debugging-tips.md` | "I see a problem, where do I look?" | 8 investigation paths + adjustable thresholds + testing checklist |
+| `ai-pipeline-sections.md` | "I found the file, where's the code?" | Line ranges, search terms, complexity ratings for all 10 main files |
+| `ai-pipeline-architecture.md` | "Why does this work this way?" | System design, thresholds, database schema, complete flow explanation |
+
+---
+
 ### How to Edit This File (For AI Models)
 **When adding new content to this file:**
 

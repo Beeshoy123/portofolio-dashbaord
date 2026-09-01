@@ -42,13 +42,14 @@ async function mapWithConcurrency<T, R>(
 }
 
 function formatStructuredRecommendation(row: any) {
-  if (!row.decision && !row.confidence && !row.evidence && !row.watch_trigger) {
+  if (!row.decision && row.confidence === null && !row.evidence && !row.thesis_risk && !row.watch_trigger) {
     return null;
   }
   return {
     decision: row.decision,
     confidence: row.confidence !== null && row.confidence !== undefined ? Number(row.confidence) : 0,
     summary: row.recommendation_text,
+    thesis_risk: row.thesis_risk || '',
     evidence: Array.isArray(row.evidence) ? row.evidence : [],
     risks: Array.isArray(row.risks) ? row.risks : [],
     next_review_days: row.next_review_days !== null && row.next_review_days !== undefined ? Number(row.next_review_days) : 14,
@@ -68,7 +69,7 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
 
     const result = await pool.query(
       `SELECT ar.id, ar.recommendation_text, ar.model_used, ar.generated_at,
-              ar.decision, ar.confidence, ar.evidence, ar.risks, ar.next_review_days,
+              ar.decision, ar.confidence, ar.thesis_risk, ar.evidence, ar.risks, ar.next_review_days,
               ar.watch_trigger, ar.do_not_act_reasons
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
@@ -83,7 +84,7 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
     }
 
     const row = result.rows[0];
-    res.json({
+    return res.json({
       id: row.id,
       ticker: ticker.toUpperCase(),
       recommendation_text: row.recommendation_text,
@@ -93,7 +94,7 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error("[advisor] GET recommendations/:ticker failed:", err);
-    res.status(500).json({ error: "Failed to fetch recommendation" });
+    return res.status(500).json({ error: "Failed to fetch recommendation" });
   }
 });
 
@@ -107,7 +108,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
     const result = await pool.query(
       `SELECT DISTINCT ON (cw.ticker) 
               cw.ticker, ar.recommendation_text, ar.model_used, ar.generated_at,
-              ar.decision, ar.confidence, ar.evidence, ar.risks, ar.next_review_days,
+             ar.decision, ar.confidence, ar.thesis_risk, ar.evidence, ar.risks, ar.next_review_days,
               ar.watch_trigger, ar.do_not_act_reasons
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
@@ -131,10 +132,10 @@ router.get("/recommendations", async (req: Request, res: Response) => {
       structured: formatStructuredRecommendation(row),
     }));
 
-    res.json(rows);
+    return res.json(rows);
   } catch (err) {
     console.error("[advisor] GET recommendations failed:", err);
-    res.status(500).json({ error: "Failed to fetch recommendations" });
+    return res.status(500).json({ error: "Failed to fetch recommendations" });
   }
 });
 
@@ -219,13 +220,14 @@ router.post("/generate", async (req: Request, res: Response) => {
 
         // Save recommendation
         await pool.query(
-          `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, thesis_risk, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
            ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
            DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
                          model_used = EXCLUDED.model_used,
                          decision = EXCLUDED.decision,
                          confidence = EXCLUDED.confidence,
+                         thesis_risk = EXCLUDED.thesis_risk,
                          evidence = EXCLUDED.evidence,
                          risks = EXCLUDED.risks,
                          next_review_days = EXCLUDED.next_review_days,
@@ -239,6 +241,7 @@ router.post("/generate", async (req: Request, res: Response) => {
             runId,
             recommendation.structured.decision,
             recommendation.structured.confidence,
+            recommendation.structured.thesis_risk,
             JSON.stringify(recommendation.structured.evidence),
             JSON.stringify(recommendation.structured.risks),
             recommendation.structured.next_review_days,
@@ -261,10 +264,10 @@ router.post("/generate", async (req: Request, res: Response) => {
       }
     });
 
-    res.json({ success: true, results });
+    return res.json({ success: true, results });
   } catch (err) {
     console.error("[advisor] POST generate failed:", err);
-    res.status(500).json({ error: "Failed to generate recommendations" });
+    return res.status(500).json({ error: "Failed to generate recommendations" });
   } finally {
     if (lockClient) {
       await releaseAdvisoryLock(lockClient, 1844674408).catch((err) => {
@@ -328,10 +331,10 @@ router.post("/opportunities/refresh", async (req: Request, res: Response) => {
     const opportunities = await findOpportunities(runId);
     recordOpportunityRefresh(runId);
 
-    res.json(opportunities);
+    return res.json(opportunities);
   } catch (err) {
     console.error("[advisor] POST /opportunities/refresh failed:", err);
-    res.status(500).json({ error: "Failed to perform on-demand opportunity analysis" });
+    return res.status(500).json({ error: "Failed to perform on-demand opportunity analysis" });
   }
 });
 
@@ -378,10 +381,10 @@ router.get("/opportunities", async (req: Request, res: Response) => {
       [runId]
     );
 
-    res.json(result.rows);
+    return res.json(result.rows);
   } catch (err) {
     console.error("[advisor] GET opportunities failed:", err);
-    res.status(500).json({ error: "Failed to fetch opportunities" });
+    return res.status(500).json({ error: "Failed to fetch opportunities" });
   }
 });
 
@@ -554,10 +557,10 @@ router.post("/generate-opportunities", async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ success: true, results, analysis_summary: analysisPrompt });
+    return res.json({ success: true, results, analysis_summary: analysisPrompt });
   } catch (err) {
     console.error("[advisor] POST generate-opportunities failed:", err);
-    res.status(500).json({ error: "Failed to generate opportunities" });
+    return res.status(500).json({ error: "Failed to generate opportunities" });
   } finally {
     if (lockClient) {
       await releaseAdvisoryLock(lockClient, 1844674409).catch((err) => {
@@ -608,7 +611,7 @@ router.get("/alerts-context/:ticker", async (req: Request, res: Response) => {
     const thesis = await checkThesis(watchlistId, runId);
     const drawdown = await computeDrawdown(runId);
 
-    res.json({
+    return res.json({
       recommendation: recResult.rows[0],
       alerts: {
         timeStop,
@@ -618,7 +621,7 @@ router.get("/alerts-context/:ticker", async (req: Request, res: Response) => {
     });
   } catch (err) {
     console.error(`[advisor] GET alerts-context/:${req.params.ticker} failed:`, err);
-    res.status(500).json({ error: "Failed to fetch recommendation with alerts" });
+    return res.status(500).json({ error: "Failed to fetch recommendation with alerts" });
   }
 });
 

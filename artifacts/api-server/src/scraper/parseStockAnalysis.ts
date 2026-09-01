@@ -428,8 +428,8 @@ async function fetchStatistics(ticker: string): Promise<Partial<StockFundamental
   };
 
   // Compute net cash position: cash - debt
-  if (result.cash_on_hand !== null && result.total_debt !== null) {
-    result.net_cash_position = result.cash_on_hand - result.total_debt;
+  if (result.cash_on_hand != null && result.total_debt != null) {
+    result.net_cash_position = Number(result.cash_on_hand) - Number(result.total_debt);
   }
 
   return result;

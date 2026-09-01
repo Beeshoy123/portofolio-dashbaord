@@ -1,6 +1,13 @@
 // Comparison Judge — Core Verdict Engine
 // Compares each holding against peers, benchmarks, and direct stocks
 // Outputs verdicts that the Alert System monitors and Smart Advisor uses
+//
+// FILE STRUCTURE:
+// ├── Types & Constants
+// ├── Utility Functions (return, risk tier, asset classification)
+// ├── Group Construction (buildGroup)
+// ├── Signal Computation (computeSignal + flag logic)
+// └── Main Entry Points (judgeHolding, judgeAllHoldings, findOpportunities)
 
 import { pool } from "../lib/dbPool";
 import type { AssetRole, HoldingVerdict, ComparisonGroup, ComparisonEntry, TechnicalSignal } from "./types";
@@ -150,12 +157,44 @@ async function getTechnicalSignals(runId?: number): Promise<Map<number, Technica
       patterns: Array.isArray(row.patterns) ? row.patterns as TechnicalSignal["patterns"] : [],
       confidence: row.confidence === null ? null : Number(row.confidence),
       raw_fetch_ok: row.raw_fetch_ok,
+      reversal_risk: "none",
     }]));
   } catch (error) {
     console.warn("[judge] technical_signals unavailable; continuing without chart evidence", error);
     return new Map();
   }
 }
+
+async function getPortfolioValueBreakdown(): Promise<{ totalValueEgp: number; byTicker: Map<string, number> }> {
+  const result = await pool.query<{ ticker: string; current_value_egp: string | number | null }>(
+    `SELECT cw.ticker,
+            COALESCE(f.units_held, 0) * COALESCE(f.nav, 0) AS current_value_egp
+       FROM comparison_watchlist cw
+       LEFT JOIN funds f ON f.key = cw.funds_table_key
+      WHERE cw.is_held = true
+        AND cw.funds_table_key IS NOT NULL
+        AND f.units_held > 0
+        AND f.nav IS NOT NULL`
+  );
+
+  const byTicker = new Map<string, number>();
+  let totalValueEgp = 0;
+
+  for (const row of result.rows) {
+    const value = numeric(row.current_value_egp);
+    if (value === null) continue;
+    byTicker.set(row.ticker.toUpperCase(), value);
+    totalValueEgp += value;
+  }
+
+  return { totalValueEgp, byTicker };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// GROUP CONSTRUCTION — buildGroup()
+// Takes a holding and a set of candidates, constructs a ComparisonGroup
+// with entries, win/loss counts, and metadata for signal computation.
+// ═══════════════════════════════════════════════════════════════════════════
 
 function buildGroup(
   groupType: ComparisonGroup["group_type"],
@@ -223,10 +262,17 @@ async function judgeHolding(
   snapshots: Map<number, SnapshotRow>,
   fundamentals: Awaited<ReturnType<typeof getLatestFundamentals>>,
   technicalSignals: Map<number, TechnicalSignal>,
+  portfolioValueBreakdown: { totalValueEgp: number; byTicker: Map<string, number> },
   runId?: number,
 ): Promise<HoldingVerdict> {
   const holdingSnapshot = snapshots.get(holding.id);
   const holdingReturn = returnFor(holdingSnapshot, period);
+  const currentValueEgp = holding.units_held !== null && holding.fund_nav !== null
+    ? numeric(holding.units_held)! * numeric(holding.fund_nav)!
+    : null;
+  const portfolioWeightPercent = currentValueEgp !== null && portfolioValueBreakdown.totalValueEgp > 0
+    ? (currentValueEgp / portfolioValueBreakdown.totalValueEgp) * 100
+    : null;
   const candidates = watchlist.filter(
     (candidate) => candidate.id !== holding.id && !isEmergencyReserveFund(candidate),
   );
@@ -301,9 +347,9 @@ async function judgeHolding(
     holding_name: holding.name,
     holding_asset_role: assetRole(holding),
     holding_return_percent: holdingReturn,
-    holding_current_value_egp: holding.units_held !== null && holding.fund_nav !== null
-      ? numeric(holding.units_held)! * numeric(holding.fund_nav)!
-      : null,
+    holding_current_value_egp: currentValueEgp,
+    holding_portfolio_weight_percent: portfolioWeightPercent,
+    portfolio_total_value_egp: portfolioValueBreakdown.totalValueEgp > 0 ? portfolioValueBreakdown.totalValueEgp : null,
     holding_risk_tier: riskTier(holdingSnapshot?.risk_level ?? null),
     holding_fundamentals: holdingFundamentals,
     technical_signal: technicalSignals.get(holding.id) ?? null,
@@ -345,6 +391,12 @@ async function judgeHolding(
   return verdict;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN ENTRY POINTS — Public API
+// judgeAllHoldings() — Run comparison judge for all holdings (v2 Alert System)
+// findOpportunities() — Identify strong unheld entities and sector gaps
+// ═══════════════════════════════════════════════════════════════════════════
+
 /**
  * judgeAllHoldings - runs comparison judge for held positions by default.
  * Pass includeAllEntities to evaluate every non-reserve watchlist entity.
@@ -361,13 +413,14 @@ export async function judgeAllHoldings(
       getLatestFundamentals(runId),
       getTechnicalSignals(runId),
     ]);
+    const portfolioValueBreakdown = await getPortfolioValueBreakdown();
 
     const verdicts: HoldingVerdict[] = [];
     const entities = includeAllEntities
       ? watchlist.filter((row) => !isEmergencyReserveFund(row))
       : watchlist.filter((row) => row.is_held && !isEmergencyReserveFund(row));
     for (const holding of entities) {
-      const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, runId);
+      const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, portfolioValueBreakdown, runId);
       verdicts.push(verdict);
     }
     return verdicts;

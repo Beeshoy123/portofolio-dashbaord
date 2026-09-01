@@ -85,6 +85,7 @@ type StructuredRecommendation = {
   decision: 'consider_entry' | 'consider_rotation' | 'watch_and_wait' | 'hold';
   confidence: number;
   summary: string;
+  thesis_risk: string;
   evidence: string[];
   risks: string[];
   next_review_days: number;
@@ -174,6 +175,11 @@ type OpportunitiesAnalysis = {
     absolute_return_positive?: boolean;
     fundamentals_flags?: string[];
     confidence_tier?: "high" | "moderate" | "low";
+  }>;
+  sector_concentration_in_opportunities?: Array<{
+    sector: string;
+    count: number;
+    tickers: string[];
   }>;
   underrepresented_sectors: Array<{
     sector: string;
@@ -455,6 +461,19 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
     [lang === 'ar' ? 'مؤشرات' : 'Indices', snapshots.filter((snapshot) => snapshot.entity_type === 'index')],
   ] as const;
   const value = (number: number | string | null, suffix = '') => number === null ? '—' : `${Number(number).toFixed(1)}${suffix}`;
+  
+  // Sort each group by YTD return (highest first), nulls last
+  const sortedGroups = groups.map(([label, group]) => [
+    label,
+    [...group].sort((a, b) => {
+      const ytdA = a.return_ytd_percent !== null ? Number(a.return_ytd_percent) : -Infinity;
+      const ytdB = b.return_ytd_percent !== null ? Number(b.return_ytd_percent) : -Infinity;
+      if (ytdA === -Infinity && ytdB === -Infinity) return 0;
+      if (ytdA === -Infinity) return 1;
+      if (ytdB === -Infinity) return -1;
+      return ytdB - ytdA;
+    }),
+  ]) as typeof groups;
   return (
     <div className="ai-bot-market-comparison">
       <div className="ai-bot-market-comparison-heading">
@@ -462,9 +481,9 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
           <span>{lang === 'ar' ? 'مقارنة السوق' : 'Market Comparison'}</span>
           <strong>{lang === 'ar' ? 'لقطة شاملة لقائمة المراقبة' : 'Full watchlist snapshot'}</strong>
         </div>
-        <small>{lang === 'ar' ? 'مرتبة حسب نوع الأصل' : 'Sorted by entity group'}</small>
+        <small>{lang === 'ar' ? 'مرتبة حسب نوع الأصل وأعلى YTD' : 'Sorted by entity group, highest YTD first'}</small>
       </div>
-      {groups.map(([label, group]) => group.length > 0 && (
+      {sortedGroups.map(([label, group]) => group.length > 0 && (
         <div className="ai-bot-market-group" key={label}>
           <h4>
             {label}
@@ -752,6 +771,22 @@ export function AiBotWorkspace() {
         )
       )
     : undefined;
+
+  const sectorConcentrationNote = useMemo(() => {
+    const groups = opportunitiesData?.sector_concentration_in_opportunities ?? [];
+    if (groups.length === 0) return null;
+
+    const phrases = groups.map((group) => {
+      const sectorLabel = translateSector(group.sector, lang);
+      return `${group.count} of these opportunities are in the ${sectorLabel} sector`;
+    });
+
+    if (lang === 'ar') {
+      return `ملاحظة: ${phrases.join('; ')} — فكر فيها كأفكار مترابطة، لا كأفكار مستقلة.`;
+    }
+
+    return `Note: ${phrases.join('; ')} — consider them as related, not independent, ideas.`;
+  }, [lang, opportunitiesData?.sector_concentration_in_opportunities]);
 
   const opportunityReason = matchingSector
     ? (lang === 'ar'
@@ -1430,12 +1465,26 @@ export function AiBotWorkspace() {
                   </div>
 
                   {isOpportunitiesExpanded && (
-                    <div className="ai-bot-opportunities-list">
-                      {opportunities.map((opp) => (
+                    <>
+                      {sectorConcentrationNote && (
                         <div
-                          key={opp.ticker}
-                          className="ai-bot-opportunity-item"
-                          style={{ cursor: 'pointer' }}
+                          className="ai-bot-opportunity-context-note"
+                          style={{
+                            marginBottom: '10px',
+                            fontSize: '12px',
+                            opacity: 0.8,
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {sectorConcentrationNote}
+                        </div>
+                      )}
+                      <div className="ai-bot-opportunities-list">
+                        {opportunities.map((opp) => (
+                          <div
+                            key={opp.ticker}
+                            className="ai-bot-opportunity-item"
+                            style={{ cursor: 'pointer' }}
                           onClick={() => {
                             const targetIndex = allEntities.findIndex((e) => e.ticker.toUpperCase() === opp.ticker.toUpperCase());
                             if (targetIndex !== -1) {
@@ -1476,8 +1525,9 @@ export function AiBotWorkspace() {
                             </span>
                           )}
                         </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -1586,6 +1636,11 @@ export function AiBotWorkspace() {
                 <p className="ai-bot-recommendation">
                   {recommendation.structured?.summary || recommendation.recommendation_text}
                 </p>
+                {recommendation.structured?.thesis_risk && (
+                  <p className="ai-bot-recommendation-risk" style={{ marginTop: '8px', marginBottom: '10px', color: '#9ca3af', fontSize: '12px', lineHeight: 1.5 }}>
+                    <strong style={{ color: '#d1d5db' }}>{lang === 'ar' ? 'مخاطرة:' : 'Risk:'}</strong> {recommendation.structured.thesis_risk}
+                  </p>
+                )}
 
                 {recommendation.structured?.evidence && recommendation.structured.evidence.length > 0 && (
                   <div className="ai-bot-portfolio-list-section">

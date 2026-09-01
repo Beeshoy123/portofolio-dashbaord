@@ -85,8 +85,6 @@ interface PortfolioOpportunity {
   opportunity_type: 'strong_unheld' | 'sector_gap' | 'underrepresented';
 }
 
-type AdvisorMode = 'holding' | 'portfolio';
-
 function recommendationAgeLabel(generatedAt: string): string {
   const ageHours = Math.max(0, (Date.now() - new Date(generatedAt).getTime()) / 3_600_000);
   if (ageHours < 1) return 'Generated less than 1 hour ago';
@@ -164,7 +162,6 @@ async function requestJson<T>(
 export function SmartAdvisorPanel() {
   const [recommendations, setRecommendations] = useState<AdvisorRecommendation[]>([]);
   const [opportunities, setOpportunities] = useState<PortfolioOpportunity[]>([]);
-  const [advisorMode, setAdvisorMode] = useState<AdvisorMode>('holding');
   const [alerts, setAlerts] = useState<Record<string, AlertContext>>({});
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -453,52 +450,47 @@ export function SmartAdvisorPanel() {
             </div>
           </div>
           <div className="smart-advisor-action">
-            <div className="flex items-center gap-3">
-              <div className="flex gap-1 border rounded p-1 bg-muted">
-                <Button
-                  size="sm"
-                  variant={advisorMode === 'holding' ? 'default' : 'ghost'}
-                  onClick={() => setAdvisorMode('holding')}
-                  className="text-xs"
-                >
-                  Held
-                </Button>
-                <Button
-                  size="sm"
-                  variant={advisorMode === 'portfolio' ? 'default' : 'ghost'}
-                  onClick={() => setAdvisorMode('portfolio')}
-                  className="text-xs"
-                >
-                  Opportunities
-                </Button>
-              </div>
-              <span className="smart-advisor-live"><span /> Live analysis</span>
-              <Button
-                size="sm"
-                className="smart-advisor-generate"
-                onClick={advisorMode === 'holding' ? handleGenerateRecommendations : handleGenerateOpportunities}
-                disabled={(advisorMode === 'holding' ? generating : generatingOpportunities) || loading}
-                variant="outline"
-              >
-                {(advisorMode === 'holding' ? generating : generatingOpportunities) ? (
-                  <>
-                    <Spinner className="mr-2 h-4 w-4" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Generate
-                  </>
-                )}
-              </Button>
-            </div>
+            <span className="smart-advisor-live"><span /> Live analysis</span>
           </div>
         </CardHeader>
 
         <CardContent className="smart-advisor-content">
-          {advisorMode === 'holding' ? (
-            <>
+          {error && (
+            <Alert className="smart-advisor-error" variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid gap-4 xl:grid-cols-2">
+            <div className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Holding advisor</div>
+                  <h3 className="mt-1 text-lg font-semibold">Entity recommendations</h3>
+                </div>
+                <Button
+                  size="sm"
+                  className="smart-advisor-generate"
+                  onClick={handleGenerateRecommendations}
+                  disabled={generating || loading}
+                  variant="outline"
+                >
+                  {generating ? (
+                    <>
+                      <Spinner className="mr-2 h-4 w-4" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
+
               <div className="smart-advisor-metrics">
                 <div className="advisor-metric advisor-metric-total">
                   <span className="advisor-metric-label">Active alerts</span>
@@ -516,7 +508,8 @@ export function SmartAdvisorPanel() {
                   <span className="advisor-metric-note">Thesis and drawdown risk</span>
                 </div>
               </div>
-              {(activeAlertCount > 0 || drawdownPercent !== undefined && drawdownPercent !== null) && (
+
+              {(activeAlertCount > 0 || (drawdownPercent !== undefined && drawdownPercent !== null)) && (
                 <div className="smart-advisor-status-row">
                   {activeTimeStops > 0 && (
                     <span className="advisor-status advisor-status-warning">
@@ -534,14 +527,6 @@ export function SmartAdvisorPanel() {
                     </span>
                   )}
                 </div>
-              )}
-
-              {error && (
-                <Alert className="smart-advisor-error" variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
               )}
 
               {generationResults.length > 0 && (
@@ -573,7 +558,6 @@ export function SmartAdvisorPanel() {
                 </div>
               )}
 
-              {/* Generation info */}
               {lastGenerationTime && (
                 <div className="smart-advisor-generation-info">
                   Last generated:{' '}
@@ -601,145 +585,127 @@ export function SmartAdvisorPanel() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {recommendations.map((rec) => (
-                    (() => {
-                      const verdict = verdicts[rec.ticker];
-                      const confidence = confidenceFor(verdict);
-                      const snapshotStatus = verdict?.data_quality?.holding_snapshot_status;
-                      const needsRefresh = snapshotStatus === 'stale' || snapshotStatus === 'missing' || snapshotStatus === 'failed';
-                      return (
-                    <div
-                      key={rec.ticker}
-                      className="advisor-recommendation"
-                    >
-                      <div className="advisor-recommendation-topline">
-                        <div>
-                          <div className="advisor-ticker-line">
-                            <h3>{rec.ticker}</h3>
-                            <span className={`advisor-confidence advisor-confidence-${confidence.toLowerCase()}`}>
-                              {confidence} confidence
-                            </span>
+                  {recommendations.map((rec) => {
+                    const verdict = verdicts[rec.ticker];
+                    const confidence = confidenceFor(verdict);
+                    const snapshotStatus = verdict?.data_quality?.holding_snapshot_status;
+                    const needsRefresh = snapshotStatus === 'stale' || snapshotStatus === 'missing' || snapshotStatus === 'failed';
+
+                    return (
+                      <div key={rec.ticker} className="advisor-recommendation">
+                        <div className="advisor-recommendation-topline">
+                          <div>
+                            <div className="advisor-ticker-line">
+                              <h3>{rec.ticker}</h3>
+                              <span className={`advisor-confidence advisor-confidence-${confidence.toLowerCase()}`}>
+                                {confidence} confidence
+                              </span>
+                            </div>
+                            <p className="advisor-recommendation-meta">
+                              Generated {new Date(rec.generated_at).toLocaleDateString()} •{' '}
+                              {rec.model_used}
+                            </p>
+                            <p className={`advisor-recommendation-age ${needsRefresh ? 'advisor-needs-refresh' : ''}`}>
+                              {recommendationAgeLabel(rec.generated_at)}
+                              {needsRefresh && ' · Refresh comparison data'}
+                            </p>
                           </div>
-                          <p className="advisor-recommendation-meta">
-                            Generated {new Date(rec.generated_at).toLocaleDateString()} •{' '}
-                            {rec.model_used}
-                          </p>
-                          <p className={`advisor-recommendation-age ${needsRefresh ? 'advisor-needs-refresh' : ''}`}>
-                            {recommendationAgeLabel(rec.generated_at)}
-                            {needsRefresh && ' · Refresh comparison data'}
-                          </p>
+
+                          <Button
+                            className="advisor-regenerate"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRegenerate(rec.ticker)}
+                            disabled={generating || regeneratingTicker !== null}
+                          >
+                            {regeneratingTicker === rec.ticker ? (
+                              <Spinner className="h-3 w-3" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                            <span className="sr-only">Regenerate {rec.ticker}</span>
+                          </Button>
+
+                          {alerts[rec.ticker] && (
+                            <div className="advisor-alert-badges">
+                              {alerts[rec.ticker].timeStop?.is_stagnant && (
+                                <span className="advisor-status advisor-status-warning">
+                                  <Zap className="h-3 w-3" />
+                                  Time Stop
+                                </span>
+                              )}
+                              {alerts[rec.ticker].thesis?.has_reversal && (
+                                <span className="advisor-status advisor-status-critical">
+                                  <TrendingDown className="h-3 w-3" />
+                                  Thesis
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
 
-                        <Button
-                          className="advisor-regenerate"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleRegenerate(rec.ticker)}
-                          disabled={generating || regeneratingTicker !== null}
-                        >
-                          {regeneratingTicker === rec.ticker ? (
-                            <Spinner className="h-3 w-3" />
-                          ) : (
-                            <RefreshCw className="h-3 w-3" />
-                          )}
-                          <span className="sr-only">Regenerate {rec.ticker}</span>
-                        </Button>
+                        <p className="advisor-recommendation-text">
+                          {rec.recommendation_text}
+                        </p>
 
-                        {/* Alert badges */}
+                        {verdict && (
+                          <div className="advisor-evidence">
+                            <span>Signal: <strong>{verdict.signal}</strong></span>
+                            <span>Period: {verdict.return_period.replace('return_', '')}</span>
+                            <span>Evidence: {verdict.data_quality?.comparable_with_return_count ?? 0}/{verdict.data_quality?.comparable_count ?? 0} usable comparisons</span>
+                            <span>Snapshot: {verdict.data_quality?.holding_snapshot_status ?? 'unknown'}</span>
+                          </div>
+                        )}
+
                         {alerts[rec.ticker] && (
-                          <div className="advisor-alert-badges">
+                          <div className="advisor-alert-details">
                             {alerts[rec.ticker].timeStop?.is_stagnant && (
-                              <span className="advisor-status advisor-status-warning">
-                                <Zap className="h-3 w-3" />
-                                Time Stop
-                              </span>
+                              <div className="text-xs text-muted-foreground">
+                                <span className="font-medium">Time Stop:</span> Stagnant for{' '}
+                                {alerts[rec.ticker].timeStop?.stagnant_days ?? 'an unknown number of'} days
+                              </div>
                             )}
                             {alerts[rec.ticker].thesis?.has_reversal && (
-                              <span className="advisor-status advisor-status-critical">
-                                <TrendingDown className="h-3 w-3" />
-                                Thesis
-                              </span>
+                              <div className="text-xs text-muted-foreground">
+                                <span className="font-medium">Thesis Check:</span> Signal reversed.
+                              </div>
                             )}
                           </div>
                         )}
                       </div>
-
-                      <p className="advisor-recommendation-text">
-                        {rec.recommendation_text}
-                      </p>
-
-                      {verdict && (
-                        <div className="advisor-evidence">
-                          <span>Signal: <strong>{verdict.signal}</strong></span>
-                          <span>Period: {verdict.return_period.replace('return_', '')}</span>
-                          <span>Evidence: {verdict.data_quality?.comparable_with_return_count ?? 0}/{verdict.data_quality?.comparable_count ?? 0} usable comparisons</span>
-                          <span>Snapshot: {verdict.data_quality?.holding_snapshot_status ?? 'unknown'}</span>
-                        </div>
-                      )}
-
-                      {/* Alert details */}
-                      {alerts[rec.ticker] && (
-                        <div className="advisor-alert-details">
-                          {alerts[rec.ticker].timeStop?.is_stagnant && (
-                            <div className="text-xs text-muted-foreground">
-                              <span className="font-medium">Time Stop:</span> Stagnant for{' '}
-                              {alerts[rec.ticker].timeStop?.stagnant_days ?? 'an unknown number of'} days
-                            </div>
-                          )}
-                          {alerts[rec.ticker].thesis?.has_reversal && (
-                            <div className="text-xs text-muted-foreground">
-                              <span className="font-medium">Thesis Check:</span> Signal reversed.
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                      );
-                    })()
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {error && (
-                <Alert className="smart-advisor-error" variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              {generationResults.length > 0 && (
-                <div className="smart-advisor-run-status">
-                  <span className="smart-advisor-run-label">Latest run</span>
-                  {(['success', 'skipped', 'failed'] as const).map((resultStatus) => {
-                    const count = generationResults.filter((result) => result.status === resultStatus).length;
-                    if (count === 0) return null;
-                    const label = resultStatus === 'success'
-                      ? 'generated'
-                      : resultStatus === 'skipped'
-                        ? 'skipped'
-                        : 'failed';
-                    return (
-                      <span
-                        key={resultStatus}
-                        className={`advisor-status ${
-                          resultStatus === 'success'
-                            ? 'advisor-status-success'
-                            : resultStatus === 'skipped'
-                              ? 'advisor-status-neutral'
-                              : 'advisor-status-critical'
-                        }`}
-                      >
-                        {count} {label}
-                      </span>
                     );
                   })}
                 </div>
               )}
+            </div>
 
-              {/* Opportunities Generation info */}
+            <div className="space-y-4 rounded-xl border border-border/60 bg-muted/30 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">Portfolio advisor</div>
+                  <h3 className="mt-1 text-lg font-semibold">Opportunity analysis</h3>
+                </div>
+                <Button
+                  size="sm"
+                  className="smart-advisor-generate"
+                  onClick={handleGenerateOpportunities}
+                  disabled={generatingOpportunities || loading}
+                  variant="outline"
+                >
+                  {generatingOpportunities ? (
+                    <>
+                      <Spinner className="mr-2 h-4 w-4" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </div>
+
               {lastOpportunitiesGenerationTime && (
                 <div className="smart-advisor-generation-info">
                   Last analyzed:{' '}
@@ -760,10 +726,7 @@ export function SmartAdvisorPanel() {
               ) : (
                 <div className="space-y-4">
                   {opportunities.map((opp) => (
-                    <div
-                      key={`${opp.ticker}-${opp.opportunity_type}`}
-                      className="advisor-recommendation"
-                    >
+                    <div key={`${opp.ticker}-${opp.opportunity_type}`} className="advisor-recommendation">
                       <div className="advisor-recommendation-topline">
                         <div>
                           <div className="advisor-ticker-line">
@@ -789,8 +752,8 @@ export function SmartAdvisorPanel() {
                   ))}
                 </div>
               )}
-            </>
-          )}
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

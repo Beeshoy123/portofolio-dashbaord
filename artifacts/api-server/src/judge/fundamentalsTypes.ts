@@ -7,8 +7,6 @@
 // existing SecondOpinionCheck/ComparisonEntry/ComparisonGroup/HoldingVerdict
 // interfaces are unchanged.
 
-import type { SecondOpinionCheck } from "./types";
-
 /**
  * A concern flagged from stock_fundamentals data (stockanalysis.com),
  * attached to a ComparisonEntry the same way the existing second_opinions

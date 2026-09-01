@@ -9,32 +9,30 @@ const router = Router();
 // positions and returns the full verdict array. Read-only; does not trigger
 // any scrape or write to the database.
 router.get("/rotation-verdicts", async (req, res) => {
-  const runId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
+  const rawRunId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
     ? Number(req.query.runId)
     : null;
 
-  if (!Number.isSafeInteger(runId) || runId <= 0) {
-    res.status(400).json({ error: "runId is required" });
-    return;
+  if (rawRunId === null || !Number.isSafeInteger(rawRunId) || rawRunId <= 0) {
+    return res.status(400).json({ error: "runId is required" });
   }
 
   try {
     const includeAllEntities = req.query.all === "true";
-    const verdicts = await judgeAllHoldings("return_1y", runId, includeAllEntities);
-    res.json(verdicts);
+    const verdicts = await judgeAllHoldings("return_1y", rawRunId, includeAllEntities);
+    return res.json(verdicts);
   } catch (err: any) {
     console.error("[/api/rotation-verdicts]", err);
-    res.status(500).json({ error: "Failed to compute rotation verdicts" });
+    return res.status(500).json({ error: "Failed to compute rotation verdicts" });
   }
 });
 
 router.get("/portfolio-summary", async (req, res) => {
-  const runId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
+  const rawRunId = typeof req.query.runId === "string" && /^\d+$/.test(req.query.runId)
     ? Number(req.query.runId)
     : null;
-  if (!Number.isSafeInteger(runId) || runId <= 0) {
-    res.status(400).json({ error: "runId is required" });
-    return;
+  if (rawRunId === null || !Number.isSafeInteger(rawRunId) || rawRunId <= 0) {
+    return res.status(400).json({ error: "runId is required" });
   }
 
   try {
@@ -46,9 +44,9 @@ router.get("/portfolio-summary", async (req, res) => {
                         model_used, generated_at
                  FROM portfolio_summaries`;
     const params: number[] = [];
-    if (runId !== null && Number.isSafeInteger(runId) && runId > 0) {
+    if (rawRunId !== null && Number.isSafeInteger(rawRunId) && rawRunId > 0) {
       query += ` WHERE run_id = $1`;
-      params.push(runId);
+      params.push(rawRunId);
     } else {
       query += ` ORDER BY generated_at DESC LIMIT 1`;
     }
@@ -78,11 +76,10 @@ router.get("/portfolio-summary", async (req, res) => {
       generated_at: string;
     }>(query, params);
     if (result.rows.length === 0) {
-      res.status(404).json({ error: "No portfolio summary found" });
-      return;
+      return res.status(404).json({ error: "No portfolio summary found" });
     }
     const summary = result.rows[0];
-    res.json({
+    return res.json({
       id: summary.id,
       run_id: summary.run_id,
       summary_text: summary.summary_text,
@@ -108,7 +105,7 @@ router.get("/portfolio-summary", async (req, res) => {
     });
   } catch (error) {
     console.error("[/api/portfolio-summary]", error);
-    res.status(500).json({ error: "Failed to fetch portfolio summary" });
+    return res.status(500).json({ error: "Failed to fetch portfolio summary" });
   }
 });
 

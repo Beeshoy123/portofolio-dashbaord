@@ -72,7 +72,7 @@ async function analyzeEntity(row: { id: number; yahoo_ticker: string }, runId: n
     const candles = await fetchCandles(row.yahoo_ticker);
     if (candles.length < 20) throw new Error("not enough OHLC history");
     const matches = patternChain(candles, allPatterns, {
-      trendContext: { trendMethod: "sma-slope", trendPeriod: 10, resolveConflicts: true },
+      strict: true,
     }) as Array<{ index: number; pattern: string }>;
     const latestDate = candles[candles.length - 1].date;
     const recentMatches = matches.filter((match) => match.index >= candles.length - 5);

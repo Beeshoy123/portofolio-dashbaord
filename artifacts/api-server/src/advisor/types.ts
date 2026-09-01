@@ -15,6 +15,7 @@ export interface AdvisorRecommendation {
     decision: "consider_entry" | "consider_rotation" | "watch_and_wait" | "hold";
     confidence: number;
     summary: string;
+    thesis_risk: string;
     evidence: string[];
     risks: string[];
     next_review_days: number;

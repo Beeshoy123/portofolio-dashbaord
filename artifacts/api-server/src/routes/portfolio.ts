@@ -686,7 +686,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
             }),
           });
           if (orResp.ok) {
-            const orData = await orResp.json().catch(() => ({}));
+            const orData = (await orResp.json().catch(() => ({}))) as any;
             const orText = (orData?.choices?.[0]?.message?.content ?? "").trim();
             const cleanedOr = orText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
             parsedRows = JSON.parse(cleanedOr);
@@ -739,7 +739,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
   // Otherwise (order/nav single-object modes) parse as before
   let parsed: { fund?: unknown; nav?: unknown; unitsHeld?: unknown } | undefined;
   try {
-    parsed = JSON.parse(cleaned) as typeof parsed;
+    parsed = JSON.parse(cleaned) as { fund?: unknown; nav?: unknown; unitsHeld?: unknown };
   } catch {
     // OpenRouter fallback: try a text-only completion if configured
     if (process.env.OPENROUTER_API_KEY) {
@@ -758,7 +758,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
           }),
         });
         if (orResp.ok) {
-          const orData = await orResp.json().catch(() => ({}));
+          const orData = (await orResp.json().catch(() => ({}))) as any;
           const orText = (orData?.choices?.[0]?.message?.content ?? "").trim();
           const cleanedOr = orText.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
           parsed = JSON.parse(cleanedOr) as typeof parsed;
@@ -773,7 +773,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
     }
   }
 
-  if (!parsed.fund || (typeof parsed.fund !== "string" && typeof parsed.fund !== "object")) {
+  if (!parsed || !parsed.fund || (typeof parsed.fund !== "string" && typeof parsed.fund !== "object")) {
     res.status(422).json({ error: "Could not identify the fund (ABR, RE or AZS). Try a clearer screenshot." });
     return;
   }
@@ -817,7 +817,7 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
 
   try {
     await db.transaction(async (tx) => {
-      const rows = body.rows;
+      const rows = body.rows ?? [];
       for (const r of rows) {
         if (!r || typeof r !== "object") continue;
         const detectedFund = r.fund && typeof r.fund === "object" ? r.fund : {};
@@ -916,7 +916,7 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
           assetType: fundRow.key,
           name: fundRow.name,
           meta,
-          occurredAt: occurredAt.toISOString(),
+          occurredAt: occurredAt,
           amount: String(amount),
           txType: side,
         }).returning();

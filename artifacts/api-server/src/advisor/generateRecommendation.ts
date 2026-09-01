@@ -12,6 +12,13 @@
 // matches whatever environment variable name your existing integration
 // already uses — using a different key name would mean managing two
 // separate keys for one API, which is unnecessary duplication.
+//
+// FILE STRUCTURE:
+// ├── Configuration & Schema (GEMINI_RESPONSE_SCHEMA, env config)
+// ├── Gemini API Callers (callGemini, callGeminiWithSchema)
+// ├── Response Parsing (parseStructuredResponse, parsePortfolioResponse)
+// ├── Recommendation Builders (generateRecommendation, generatePortfolioSummary)
+// └── Entry Points (exported functions for route handlers)
 
 import {
   SYSTEM_INSTRUCTIONS,
@@ -63,6 +70,7 @@ const GEMINI_RESPONSE_SCHEMA = {
     },
     confidence: { type: "INTEGER", minimum: 0, maximum: 100 },
     summary: { type: "STRING" },
+    thesis_risk: { type: "STRING" },
     evidence: { type: "ARRAY", items: { type: "STRING" } },
     risks: { type: "ARRAY", items: { type: "STRING" } },
     next_review_days: { type: "INTEGER", minimum: 1, maximum: 365 },
@@ -73,6 +81,7 @@ const GEMINI_RESPONSE_SCHEMA = {
     "decision",
     "confidence",
     "summary",
+    "thesis_risk",
     "evidence",
     "risks",
     "next_review_days",
@@ -170,6 +179,12 @@ export async function verifyGeminiModel(): Promise<void> {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// RESPONSE PARSING & VALIDATION
+// parseStructuredResponse() — JSON schema validation for single recommendations
+// parsePortfolioResponse() — JSON schema validation for portfolio summaries
+// ═══════════════════════════════════════════════════════════════════════════
+
 function parseStructuredResponse(text: string): StructuredAdvisorResult {
   const candidate = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   let parsed: unknown;
@@ -205,6 +220,7 @@ function isStructuredAdvisorResult(value: unknown): value is StructuredAdvisorRe
     && typeof result.confidence === "number" && Number.isInteger(result.confidence)
     && result.confidence >= 0 && result.confidence <= 100
     && typeof result.summary === "string" && result.summary.trim().length > 0 && result.summary.length <= 1200
+    && typeof result.thesis_risk === "string" && result.thesis_risk.trim().length > 0 && result.thesis_risk.length <= 600
     && isTextArray(result.evidence, 6)
     && isTextArray(result.risks, 6)
     && typeof result.next_review_days === "number" && Number.isInteger(result.next_review_days)
@@ -234,7 +250,7 @@ export async function generateRecommendation(
   const dataBlock = `${buildDataBlock(verdict, alerts)}
 
 Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
-{"decision":"consider_entry|consider_rotation|watch_and_wait|hold","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30,"watch_trigger":"...","do_not_act_reasons":["..."]}`;
+{"decision":"consider_entry|consider_rotation|watch_and_wait|hold","confidence":0,"summary":"...","thesis_risk":"...","evidence":["..."],"risks":["..."],"next_review_days":30,"watch_trigger":"...","do_not_act_reasons":["..."]}`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
@@ -306,6 +322,12 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
     structured,
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PUBLIC ENTRY POINTS — Exported recommendation generators
+// generateRecommendation() — Single holding recommendation via Gemini
+// generatePortfolioSummary() — Portfolio-wide summary via Gemini
+// ═══════════════════════════════════════════════════════════════════════════
 
 function isStructuredPortfolioResult(value: unknown): value is PortfolioSummaryResult {
   if (!value || typeof value !== "object") return false;

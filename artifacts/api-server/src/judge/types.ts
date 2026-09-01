@@ -49,6 +49,8 @@ export interface HoldingVerdict {
   holding_asset_role: AssetRole;
   holding_return_percent: number | null;
   holding_current_value_egp: number | null;
+  holding_portfolio_weight_percent: number | null;
+  portfolio_total_value_egp: number | null;
   holding_risk_tier: "Low" | "Medium" | "High" | null;
   holding_fundamentals?: FundamentalsSnapshot | null;
   technical_signal: TechnicalSignal | null;

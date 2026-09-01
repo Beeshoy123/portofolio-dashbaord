@@ -8,6 +8,16 @@
 // - Risk differences
 //
 // Gemini's job is explaining these facts, not discovering them.
+//
+// FILE STRUCTURE:
+// ├── Types (OpportunitySector, OpportunitiesAnalysis, etc.)
+// ├── Analysis Helpers (compareGroups, buildOpportunityAnalysisPrompt)
+// ├── Sector Concentration Detection
+// └── Main Entry Points (analyzePortfolioOpportunities, findOpportunities)
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PART 0: TYPES & INTERFACES
+// ═══════════════════════════════════════════════════════════════════════════
 
 import type { HoldingVerdict, ComparisonEntry } from "../judge/types";
 
@@ -34,6 +44,11 @@ export interface PortfolioOpportunityAnalysis {
     fundamentals_flags: string[];
     confidence_tier: "high" | "moderate" | "low";
   }>;
+  sector_concentration_in_opportunities: Array<{
+    sector: string;
+    count: number;
+    tickers: string[];
+  }>;
   sectors_no_strong_exposure: OpportunitySector[];
   underrepresented_sectors: OpportunitySector[];
   unheld_outperforming_held: Array<{
@@ -53,14 +68,28 @@ export interface PortfolioOpportunityAnalysis {
   };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN ENTRY POINT: analyzePortfolioOpportunities
+// Orchestrates all 6 types of opportunity detection and returns structured result
+// ═══════════════════════════════════════════════════════════════════════════
+
 export function analyzePortfolioOpportunities(
   verdicts: HoldingVerdict[],
 ): PortfolioOpportunityAnalysis {
   const heldVerdicts = verdicts.filter((v) => v.is_held);
   const unheldVerdicts = verdicts.filter((v) => !v.is_held);
 
-  // 1. Strong unheld entities
+  // ─────────────────────────────────────────────────────────────────────────
+  // PART 1: Strong unheld entities
+  // Filter unheld holdings with Strong signal — these are the most obvious
+  // opportunities (good performance, no portfolio exposure yet)
+  // ─────────────────────────────────────────────────────────────────────────
   const strongUnheld = unheldVerdicts.filter((v) => v.signal === "Strong");
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PART 2: Sector analysis
+  // Group all verdicts by sector to detect gaps and concentration
+  // ─────────────────────────────────────────────────────────────────────────
 
   // 2. Sectors analysis
   const sectorMap = new Map<
@@ -265,8 +294,26 @@ export function analyzePortfolioOpportunities(
       return 0;
     });
 
+  const sectorConcentrationInOpportunities = Array.from(
+    strongUnheld.reduce<Map<string, Set<string>>>((acc, verdict) => {
+      const sectorName = getSector(verdict);
+      const sectorTickers = acc.get(sectorName) ?? new Set<string>();
+      sectorTickers.add(verdict.holding_ticker);
+      acc.set(sectorName, sectorTickers);
+      return acc;
+    }, new Map()),
+  )
+    .filter(([, tickers]) => tickers.size > 1)
+    .map(([sector, tickers]) => ({
+      sector,
+      count: tickers.size,
+      tickers: Array.from(tickers).sort(),
+    }))
+    .sort((a, b) => b.count - a.count || a.sector.localeCompare(b.sector));
+
   return {
     strong_unheld_entities: strongUnheldEntities,
+    sector_concentration_in_opportunities: sectorConcentrationInOpportunities,
     sectors_no_strong_exposure: sectorsNoStrongExposure,
     underrepresented_sectors: underrepresentedSectors,
     unheld_outperforming_held: unheldOutperformingHeld,
@@ -306,6 +353,16 @@ export function buildOpportunityAnalysisPrompt(
     lines.push("");
   } else {
     lines.push("Strong Unheld Entities: None detected\n");
+  }
+
+  if (analysis.sector_concentration_in_opportunities.length > 0) {
+    lines.push("Sector concentration in opportunities:");
+    for (const sector of analysis.sector_concentration_in_opportunities) {
+      lines.push(
+        `  - ${sector.sector}: ${sector.count} strong opportunities (${sector.tickers.join(", ")})`,
+      );
+    }
+    lines.push("");
   }
 
   if (analysis.sectors_no_strong_exposure.length > 0) {

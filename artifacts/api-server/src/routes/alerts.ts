@@ -15,10 +15,10 @@ router.get("/time-stops", async (req: Request, res: Response) => {
     const runId = parseRunId(req.query.runId);
     if (runId === null) return res.status(400).json({ error: "runId is required" });
     const timeStops = await checkAllTimeStops(runId);
-    res.json(timeStops);
+    return res.json(timeStops);
   } catch (err: any) {
     console.error("[/api/alerts/time-stops]", err);
-    res.status(500).json({ error: "Failed to compute time stops" });
+    return res.status(500).json({ error: "Failed to compute time stops" });
   }
 });
 
@@ -28,10 +28,10 @@ router.get("/thesis-checks", async (req: Request, res: Response) => {
     const runId = parseRunId(req.query.runId);
     if (runId === null) return res.status(400).json({ error: "runId is required" });
     const theses = await checkAllTheses(runId);
-    res.json(theses);
+    return res.json(theses);
   } catch (err: any) {
     console.error("[/api/alerts/thesis-checks]", err);
-    res.status(500).json({ error: "Failed to compute thesis checks" });
+    return res.status(500).json({ error: "Failed to compute thesis checks" });
   }
 });
 
@@ -41,10 +41,10 @@ router.get("/drawdown", async (req: Request, res: Response) => {
     const runId = parseRunId(req.query.runId);
     if (runId === null) return res.status(400).json({ error: "runId is required" });
     const drawdown = await computeDrawdown(runId);
-    res.json(drawdown);
+    return res.json(drawdown);
   } catch (err: any) {
     console.error("[/api/alerts/drawdown]", err);
-    res.status(500).json({ error: "Failed to compute drawdown" });
+    return res.status(500).json({ error: "Failed to compute drawdown" });
   }
 });
 
@@ -62,7 +62,7 @@ router.get("/all/:ticker", async (req: Request, res: Response) => {
     const timeStop = allTimeStops.find((ts) => ts.ticker === ticker.toUpperCase());
     const thesis = allTheses.find((t) => t.ticker === ticker.toUpperCase());
 
-    res.json({
+    return res.json({
       ticker: ticker.toUpperCase(),
       timeStop: timeStop || null,
       thesis: thesis || null,
@@ -72,7 +72,7 @@ router.get("/all/:ticker", async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error(`[/api/alerts/all/:${req.params.ticker}]`, err);
-    res.status(500).json({ error: "Failed to fetch alerts" });
+    return res.status(500).json({ error: "Failed to fetch alerts" });
   }
 });
 
@@ -98,7 +98,7 @@ router.get("/summary", async (req: Request, res: Response) => {
       alertsByTicker[t.ticker].thesis = t;
     });
 
-    res.json({
+    return res.json({
       generatedAt: new Date().toISOString(),
       alerts: alertsByTicker,
       portfolio: {
@@ -107,7 +107,7 @@ router.get("/summary", async (req: Request, res: Response) => {
     });
   } catch (err: any) {
     console.error("[/api/alerts/summary]", err);
-    res.status(500).json({ error: "Failed to fetch alert summary" });
+    return res.status(500).json({ error: "Failed to fetch alert summary" });
   }
 });
 
