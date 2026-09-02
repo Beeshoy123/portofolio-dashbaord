@@ -58,6 +58,10 @@ type Verdict = {
   is_held?: boolean;
   return_period?: 'return_1y' | 'return_6m' | 'return_3m';
   signal: string;
+  performance_grade?: 'Strong' | 'Mixed' | 'Weak' | 'Insufficient Data';
+  financial_health_grade?: 'Red Flag' | 'Weak' | 'Strong' | 'Neutral' | 'Insufficient Data';
+  technical_grade?: 'Red Flag' | 'Weak' | 'Strong' | 'Neutral' | 'Insufficient Data';
+  final_label?: 'Excellent' | 'Solid' | 'Caution' | 'Avoid' | 'Insufficient Data';
   coverage_percent: number | null;
   comparables_beaten?: number;
   comparables_total?: number;
@@ -81,7 +85,7 @@ type Verdict = {
     flags?: Array<{ flag: string; detail: string }>;
   } | null;
 };
-type StructuredRecommendation = {
+export type StructuredRecommendation = {
   decision: 'consider_entry' | 'consider_rotation' | 'watch_and_wait' | 'hold';
   confidence: number;
   summary: string;
@@ -93,7 +97,7 @@ type StructuredRecommendation = {
   do_not_act_reasons: string[];
 };
 
-type Recommendation = {
+export type Recommendation = {
   ticker: string;
   recommendation_text: string;
   model_used: string;
@@ -101,7 +105,7 @@ type Recommendation = {
   structured?: StructuredRecommendation | null;
 };
 
-type TimeStopAlert = {
+export type TimeStopAlert = {
   watchlist_id?: number;
   ticker?: string;
   is_stagnant: boolean;
@@ -111,7 +115,7 @@ type TimeStopAlert = {
   message?: string;
 };
 
-type ThesisAlert = {
+export type ThesisAlert = {
   watchlist_id?: number;
   ticker?: string;
   has_reversal: boolean;
@@ -121,7 +125,7 @@ type ThesisAlert = {
   message?: string;
 };
 
-type DrawdownAlert = {
+export type DrawdownAlert = {
   current_drawdown_percent?: number | null;
   drawdown_percent?: number | null;
   peak_value?: number;
@@ -130,7 +134,7 @@ type DrawdownAlert = {
   is_alert?: boolean;
 };
 
-type AlertsSummary = {
+export type AlertsSummary = {
   timeStops?: TimeStopAlert[];
   theses?: ThesisAlert[];
   drawdown?: DrawdownAlert | null;
@@ -141,17 +145,19 @@ type AlertsSummary = {
 };
 type PortfolioSummary = {
   summary_text: string;
-  strong_count: number;
-  mixed_count: number;
-  weak_count: number;
+  excellent_count: number;
+  solid_count: number;
+  caution_count: number;
+  avoid_count: number;
   insufficient_data_count: number;
   flagged_count?: number | null;
   avg_coverage_percent?: number | null;
   reversal_risk_count?: number | null;
   divergence_count?: number | null;
-  strong_value_percent?: number | null;
-  mixed_value_percent?: number | null;
-  weak_value_percent?: number | null;
+  excellent_value_percent?: number | null;
+  solid_value_percent?: number | null;
+  caution_value_percent?: number | null;
+  avoid_value_percent?: number | null;
   insufficient_value_percent?: number | null;
   // Decision-structured fields (present on rows from migration 022+; null on older rows)
   decision?: "hold" | "watch" | "rebalance" | null;
@@ -218,6 +224,68 @@ const VERDICT_FLAG_MAP: Record<string, { en: string; ar: string; category: 'info
   low_return_on_equity: { en: 'Low ROE', ar: 'عائد منخفض على الملكية', category: 'warning' },
   shrinking_revenue: { en: 'Shrinking revenue', ar: 'انكماش الإيرادات', category: 'warning' },
 };
+
+const GRID_GLOSSARY = {
+  labels: {
+    Excellent: {
+      en: 'Performance is strong and the financial-health and technical checks do not show a material weakness.',
+      ar: 'الأداء قوي ولا تظهر فحوصات الصحة المالية والفنية ضعفاً جوهرياً.',
+    },
+    Solid: {
+      en: 'The holding passed the main checks, but one category did not clear the higher Excellent bar.',
+      ar: 'اجتازت الحيازة الفحوصات الأساسية، لكن إحدى الفئات لم تصل إلى مستوى ممتاز.',
+    },
+    Caution: {
+      en: 'Performance is not enough on its own; the result includes a meaningful weakness that needs attention.',
+      ar: 'الأداء وحده لا يكفي؛ تتضمن النتيجة نقطة ضعف مهمة تحتاج إلى الانتباه.',
+    },
+    Avoid: {
+      en: 'Financial Health or Technical shows a serious red flag. A good price return cannot override that warning.',
+      ar: 'تظهر الصحة المالية أو المؤشرات الفنية علامة حمراء خطيرة. لا يمكن لعائد سعري جيد تجاوز هذا التحذير.',
+    },
+    'Insufficient Data': {
+      en: 'There is not enough usable comparison data to support a reliable combined label.',
+      ar: 'لا توجد بيانات مقارنة صالحة كافية لدعم تصنيف موحد موثوق.',
+    },
+  },
+  categories: {
+    Performance: {
+      en: 'Compares the 1-year price return against similar funds, stocks, and benchmarks.',
+      ar: 'تقارن عائد السعر لسنة واحدة بالصناديق والأسهم والمؤشرات المماثلة.',
+    },
+    'Financial Health': {
+      en: 'Compares profitability, debt, revenue growth, liquidity, cash flow, and share changes against peers.',
+      ar: 'تقارن الربحية والديون ونمو الإيرادات والسيولة والتدفق النقدي وتغير الأسهم بالنظراء.',
+    },
+    Technical: {
+      en: 'Reads the recent price chart for trend direction and warning patterns.',
+      ar: 'تقرأ الرسم البياني الحديث لمعرفة الاتجاه وأنماط التحذير.',
+    },
+  },
+  cap: {
+    en: 'If Financial Health or Technical shows a serious red flag, the final label is capped at Avoid; a good price return alone cannot earn a high rating.',
+    ar: 'إذا أظهرت الصحة المالية أو المؤشرات الفنية علامة حمراء خطيرة، يتم تحديد التصنيف النهائي عند تجنب؛ لا يكفي عائد سعري جيد وحده للحصول على تصنيف مرتفع.',
+  },
+} as const;
+
+function GlossaryHint({ text, lang }: { text: string; lang: Lang }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="ai-bot-glossary-hint">
+      <button
+        type="button"
+        className="ai-bot-glossary-button"
+        aria-label={lang === 'ar' ? 'شرح التصنيف' : 'Explain this grade'}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+        title={lang === 'ar' ? 'شرح التصنيف' : 'Explain this grade'}
+      >
+        ?
+      </button>
+      {open && <span className="ai-bot-glossary-popover">{text}</span>}
+    </span>
+  );
+}
 
 function getVerdictFlagMeta(flag: string, lang: Lang): { label: string; category: 'info' | 'warning' } {
   if (VERDICT_FLAG_MAP[flag]) {
@@ -390,9 +458,10 @@ function formatRiskTier(tier: string | null | undefined, lang: Lang): string {
 function formatSignal(signal: string | null | undefined, lang: Lang): string {
   if (!signal) return '—';
   if (lang === 'ar') {
-    if (signal === 'Strong') return 'قوي';
-    if (signal === 'Mixed') return 'مختلط';
-    if (signal === 'Weak') return 'ضعيف';
+    if (signal === 'Excellent') return 'ممتاز';
+    if (signal === 'Solid') return 'متين';
+    if (signal === 'Caution') return 'حذر';
+    if (signal === 'Avoid') return 'تجنب';
     if (signal === 'Insufficient Data') return 'بيانات غير كافية';
     return signal;
   }
@@ -412,10 +481,10 @@ function formatSummaryText(text: string | undefined | null, lang: Lang): string 
   if (!text) return '';
   if (lang !== 'ar') return text;
 
-  const m1 = text.match(/Portfolio summary could not be generated by AI for this run\. Evaluated (\d+) of (\d+) holdings: (\d+) Strong, (\d+) Mixed, (\d+) Weak, (\d+) Insufficient Data\./i);
+  const m1 = text.match(/Portfolio summary could not be generated by AI for this run\. Evaluated (\d+) of (\d+) holdings: (\d+) Excellent, (\d+) Solid, (\d+) Caution, (\d+) Avoid, (\d+) Insufficient Data\./i);
   if (m1) {
-    const [, succeeded, total, strong, mixed, weak, insufficient] = m1;
-    return `تعذر إنشاء ملخص المحفظة عبر الذكاء الاصطناعي لهذا التشغيل. تم تقييم ${succeeded} من أصل ${total} من الحيازات: ${strong} قوي، ${mixed} مختلط، ${weak} ضعيف، ${insufficient} بيانات غير كافية.`;
+    const [, succeeded, total, excellent, solid, caution, avoid, insufficient] = m1;
+    return `تعذر إنشاء ملخص المحفظة عبر الذكاء الاصطناعي لهذا التشغيل. تم تقييم ${succeeded} من أصل ${total} من الحيازات: ${excellent} ممتاز، ${solid} متين، ${caution} حذر، ${avoid} تجنب، ${insufficient} بيانات غير كافية.`;
   }
 
   const m2 = text.match(/Only (\d+) of (\d+) holdings could be judged this run — not enough data for a reliable portfolio summary\. Retry the run for a complete picture\./i);
@@ -663,6 +732,22 @@ export function AiBotWorkspace() {
     : undefined;
   const portfolioDrawdown = alertsData?.portfolio?.drawdown ?? alertsData?.drawdown;
   const trendDown = signal?.trend === 'downtrend';
+  const currentGroupKeys = (verdict?.groups ?? []).map(
+    (group) => `${entity?.ticker || ''}_${group.group_type}`,
+  );
+  const hasCollapsedSection = !isOpportunitiesExpanded || currentGroupKeys.some((key) => !expandedGroups[key]);
+
+  const toggleAllSections = () => {
+    const targetExpandedState = hasCollapsedSection;
+    setIsOpportunitiesExpanded(targetExpandedState);
+    setExpandedGroups((previous) => {
+      const next = { ...previous };
+      currentGroupKeys.forEach((key) => {
+        next[key] = targetExpandedState;
+      });
+      return next;
+    });
+  };
 
   // Analyze strong unheld entities as opportunities
   const opportunities = useMemo(() => {
@@ -676,12 +761,18 @@ export function AiBotWorkspace() {
       coverage: number | null | undefined,
       beaten: number | undefined,
       total: number | undefined,
+      finalLabel?: string,
     ): 'high' | 'moderate' | 'low' => {
       const cov = coverage ?? 0;
       const winRate = total && total > 0 && beaten !== undefined ? beaten / total : 0;
-      if (cov >= 70 && winRate >= 0.75) return 'high';
-      if (cov < 50 || winRate < 0.65) return 'low';
-      return 'moderate';
+      const tier = cov >= 70 && winRate >= 0.75
+        ? 'high'
+        : cov < 50 || winRate < 0.65
+          ? 'low'
+          : 'moderate';
+      if (finalLabel === 'Solid' && tier === 'high') return 'moderate';
+      if (finalLabel === 'Excellent' && tier === 'low') return 'moderate';
+      return tier;
     };
 
     if (opportunitiesData?.strong_unheld && opportunitiesData.strong_unheld.length > 0) {
@@ -699,6 +790,7 @@ export function AiBotWorkspace() {
           v.coverage_percent ?? matchedVerdict?.coverage_percent,
           v.comparables_beaten ?? matchedVerdict?.comparables_beaten,
           v.comparables_total ?? matchedVerdict?.comparables_total,
+          v.signal,
         );
 
         return {
@@ -722,7 +814,7 @@ export function AiBotWorkspace() {
       });
     }
     const strongUnheld = verdicts
-      .filter((v) => v.signal === 'Strong' && !allEntities.find((e) => e.ticker === v.holding_ticker && e.is_held))
+      .filter((v) => (v.signal === 'Excellent' || v.signal === 'Solid') && !allEntities.find((e) => e.ticker === v.holding_ticker && e.is_held))
       .map((v) => {
         const snap = allEntities.find((e) => e.ticker === v.holding_ticker);
         const returnPercent = v.holding_return_percent !== null && v.holding_return_percent !== undefined
@@ -734,6 +826,7 @@ export function AiBotWorkspace() {
           v.coverage_percent,
           v.comparables_beaten,
           v.comparables_total,
+          v.signal,
         );
         return {
           ticker: v.holding_ticker,
@@ -794,11 +887,11 @@ export function AiBotWorkspace() {
         : `Fills gap in ${translateSector(matchingSector.sector, lang)} (currently only ${Number(matchingSector.portfolio_allocation_percent).toFixed(1)}% of portfolio)`)
     : verdict?.coverage_percent !== null && verdict?.coverage_percent !== undefined
       ? (lang === 'ar'
-          ? `إشارة قوية بتغطية مقارنة بنسبة ${Number(verdict.coverage_percent).toFixed(1)}%.`
-          : `Strong signal with ${Number(verdict.coverage_percent).toFixed(1)}% comparable coverage.`)
+            ? `إشارة ممتازة أو متينة بتغطية مقارنة بنسبة ${Number(verdict.coverage_percent).toFixed(1)}%.`
+            : `Excellent/Solid signal with ${Number(verdict.coverage_percent).toFixed(1)}% comparable coverage.`)
       : (lang === 'ar'
-          ? 'تم رصد إشارة قوية. مرشح للنظر في إضافته للمحفظة.'
-          : 'Strong signal detected. Consider for portfolio inclusion.');
+            ? 'تم رصد تصنيف ممتاز أو متين. مرشح للدراسة قبل إضافته للمحفظة.'
+            : 'Excellent/Solid signal detected. Research before considering portfolio inclusion.');
 
   const fundamentals = entity?.entity_type === 'stock' ? [
     [lang === 'ar' ? 'مكرر الربحية (P/E)' : 'P/E', metric(entity.pe_ratio)],
@@ -902,6 +995,31 @@ export function AiBotWorkspace() {
             onClick={() => setFilterMode('all')}
           >
             {lang === 'ar' ? `الكل (${allEntities.length})` : `All (${allEntities.length})`}
+          </button>
+          <button
+            type="button"
+            className="comparison-group-collapse-btn ai-bot-master-collapse-btn"
+            onClick={toggleAllSections}
+            aria-label={hasCollapsedSection ? (lang === 'ar' ? 'توسيع كل الأقسام' : 'Expand all sections') : (lang === 'ar' ? 'طي كل الأقسام' : 'Collapse all sections')}
+            title={hasCollapsedSection ? (lang === 'ar' ? 'توسيع كل الأقسام' : 'Expand all sections') : (lang === 'ar' ? 'طي كل الأقسام' : 'Collapse all sections')}
+          >
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{
+                transform: hasCollapsedSection ? 'rotate(0deg)' : 'rotate(180deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+            <span>{hasCollapsedSection ? (lang === 'ar' ? 'توسيع الكل' : 'Expand all') : (lang === 'ar' ? 'طي الكل' : 'Collapse all')}</span>
           </button>
         </div>
         <button
@@ -1078,6 +1196,7 @@ export function AiBotWorkspace() {
                   <div className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.signal)}`}>
                     {formatSignal(verdict.signal, lang)}
                   </div>
+                  <GlossaryHint text={GRID_GLOSSARY.labels[verdict.signal as keyof typeof GRID_GLOSSARY.labels]?.[lang] ?? GRID_GLOSSARY.labels['Insufficient Data'][lang]} lang={lang} />
                   {verdict.coverage_percent !== null && (
                     <span className="ai-bot-coverage-badge">
                       {lang === 'ar' ? `تغطية ${verdict.coverage_percent.toFixed(1)}%` : `${verdict.coverage_percent.toFixed(1)}% Coverage`}
@@ -1111,14 +1230,36 @@ export function AiBotWorkspace() {
 
                 <p className="ai-bot-verdict-caption">
                   {lang === 'ar'
-                    ? 'تُشتق الإشارة من نسبة التفوق المباشر مقارنة بالنظراء (≥60% فوز = قوي، 40–59% = مختلط، <40% = ضعيف). تقيس التغطية نسبة النظراء الذين تتوفر لديهم بيانات عوائد صالحة — التغطية الأعلى تعني موثوقية إحصائية أكبر.'
-                    : 'Signal is derived from the head-to-head win rate against comparable peers (≥60% wins = Strong, 40–59% = Mixed, <40% = Weak). Coverage measures the percentage of peers with usable return data — higher coverage indicates greater statistical reliability.'}
+                    ? 'يقيس الأداء التفوق المباشر مقارنة بالنظراء. تقيس التغطية نسبة النظراء الذين تتوفر لديهم بيانات عوائد صالحة — التغطية الأعلى تعني موثوقية إحصائية أكبر.'
+                    : 'Performance measures the head-to-head result against comparable peers. Coverage measures the percentage of peers with usable return data — higher coverage indicates greater statistical reliability.'}
                 </p>
+              </div>
+
+              <div className="ai-bot-verdict-section ai-bot-grid-grades-section">
+                <div className="ai-bot-grid-grade-header">
+                  <span className="comparison-holding-eyebrow">{lang === 'ar' ? 'تفصيل شبكة التقييم' : 'Grid Grade Breakdown'}</span>
+                  <GlossaryHint text={GRID_GLOSSARY.cap[lang]} lang={lang} />
+                </div>
+                <div className="ai-bot-grid-grades">
+                  {([
+                    ['Performance', verdict.performance_grade],
+                    ['Financial Health', verdict.financial_health_grade],
+                    ['Technical', verdict.technical_grade],
+                  ] as const).map(([category, grade]) => (
+                    <div className="ai-bot-grid-grade" key={category}>
+                      <div className="ai-bot-grid-grade-label">
+                        <span>{lang === 'ar' ? (category === 'Performance' ? 'الأداء' : category === 'Financial Health' ? 'الصحة المالية' : 'فني') : category}</span>
+                        <GlossaryHint text={GRID_GLOSSARY.categories[category][lang]} lang={lang} />
+                      </div>
+                      <strong>{formatSignal(grade, lang)}</strong>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Feature 8: Technical Divergence Warning Callout */}
               {(verdict.flags?.includes('technical_divergence') ||
-                (verdict.signal === 'Strong' && (verdict.technical_signal?.trend === 'downtrend' || signal?.trend === 'downtrend'))) && (
+                ((verdict.signal === 'Excellent' || verdict.signal === 'Solid') && (verdict.technical_signal?.trend === 'downtrend' || signal?.trend === 'downtrend'))) && (
                 <div className="comparison-warning ai-bot-callout-warning">
                   <span>⚠️</span>
                   <div>
@@ -1126,7 +1267,7 @@ export function AiBotWorkspace() {
                     <p>
                       {lang === 'ar'
                         ? 'يتفوق هذا الأصل على نظرائه في العوائد، لكن الرسم البياني في مسار هابط. ترسل بيانات أداء النظراء وحركة السعر إشارات متضاربة — انتظر تأكيد الرسم البياني قبل اتخاذ قرار بناءً على التقييم القوي.'
-                        : 'This holding beats its peers on returns, but the price chart is in a downtrend. Peer performance data and price action are sending conflicting signals — wait for the chart to confirm before acting on the Strong verdict.'}
+                        : 'This holding beats its peers on returns, but the price chart is in a downtrend. Peer performance data and price action are sending conflicting signals — wait for the chart to confirm before acting on the positive final label.'}
                     </p>
                   </div>
                 </div>
@@ -1149,7 +1290,7 @@ export function AiBotWorkspace() {
                       <p>
                         {lang === 'ar'
                           ? 'تم اكتشاف نماذج شموع هبوطية أثناء اتجاه صاعد نشط. اعتبر هذا تنبيهاً احترازياً حتى لو كانت المقارنة بالنظراء قوية.'
-                          : 'Bearish candlestick patterns detected in an active uptrend. Consider this a caution flag even if the peer comparison is strong.'}
+                          : 'Bearish candlestick patterns detected in an active uptrend. Consider this a caution flag even if the Performance grade is strong.'}
                       </p>
                     </div>
                   </div>
@@ -1338,7 +1479,7 @@ export function AiBotWorkspace() {
               )}
 
               {/* Feature 9: Opportunity Candidate Banner (for un-held entities with Strong signal) */}
-              {!entity?.is_held && verdict.signal === 'Strong' && (
+              {!entity?.is_held && (verdict.signal === 'Excellent' || verdict.signal === 'Solid') && (
                 <div className="ai-bot-callout-box ai-bot-callout-opportunity">
                   <strong>{lang === 'ar' ? '💡 فرصة استثمارية مرشحة' : '💡 Opportunity Candidate'}</strong>
                   <p>{opportunityReason}</p>
@@ -1373,19 +1514,21 @@ export function AiBotWorkspace() {
                   <div className="ai-bot-summary-row">
                     <span className="text-xs font-semibold text-muted-foreground mr-1.5">{lang === 'ar' ? 'حسب العدد:' : 'By count:'}</span>
                     <span className="ai-bot-summary-holdings">
-                      <span className="ai-bot-label-strong">{portfolioSummary.strong_count} {lang === 'ar' ? 'قوي' : 'Strong'}</span>,{' '}
-                      <span className="ai-bot-label-mixed">{portfolioSummary.mixed_count} {lang === 'ar' ? 'مختلط' : 'Mixed'}</span>,{' '}
-                      <span className="ai-bot-label-weak">{portfolioSummary.weak_count} {lang === 'ar' ? 'ضعيف' : 'Weak'}</span>
+                      <span className="ai-bot-label-excellent">{portfolioSummary.excellent_count} {lang === 'ar' ? 'ممتاز' : 'Excellent'}</span>,{' '}
+                      <span className="ai-bot-label-solid">{portfolioSummary.solid_count} {lang === 'ar' ? 'متين' : 'Solid'}</span>,{' '}
+                      <span className="ai-bot-label-caution">{portfolioSummary.caution_count} {lang === 'ar' ? 'حذر' : 'Caution'}</span>,{' '}
+                      <span className="ai-bot-label-avoid">{portfolioSummary.avoid_count} {lang === 'ar' ? 'تجنب' : 'Avoid'}</span>,{' '}
                       {portfolioSummary.insufficient_data_count > 0 && <span className="ai-bot-label-insufficient">, {portfolioSummary.insufficient_data_count} {lang === 'ar' ? 'بيانات غير كافية' : 'Insufficient Data'}</span>}
                     </span>
                   </div>
-                  {portfolioSummary.strong_value_percent !== null && portfolioSummary.strong_value_percent !== undefined ? (
+                  {portfolioSummary.excellent_value_percent !== null && portfolioSummary.excellent_value_percent !== undefined ? (
                     <div className="ai-bot-summary-row">
                       <span className="text-xs font-semibold text-muted-foreground mr-1.5">{lang === 'ar' ? 'حسب القيمة:' : 'By value:'}</span>
                       <span className="ai-bot-summary-holdings">
-                        <span className="ai-bot-label-strong">{Number(portfolioSummary.strong_value_percent).toFixed(1)}% {lang === 'ar' ? 'قوي' : 'Strong'}</span>,{' '}
-                        <span className="ai-bot-label-mixed">{Number(portfolioSummary.mixed_value_percent).toFixed(1)}% {lang === 'ar' ? 'مختلط' : 'Mixed'}</span>,{' '}
-                        <span className="ai-bot-label-weak">{Number(portfolioSummary.weak_value_percent).toFixed(1)}% {lang === 'ar' ? 'ضعيف' : 'Weak'}</span>
+                        <span className="ai-bot-label-excellent">{Number(portfolioSummary.excellent_value_percent).toFixed(1)}% {lang === 'ar' ? 'ممتاز' : 'Excellent'}</span>,{' '}
+                        <span className="ai-bot-label-solid">{Number(portfolioSummary.solid_value_percent).toFixed(1)}% {lang === 'ar' ? 'متين' : 'Solid'}</span>,{' '}
+                        <span className="ai-bot-label-caution">{Number(portfolioSummary.caution_value_percent).toFixed(1)}% {lang === 'ar' ? 'حذر' : 'Caution'}</span>,{' '}
+                        <span className="ai-bot-label-avoid">{Number(portfolioSummary.avoid_value_percent).toFixed(1)}% {lang === 'ar' ? 'تجنب' : 'Avoid'}</span>,{' '}
                         {Number(portfolioSummary.insufficient_value_percent) > 0 && <span className="ai-bot-label-insufficient">, {Number(portfolioSummary.insufficient_value_percent).toFixed(1)}% {lang === 'ar' ? 'بيانات غير كافية' : 'Insufficient Data'}</span>}
                       </span>
                     </div>
@@ -1504,10 +1647,10 @@ export function AiBotWorkspace() {
                                     ? 'إشارة قوية · ثقة منخفضة'
                                     : 'إشارة قوية · ثقة متوسطة')
                               : (opp.confidence_tier === 'high'
-                                  ? 'Strong Signal · High Confidence'
+                                  ? 'Excellent/Solid · High Confidence'
                                   : opp.confidence_tier === 'low'
-                                    ? 'Strong Signal · Low Confidence'
-                                    : 'Strong Signal · Moderate Confidence')}
+                                    ? 'Excellent/Solid · Low Confidence'
+                                    : 'Excellent/Solid · Moderate Confidence')}
                           </span>
                           {!opp.absolute_return_positive && (
                             <span className="ai-bot-opp-subnote">
@@ -1597,12 +1740,21 @@ export function AiBotWorkspace() {
           <Brain />
         </div>
         <article className="ai-bot-panel ai-bot-advice-panel">
-          {recommendation ? (
+          {recommendation?.model_used === 'error' ? (
+            <div className="ai-bot-advisor-error-state" role="status">
+              <strong>{lang === 'ar' ? 'تعذر إنشاء التوصية لهذا الأصل' : 'Recommendation generation failed'}</strong>
+              <p>
+                {lang === 'ar'
+                  ? 'تعذر على المستشار الذكي إنشاء توصية لهذا الأصل في هذا التشغيل — ستتم المحاولة في التشغيل القادم.'
+                  : 'Smart Advisor could not generate a recommendation for this entity this run — it will retry next run.'}
+              </p>
+            </div>
+          ) : recommendation ? (
             <div className="ai-bot-advice-report-card">
               {/* 3.1: Decision Pill & Confidence Header */}
               {(() => {
                 const inferredDecision = entity?.is_held
-                  ? (verdict?.signal === 'Weak' ? 'consider_rotation' : verdict?.signal === 'Mixed' ? 'watch_and_wait' : 'hold')
+                  ? (verdict?.signal === 'Avoid' || verdict?.signal === 'Caution' ? 'consider_rotation' : 'hold')
                   : 'consider_entry';
                 const decision = recommendation.structured?.decision || inferredDecision;
                 const decisionMeta = getDecisionMeta(decision, lang);
@@ -1780,7 +1932,7 @@ export function AiBotWorkspace() {
               {!entity?.is_held && (
                 <div className="ai-bot-advice-section ai-bot-advice-watchlist-section">
                   <span className="comparison-holding-eyebrow">{lang === 'ar' ? 'تقييم قائمة المراقبة' : 'Watchlist Evaluation'}</span>
-                  {(strongUnheldMatch || verdict?.signal === 'Strong') ? (
+                  {(strongUnheldMatch || verdict?.signal === 'Excellent' || verdict?.signal === 'Solid') ? (
                     <div className="ai-bot-watchlist-opportunity">
                       <strong>{lang === 'ar' ? '💡 فرصة استثمارية مرشحة' : '💡 Opportunity Candidate'}</strong>
                       <p>{opportunityReason}</p>
@@ -1797,12 +1949,12 @@ export function AiBotWorkspace() {
                           : 'Surfaced because this unheld asset exhibits outperformance relative to its peer group and may offer favorable portfolio rotation or diversification potential.'}
                       </p>
                     </div>
-                  ) : verdict?.signal === 'Weak' ? (
+                  ) : verdict?.signal === 'Avoid' ? (
                     <div className="ai-bot-watchlist-status ai-bot-watchlist-weak">
                       <strong>{lang === 'ar' ? '⛔ غير موصى به' : '⛔ Not Recommended'}</strong>
                       <p>{lang === 'ar' ? 'أداؤه دون مجموعته النظيرة. غير موصى به للإضافة للمحفظة حالياً.' : 'Underperforming its peer group. Not recommended for portfolio inclusion at this time.'}</p>
                     </div>
-                  ) : verdict?.signal === 'Mixed' ? (
+                  ) : verdict?.signal === 'Caution' ? (
                     <div className="ai-bot-watchlist-status ai-bot-watchlist-mixed">
                       <strong>{lang === 'ar' ? '👁️ للمراقبة فقط' : '👁️ Monitor Only'}</strong>
                       <p>{lang === 'ar' ? 'أداء متباين مقارنة بالنظراء. انتظر تأكيد الاتجاه قبل دراسة الدخول.' : 'Mixed peer performance. Wait for trend confirmation before considering entry.'}</p>
@@ -1823,7 +1975,7 @@ export function AiBotWorkspace() {
             </div>
           ) : entity?.is_held ? (
             <p>{lang === 'ar' ? 'التوصية غير متاحة لهذا التشغيل بعد.' : 'Recommendation is not available for this run yet.'}</p>
-          ) : (strongUnheldMatch || verdict?.signal === 'Strong') ? (
+          ) : (strongUnheldMatch || verdict?.signal === 'Excellent' || verdict?.signal === 'Solid') ? (
             <div className="ai-bot-watchlist-opportunity">
               <strong>{lang === 'ar' ? '💡 فرصة استثمارية مرشحة' : '💡 Opportunity Candidate'}</strong>
               <p>{opportunityReason}</p>
@@ -1840,12 +1992,12 @@ export function AiBotWorkspace() {
                   : 'Surfaced because this unheld asset exhibits outperformance relative to its peer group and may offer favorable portfolio rotation or diversification potential.'}
               </p>
             </div>
-          ) : verdict?.signal === 'Weak' ? (
+          ) : verdict?.signal === 'Avoid' ? (
             <div className="ai-bot-watchlist-status ai-bot-watchlist-weak">
               <strong>{lang === 'ar' ? '⛔ غير موصى به' : '⛔ Not Recommended'}</strong>
               <p>{lang === 'ar' ? 'أصل قائمة المراقبة دون أداء مجموعته النظيرة. غير موصى به للإضافة للمحفظة حالياً.' : 'Watchlist asset underperforming its peer group. Not recommended for portfolio inclusion at this time.'}</p>
             </div>
-          ) : verdict?.signal === 'Mixed' ? (
+          ) : verdict?.signal === 'Caution' ? (
             <div className="ai-bot-watchlist-status ai-bot-watchlist-mixed">
               <strong>{lang === 'ar' ? '👁️ للمراقبة فقط' : '👁️ Monitor Only'}</strong>
               <p>{lang === 'ar' ? 'أصل قائمة المراقبة يظهر أداءً متبايناً. راقب لتأكيد الاتجاه قبل دراسة الدخول.' : 'Watchlist asset showing mixed peer performance. Monitor for trend confirmation before considering entry.'}</p>

@@ -14,6 +14,13 @@ export interface BotPipelineDependencies {
 }
 
 /**
+ * Naming convention from multi-factor-grid-plan.md:
+ * Gatherers (Price Checker and Chart Reader) collect raw market data.
+ * Deciders (Comparison Judge and Opportunity Scanner) consume that data to
+ * compare, grade, and surface opportunities. Gatherers must not make
+ * investment judgments or silently drop fields before the Deciders receive them.
+ */
+/**
  * Coordinates the five engines as one bot run. Each downstream engine receives
  * the exact run ID created by Price Checker, so no stage can silently consume
  * data from another execution.

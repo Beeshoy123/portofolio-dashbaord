@@ -1,8 +1,12 @@
 // Deterministic Portfolio Opportunity Analysis
 //
+// Role note: Opportunity Scanner is a Decider. It consumes Comparison Judge
+// verdicts produced from Gatherer data and surfaces opportunities; it does
+// not create a separate data-gathering or scoring pipeline.
+//
 // Calculates structured opportunity data BEFORE Gemini runs:
-// - Strong unheld entities
-// - Sectors with no current Strong exposure
+// - Excellent/Solid unheld entities
+// - Sectors with no current Excellent/Solid exposure
 // - Sectors with too little representation
 // - Unheld assets outperforming held positions
 // - Risk differences
@@ -68,6 +72,28 @@ export interface PortfolioOpportunityAnalysis {
   };
 }
 
+function isOpportunitySignal(signal: HoldingVerdict["signal"]): boolean {
+  return signal === "Excellent" || signal === "Solid";
+}
+
+function confidenceTierFor(verdict: HoldingVerdict): "high" | "moderate" | "low" {
+  const coverage = verdict.coverage_percent ?? 0;
+  const winRate = verdict.comparables_total > 0
+    ? verdict.comparables_beaten / verdict.comparables_total
+    : 0;
+
+  let confidenceTier: "high" | "moderate" | "low" = "moderate";
+  if (coverage >= 70 && winRate >= 0.75) {
+    confidenceTier = "high";
+  } else if (coverage < 50 || winRate < 0.65) {
+    confidenceTier = "low";
+  }
+
+  if (verdict.signal === "Solid" && confidenceTier === "high") return "moderate";
+  if (verdict.signal === "Excellent" && confidenceTier === "low") return "moderate";
+  return confidenceTier;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN ENTRY POINT: analyzePortfolioOpportunities
 // Orchestrates all 6 types of opportunity detection and returns structured result
@@ -80,11 +106,11 @@ export function analyzePortfolioOpportunities(
   const unheldVerdicts = verdicts.filter((v) => !v.is_held);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PART 1: Strong unheld entities
-  // Filter unheld holdings with Strong signal — these are the most obvious
-  // opportunities (good performance, no portfolio exposure yet)
+  // PART 1: Excellent/Solid unheld entities
+  // Filter unheld holdings with an opportunity-grade final label — these are
+  // the most obvious opportunities (good performance, no portfolio exposure yet)
   // ─────────────────────────────────────────────────────────────────────────
-  const strongUnheld = unheldVerdicts.filter((v) => v.signal === "Strong");
+  const strongUnheld = unheldVerdicts.filter((v) => isOpportunitySignal(v.signal));
 
   // ─────────────────────────────────────────────────────────────────────────
   // PART 2: Sector analysis
@@ -125,9 +151,9 @@ export function analyzePortfolioOpportunities(
       });
     }
     const entry = sectorMap.get(sector)!;
-    if (verdict.signal === "Strong") entry.held_strong.push(verdict);
-    else if (verdict.signal === "Mixed") entry.held_mixed.push(verdict);
-    else if (verdict.signal === "Weak") entry.held_weak.push(verdict);
+    if (isOpportunitySignal(verdict.signal)) entry.held_strong.push(verdict);
+    else if (verdict.signal === "Caution") entry.held_mixed.push(verdict);
+    else if (verdict.signal === "Avoid") entry.held_weak.push(verdict);
   }
 
   for (const verdict of unheldVerdicts) {
@@ -141,10 +167,10 @@ export function analyzePortfolioOpportunities(
       });
     }
     const entry = sectorMap.get(sector)!;
-    if (verdict.signal === "Strong") entry.unheld_strong.push(verdict);
+    if (isOpportunitySignal(verdict.signal)) entry.unheld_strong.push(verdict);
   }
 
-  // 3. Sectors with no Strong exposure (held)
+  // 3. Sectors with no Excellent/Solid exposure (held)
   const sectorsNoStrongExposure: OpportunitySector[] = [];
   for (const [sector, data] of sectorMap.entries()) {
     if (data.held_strong.length === 0 && data.unheld_strong.length > 0) {
@@ -247,7 +273,7 @@ export function analyzePortfolioOpportunities(
   const unheldAvgRisk = getAvgRiskTier(unheldRiskScores);
   const higherRiskOpportunities = unheldVerdicts.filter(
     (v) =>
-      v.signal === "Strong" &&
+      isOpportunitySignal(v.signal) &&
       getRiskScore(v.holding_risk_tier) > getRiskScore(heldAvgRisk as any),
   ).length;
 
@@ -259,18 +285,7 @@ export function analyzePortfolioOpportunities(
 
   const strongUnheldEntities = strongUnheld
     .map((v) => {
-      const coverage = v.coverage_percent ?? 0;
-      const winRate =
-        v.comparables_total > 0
-          ? v.comparables_beaten / v.comparables_total
-          : 0;
-
-      let confidenceTier: "high" | "moderate" | "low" = "moderate";
-      if (coverage >= 70 && winRate >= 0.75) {
-        confidenceTier = "high";
-      } else if (coverage < 50 || winRate < 0.65) {
-        confidenceTier = "low";
-      }
+      const confidenceTier = confidenceTierFor(v);
 
       return {
         ticker: v.holding_ticker,
@@ -293,6 +308,26 @@ export function analyzePortfolioOpportunities(
       }
       return 0;
     });
+
+  console.log(
+    "[opportunityAnalysis] strong_unheld_entities diagnostic",
+    strongUnheld.map((v) => {
+      const coverage = v.coverage_percent ?? 0;
+      const comparablesTotal = v.comparables_total ?? 0;
+      const comparablesBeaten = v.comparables_beaten ?? 0;
+      const winRate = comparablesTotal > 0 ? comparablesBeaten / comparablesTotal : 0;
+      const confidenceTier = confidenceTierFor(v);
+
+      return {
+        ticker: v.holding_ticker,
+        coverage_percent: coverage,
+        comparables_beaten: comparablesBeaten,
+        comparables_total: comparablesTotal,
+        win_rate: winRate,
+        confidence_tier: confidenceTier,
+      };
+    }),
+  );
 
   const sectorConcentrationInOpportunities = Array.from(
     strongUnheld.reduce<Map<string, Set<string>>>((acc, verdict) => {
@@ -333,7 +368,7 @@ export function buildOpportunityAnalysisPrompt(
   lines.push("PORTFOLIO OPPORTUNITY ANALYSIS (deterministic, pre-calculated):\n");
 
   if (analysis.strong_unheld_entities.length > 0) {
-    lines.push("Strong Unheld Entities:");
+    lines.push("Excellent/Solid Unheld Entities:");
     for (const entity of analysis.strong_unheld_entities) {
       const returnStr =
         entity.return_percent !== null
@@ -352,14 +387,14 @@ export function buildOpportunityAnalysisPrompt(
     }
     lines.push("");
   } else {
-    lines.push("Strong Unheld Entities: None detected\n");
+    lines.push("Excellent/Solid Unheld Entities: None detected\n");
   }
 
   if (analysis.sector_concentration_in_opportunities.length > 0) {
     lines.push("Sector concentration in opportunities:");
     for (const sector of analysis.sector_concentration_in_opportunities) {
       lines.push(
-        `  - ${sector.sector}: ${sector.count} strong opportunities (${sector.tickers.join(", ")})`,
+        `  - ${sector.sector}: ${sector.count} Excellent/Solid opportunities (${sector.tickers.join(", ")})`,
       );
     }
     lines.push("");

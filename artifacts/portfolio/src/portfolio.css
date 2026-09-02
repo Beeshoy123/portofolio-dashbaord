@@ -519,6 +519,7 @@ html[lang="ar"] .sort-popover {
 .comparison-group-header:hover { background: rgba(255, 255, 255, .03); }
 .comparison-group-collapse-btn { background: rgba(255, 255, 255, .04); color: var(--dim); border: 1px solid rgba(255, 255, 255, .1); border-radius: 6px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s ease; padding: 0; flex-shrink: 0; }
 .comparison-group-collapse-btn:hover { color: #72dfd1; border-color: rgba(95, 225, 208, .35); background: rgba(18, 160, 143, .15); }
+.ai-bot-entity-nav .ai-bot-master-collapse-btn { width: auto; height: 28px; gap: 6px; padding: 0 8px; border-radius: 6px; font-size: 9px; font-weight: 700; white-space: nowrap; }
 .comparison-group-label { color: var(--dim); font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
 .comparison-group-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
 .comparison-evidence-row { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 6px 0; border-bottom: 1px solid var(--edge); flex-wrap: wrap; }
@@ -677,6 +678,21 @@ html[lang="ar"] .sort-popover {
 .ai-bot-chart-footer { display: flex; justify-content: space-between; margin-top: 9px; color: #78948f; font-size: 10px; }
 .ai-bot-chart-empty { display: grid; height: 100%; place-items: center; color: #78948f; font-size: 11px; }
 .ai-bot-verdict-pill { display: inline-block; margin: 22px 0 12px; border-radius: 8px; padding: 8px 14px; font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 800; }
+.ai-bot-glossary-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; }
+.ai-bot-glossary-button { display: inline-grid; width: 20px; height: 20px; place-items: center; border: 1px solid rgba(88, 203, 189, .45); border-radius: 50%; background: rgba(88, 203, 189, .10); color: #58cbbd; font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer; }
+.ai-bot-glossary-button:hover, .ai-bot-glossary-button:focus-visible { background: rgba(88, 203, 189, .22); outline: 2px solid rgba(88, 203, 189, .3); outline-offset: 2px; }
+.ai-bot-glossary-popover { position: absolute; z-index: 5; top: calc(100% + 8px); left: 0; width: min(280px, 72vw); padding: 9px 11px; border: 1px solid rgba(88, 203, 189, .28); border-radius: 7px; background: #142321; color: #dceae6; box-shadow: 0 12px 28px rgba(0, 0, 0, .28); font-size: 11px; font-weight: 500; line-height: 1.5; }
+.ai-bot-grid-grade-header { display: flex; align-items: center; gap: 8px; }
+.ai-bot-grid-grades { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.ai-bot-grid-grade { min-width: 0; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 7px; background: rgba(255, 255, 255, .03); }
+.ai-bot-grid-grade-label { display: flex; align-items: center; justify-content: space-between; gap: 5px; color: #78948f; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.ai-bot-grid-grade-label .ai-bot-glossary-button { width: 16px; height: 16px; font-size: 10px; }
+.ai-bot-grid-grade > strong { display: block; margin-top: 6px; color: #dceae6; font-size: 11px; }
+.ai-bot-grid-grade-header > .ai-bot-glossary-hint .ai-bot-glossary-popover { left: auto; right: 0; }
+.ai-bot-verdict-excellent { background: rgba(85, 209, 155, .18); color: #6bf2b7; border: 1px solid rgba(85, 209, 155, .45); }
+.ai-bot-verdict-solid { background: rgba(85, 209, 155, .10); color: #62d9a4; border: 1px solid rgba(85, 209, 155, .28); }
+.ai-bot-verdict-caution { background: rgba(217, 154, 43, .18); color: #f0bd58; border: 1px solid rgba(217, 154, 43, .38); }
+.ai-bot-verdict-avoid { background: rgba(224, 90, 80, .22); color: #ff8a80; border: 1px solid rgba(224, 90, 80, .55); box-shadow: 0 0 12px rgba(224, 90, 80, .16); }
 .ai-bot-verdict-strong { background: rgba(85, 209, 155, .14); color: #62d9a4; }
 .ai-bot-verdict-mixed { background: rgba(217, 154, 43, .14); color: #e7b85b; }
 .ai-bot-verdict-weak { background: rgba(224, 90, 80, .14); color: #f08078; }
@@ -693,6 +709,9 @@ html[lang="ar"] .sort-popover {
 .ai-bot-opportunity-label { display: inline-block; margin-bottom: 12px; padding: 6px 10px; border-radius: 6px; background: rgba(233, 212, 96, .12); color: #e7d85f; font-weight: 800; font-size: 11px; letter-spacing: .05em; }
 .ai-bot-opportunity-label + p { margin-top: 10px; color: #a8c5be; font-size: 12px; line-height: 1.6; }
 .ai-bot-advice-panel small { display: block; margin-top: 14px; color: #64857e; font-size: 9px; }
+.ai-bot-advisor-error-state { padding: 14px; border: 1px solid rgba(217, 154, 43, .32); border-radius: 8px; background: rgba(217, 154, 43, .08); color: #e7b85b; }
+.ai-bot-advisor-error-state strong { display: block; font-size: 12px; }
+.ai-bot-advisor-error-state p { margin: 6px 0 0; color: #c4a870 !important; font-size: 11px !important; line-height: 1.55 !important; }
 .ai-bot-workspace-loading, .ai-bot-workspace-error { padding: 34px; color: #78948f; font-size: 12px; }
 .ai-bot-workspace-loading { display: flex; align-items: center; gap: 10px; }
 .ai-bot-workspace-error { border: 1px solid rgba(224, 90, 80, .35); color: #f08078; }
@@ -730,6 +749,10 @@ html[lang="ar"] .sort-popover {
 .ai-bot-summary-title { display: block; color: #58cbbd; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; margin-bottom: 10px; }
 .ai-bot-summary-holdings { color: #dceae6; font-size: 12px; line-height: 1.6; }
 .ai-bot-summary-holdings span { font-weight: 700; margin: 0 2px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.ai-bot-label-excellent { background: rgba(85, 209, 155, .18); color: #6bf2b7; }
+.ai-bot-label-solid { background: rgba(85, 209, 155, .10); color: #62d9a4; }
+.ai-bot-label-caution { background: rgba(217, 154, 43, .18); color: #f0bd58; }
+.ai-bot-label-avoid { background: rgba(224, 90, 80, .22); color: #ff8a80; }
 .ai-bot-label-strong { background: rgba(85, 209, 155, .14); color: #62d9a4; }
 .ai-bot-label-mixed { background: rgba(217, 154, 43, .14); color: #e7b85b; }
 .ai-bot-label-weak { background: rgba(224, 90, 80, .14); color: #f08078; }
@@ -842,6 +865,7 @@ html[lang="ar"] .sort-popover {
 .ai-bot-portfolio-next-review { margin-top: 12px; color: #64857e; font-size: 10px; font-style: italic; }
 
 @media (max-width: 700px) {
+  .ai-bot-grid-grades { grid-template-columns: 1fr; }
   .ai-bot-workspace { margin: 0 8px 18px; }
   .ai-bot-workspace-header { align-items: flex-start; flex-direction: column; padding: 16px; }
   .ai-bot-entity-nav { padding: 12px 16px; }

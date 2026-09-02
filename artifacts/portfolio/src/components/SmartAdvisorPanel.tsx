@@ -65,7 +65,7 @@ interface ComparisonVerdict {
   holding_return_percent: number | null;
   holding_asset_role: string;
   return_period: string;
-  signal: 'Strong' | 'Mixed' | 'Weak' | 'Insufficient Data';
+  signal: 'Excellent' | 'Solid' | 'Caution' | 'Avoid' | 'Insufficient Data';
   coverage_percent: number | null;
   data_completeness_warning: boolean;
   data_quality?: {
@@ -431,7 +431,7 @@ export function SmartAdvisorPanel() {
 
   const confidenceFor = (verdict: ComparisonVerdict | undefined) => {
     if (!verdict || verdict.data_completeness_warning || verdict.data_quality?.holding_snapshot_status !== 'fresh' || verdict.signal === 'Insufficient Data') return 'Limited';
-    if (verdict.data_quality.comparable_with_return_count < 3 || verdict.signal === 'Mixed') return 'Moderate';
+    if (verdict.data_quality.comparable_with_return_count < 3 || verdict.signal === 'Caution') return 'Moderate';
     return 'High';
   };
 

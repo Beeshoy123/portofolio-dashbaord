@@ -25,9 +25,10 @@ export interface AdvisorAlertContext {
   signalTrend?: SignalHistoryRow[] | null;
   portfolioSummary?: {
     summary_text: string;
-    strong_count: number;
-    mixed_count: number;
-    weak_count: number;
+    excellent_count: number;
+    solid_count: number;
+    caution_count: number;
+    avoid_count: number;
     insufficient_data_count: number;
   };
 }
@@ -52,10 +53,10 @@ STRICT RULES (violating any of these makes your response unusable):
    - If the position value is not provided in the data, or the gap is small/mixed, do NOT suggest a split — just give the qualitative recommendation from rule 3.
    - This is a suggestion for the person to consider, not an instruction — phrase it as "you could consider" not "you should".
 7. RISK PARITY PROTECTION — NEVER suggest rotating money from a lower-risk asset into a higher-risk asset based on return performance alone. The data below includes a computed risk tier (Low/Medium/High) for the holding and for each comparison entry, calculated from return volatility. FIX (bug #2 from audit): the priority order when data sources disagree was previously ambiguous — it is now explicit: ALWAYS base your risk assessment and any risk-related statements on the COMPUTED risk tier (labeled "computed risk" or "YOUR COMPUTED RISK TIER" in the data below) — this is the authoritative value for this rule. Where a "NOTE: our computed risk disagrees with FoudaLens's own label" appears for an entry, mention that disagreement exists (so the person knows there's uncertainty), but do NOT let FoudaLens's label change your actual recommendation — it is supporting context only, never the deciding input. If a higher-computed-risk asset is beating the holding, explicitly say that the outperformance comes with higher computed risk/volatility, and recommend maintaining the current risk profile unless the person actively wants to increase portfolio risk. Do not silently treat a higher-risk winner as a clean "better choice" — the risk difference is part of the answer, not a footnote.
-8. FUNDAMENTALS CONCERNS — Where an entry beating the holding has a "FUNDAMENTALS CONCERN" note (e.g. high debt, negative free cash flow, low_return_on_equity, shrinking_revenue, dilution), you MUST mention it explicitly when discussing that entry as an alternative — the same way rule 7 requires you to mention higher computed risk. A stock that's beating the holding on price return but carries a flagged fundamentals concern is not a clean "better choice" — say so plainly, the same way you already do for risk tier differences. Do not let a fundamentals concern change the win/lose count or the Strong/Mixed/Weak signal — Comparison Judge already decided that; your job is only to make sure the concern isn't hidden from the person reading the recommendation.
-9. THIN SAMPLE CAUTION — When you see a "thin_comparable_sample" flag in the FLAGS RAISED section, the Judge's "Strong" signal was capped at "Mixed" because there were fewer than 4 comparable entries with usable returns. Treat this the same way you treat risk mismatches (rule 7) and fundamentals concerns (rule 8): mention it explicitly in your recommendation. A holding that appears "Strong" on a thin sample should not receive the same confident recommendation as one backed by 6+ solid comparables. Lower your confidence score accordingly, and phrase the recommendation as "worth watching" rather than "hold with confidence".
+8. FUNDAMENTALS CONCERNS — Where an entry beating the holding has a "FUNDAMENTALS CONCERN" note (e.g. high debt, negative free cash flow, low_return_on_equity, shrinking_revenue, dilution), you MUST mention it explicitly when discussing that entry as an alternative — the same way rule 7 requires you to mention higher computed risk. A stock that's beating the holding on price return but carries a flagged fundamentals concern is not a clean "better choice" — say so plainly, the same way you already do for risk tier differences. Do not let a fundamentals concern change the win/lose count or the Performance grade — Comparison Judge already decided that; your job is only to make sure the concern isn't hidden from the person reading the recommendation.
+9. THIN SAMPLE CAUTION — When you see a "thin_comparable_sample" flag in the FLAGS RAISED section, the Judge's Performance grade was capped at "Mixed" because there were fewer than 4 comparable entries with usable returns. Treat this the same way you treat risk mismatches (rule 7) and fundamentals concerns (rule 8): mention it explicitly in your recommendation. A holding with a Strong Performance grade on a thin sample should not receive the same confident recommendation as one backed by 6+ solid comparables. Lower your confidence score accordingly, and phrase the recommendation as "worth watching" rather than "hold with confidence".
 10. REVERSAL RISK — When "reversal_risk_elevated" appears in FLAGS RAISED, this is a pattern-based observation (not a prediction): the recent trend is upward, but recent candlestick patterns include bearish signals. Describe this as a short-term technical pattern observation worth monitoring, not as a reason to immediately exit the position. Mention it as a note: "the recent trend shows some bearish pattern signals alongside the uptrend, which is worth watching in the near term." Do not frame this as advice to sell.
-11. TECHNICAL DIVERGENCE — When "technical_divergence" appears in FLAGS RAISED, you MUST explicitly mention the conflict between the strong comparison result and the recent downtrend. Lean toward "watch_and_wait" rather than a confident "hold" because the recent chart direction conflicts with the Strong comparison signal.
+11. TECHNICAL DIVERGENCE — When "technical_divergence" appears in FLAGS RAISED, you MUST explicitly mention the conflict between the strong Performance result and the recent downtrend. Lean toward "watch_and_wait" rather than a confident "hold" because the recent chart direction conflicts with the positive Performance grade.
 12. DATA QUALITY — Treat DATA QUALITY as a hard confidence constraint. If the holding snapshot is missing, failed, or stale, say that the recommendation is limited and do not present the comparison as definitive. If few comparables have usable returns, prefer "watch_and_wait" over a confident rotation suggestion. If a SIGNAL TREND shows a declining pattern (e.g. Strong, Strong, Mixed, Weak), lower your confidence score and mention this deterioration in your summary — a worsening trend is a meaningful context shift. Never invent missing values.
 13. CONFIDENCE CALIBRATION — Your confidence score (0-100) must reflect the amount of comparison data available, not just how clear the direction looks. If 'Comparable entries with usable returns' (from the DETERMINISTIC ANALYSIS BASIS section) is 0-2, confidence must be 40 or below. If it is 3-5, confidence must be 65 or below. Only use a confidence above 65 when 6 or more comparable entries have usable returns. This is a hard ceiling, not a suggestion — a confident-sounding summary with thin backing data must still report a low confidence number.
 14. STRUCTURED ACTION VOCABULARY & FIELDS:
@@ -68,6 +69,8 @@ DECISION must be exactly one of: consider_entry, consider_rotation, watch_and_wa
 WATCH_TRIGGER: when decision is watch_and_wait or consider_rotation, you MUST state one concrete, checkable condition drawn from data already provided (e.g. referencing the comparable count needed, a stated technical pattern, or 'next scheduled bot run') — do not invent a specific price percentage or number that was not provided to you in the DATA block. When decision is consider_entry or hold, return an empty string.
 
 DO_NOT_ACT_REASONS: when decision is watch_and_wait or hold, list 1-3 short reasons grounded in the DATA block for why no action is needed yet (e.g. 'still beating comparable peers', 'no reversal pattern confirmed'). When decision is consider_entry or consider_rotation, return an empty array.
+
+15. COMPLETE GRID REASONING — The DATA block includes the holding's complete available financial picture, performance grade, financial health grade, and technical grade. Explain the recommendation like a senior analyst mentoring a junior analyst: connect multiple metrics rather than listing them separately. If the final label is Caution or Avoid, identify specifically whether Financial Health or Technical caused the cap and cite the actual supplied numbers. Never invent a metric, peer average, or explanation that is not supported by the DATA block.
 `;
 
 export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are not a licensed financial advisor.
@@ -75,16 +78,16 @@ export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explai
 Your job is to produce a single structured JSON object — NOT narrative prose — that captures an overall portfolio-level read based on the DATA block provided. Use only the numbers and counts given to you; do not invent, estimate, or assume any figure not in the data.
 
 DECISION (exactly one of: "hold", "watch", "rebalance"):
-- "hold": portfolio composition looks fine overall. The count-based and value-based signal distributions are both reasonable (e.g. most holdings and most portfolio value sit in Strong or Mixed). No flags or reversal-risk clusters represent a major fraction of the total. No changes needed at the portfolio level.
-- "watch": something specific deserves attention but does not yet require action. Examples: a single holding with an outsized value weight is showing Weak signal; reversal-risk or technical divergence is present in 2+ holdings; flagged holdings represent more than a small fraction of the total. Name what specifically deserves watching in the summary.
-- "rebalance": allocation is meaningfully skewed and attention to redistribution across holdings is warranted. Use this when the size-weighted (By value) data diverges materially from the count-based picture — e.g. a large percentage of total portfolio value sits in Weak or Insufficient Data holdings while the count looks fine, or multiple holdings share the same flag or risk exposure. Reference the size-weighted data and the flags/coverage/reversal-risk aggregates from the DATA block when justifying this decision.
+- "hold": portfolio composition looks fine overall. The count-based and value-based final-label distributions are both reasonable (e.g. most holdings and most portfolio value sit in Excellent or Solid). No flags or reversal-risk clusters represent a major fraction of the total. No changes needed at the portfolio level.
+- "watch": something specific deserves attention but does not yet require action. Examples: a single holding with an outsized value weight is showing Caution or Avoid; reversal-risk or technical divergence is present in 2+ holdings; flagged holdings represent more than a small fraction of the total. Name what specifically deserves watching in the summary.
+- "rebalance": allocation is meaningfully skewed and attention to redistribution across holdings is warranted. Use this when the size-weighted (By value) data diverges materially from the count-based picture — e.g. a large percentage of total portfolio value sits in Caution, Avoid, or Insufficient Data holdings while the count looks fine, or multiple holdings share the same flag or risk exposure. Reference the size-weighted data and the flags/coverage/reversal-risk aggregates from the DATA block when justifying this decision.
 
 CONFIDENCE (0–100): Reflect the completeness and quality of the data.
 - If many holdings have Insufficient Data signal or missing coverage, or if a partial evaluation was noted, confidence must be lower (≤50).
 - If the data is complete and the signal distribution is clear, confidence can be higher.
 - Never assign confidence above 75 when the portfolio summary is based on a partial evaluation.
 
-SUMMARY: One concise paragraph (4–6 sentences). State the counts and value percentages of Strong, Mixed, Weak, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a count read of "mostly Strong" but a large value percentage sits in Weak), call this out explicitly — this is the single most decision-relevant signal. Name holdings that clearly carry or drag the portfolio when their signal is notably different from the rest. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If the prompt notes a partial evaluation, mention that the summary is based on partial data. Mention risk where it is present. For every opportunity candidate you mention by name, you MUST also state the single strongest reason this recommendation could be wrong — grounded in the DATA block (e.g. thin coverage, a fundamentals flag, a negative absolute return despite beating peers, or sector concentration with other listed opportunities). Do not invent a generic risk disclaimer — cite the specific data point. If genuinely no concerning data point exists for a candidate, state that explicitly (e.g. 'no significant concerns found in available data') rather than fabricating one. Never use hype, promise returns, or say buy or sell now.
+SUMMARY: One concise paragraph (4–6 sentences). State the counts and value percentages of Excellent, Solid, Caution, Avoid, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a count read of "mostly Excellent" but a large value percentage sits in Avoid), call this out explicitly — this is the single most decision-relevant signal. Name holdings that clearly carry or drag the portfolio when their final label is notably different from the rest. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If the prompt notes a partial evaluation, mention that the summary is based on partial data. Mention risk where it is present. For every opportunity candidate you mention by name, you MUST also state the single strongest reason this recommendation could be wrong — grounded in the DATA block (e.g. thin coverage, a fundamentals flag, a negative absolute return despite beating peers, or sector concentration with other listed opportunities). Do not invent a generic risk disclaimer — cite the specific data point. If genuinely no concerning data point exists for a candidate, state that explicitly (e.g. 'no significant concerns found in available data') rather than fabricating one. Never use hype, promise returns, or say buy or sell now.
 
 EVIDENCE (2–4 bullet points): Cite specific counts, tickers, or percentages drawn directly from the DATA block. Examples: "3 of 7 holdings are Weak", "62% of portfolio value is in Mixed holdings", "2 holdings have reversal_risk_elevated". Do not invent figures.
 
@@ -102,10 +105,10 @@ TONE AND CONSTRAINTS:
 export const OPPORTUNITY_ANALYSIS_SYSTEM_INSTRUCTIONS = `You are a financial explainer helping an Egyptian investor identify portfolio diversification opportunities. Your job is to explain PRE-CALCULATED opportunity facts, not discover them yourself.
 
 OPPORTUNITY ANALYSIS RULES:
-1. EXPLAIN FACTS ONLY — You will receive a deterministic analysis showing strong unheld entities, sector gaps, and performance comparisons. Explain these facts plainly; do not recalculate or contradict them.
+1. EXPLAIN FACTS ONLY — You will receive a deterministic analysis showing Excellent/Solid unheld entities, sector gaps, and performance comparisons. Explain these facts plainly; do not recalculate or contradict them.
 2. STRUCTURE YOUR RESPONSE as:
-   a) Strongest unheld candidates (Strong signal, ranked by return if tied)
-   b) Sector gaps (sectors with no Strong held exposure, with Strong unheld alternatives)
+  a) Strongest unheld candidates (Excellent/Solid final label, ranked by return if tied)
+  b) Sector gaps (sectors with no Excellent/Solid held exposure, with Excellent/Solid unheld alternatives)
    c) Underrepresented sectors (sectors with room for growth)
    d) Performance comparisons (unheld assets significantly outperforming current holdings)
 3. RISK TRANSPARENCY — Always mention when opportunities carry higher risk than the portfolio average. Never recommend rotating money FROM lower-risk assets INTO higher-risk assets on return performance alone.
@@ -144,13 +147,14 @@ export function buildPortfolioSummaryPrompt(
 
   const counts = verdicts.reduce(
     (result, verdict) => {
-      if (verdict.signal === "Strong") result.strong++;
-      else if (verdict.signal === "Mixed") result.mixed++;
-      else if (verdict.signal === "Weak") result.weak++;
+      if (verdict.signal === "Excellent") result.excellent++;
+      else if (verdict.signal === "Solid") result.solid++;
+      else if (verdict.signal === "Caution") result.caution++;
+      else if (verdict.signal === "Avoid") result.avoid++;
       else if (verdict.signal === "Insufficient Data") result.insufficientData++;
       return result;
     },
-    { strong: 0, mixed: 0, weak: 0, insufficientData: 0 },
+    { excellent: 0, solid: 0, caution: 0, avoid: 0, insufficientData: 0 },
   );
 
   const valueSums = verdicts.reduce(
@@ -158,29 +162,32 @@ export function buildPortfolioSummaryPrompt(
       const val = verdict.holding_current_value_egp;
       if (typeof val === "number" && Number.isFinite(val) && val > 0) {
         acc.totalValue += val;
-        if (verdict.signal === "Strong") acc.strongValue += val;
-        else if (verdict.signal === "Mixed") acc.mixedValue += val;
-        else if (verdict.signal === "Weak") acc.weakValue += val;
+        if (verdict.signal === "Excellent") acc.excellentValue += val;
+        else if (verdict.signal === "Solid") acc.solidValue += val;
+        else if (verdict.signal === "Caution") acc.cautionValue += val;
+        else if (verdict.signal === "Avoid") acc.avoidValue += val;
         else if (verdict.signal === "Insufficient Data") acc.insufficientValue += val;
       }
       return acc;
     },
-    { totalValue: 0, strongValue: 0, mixedValue: 0, weakValue: 0, insufficientValue: 0 },
+    { totalValue: 0, excellentValue: 0, solidValue: 0, cautionValue: 0, avoidValue: 0, insufficientValue: 0 },
   );
 
   const countParts: string[] = [];
-  if (counts.strong > 0) countParts.push(`${counts.strong} Strong`);
-  if (counts.mixed > 0) countParts.push(`${counts.mixed} Mixed`);
-  if (counts.weak > 0) countParts.push(`${counts.weak} Weak`);
+  if (counts.excellent > 0) countParts.push(`${counts.excellent} Excellent`);
+  if (counts.solid > 0) countParts.push(`${counts.solid} Solid`);
+  if (counts.caution > 0) countParts.push(`${counts.caution} Caution`);
+  if (counts.avoid > 0) countParts.push(`${counts.avoid} Avoid`);
   if (counts.insufficientData > 0) countParts.push(`${counts.insufficientData} Insufficient Data`);
   const countStr = countParts.length > 0 ? countParts.join(", ") : "0 holdings";
 
   let valueStr = "unavailable (holding values not provided)";
   if (valueSums.totalValue > 0) {
     const valueParts: string[] = [];
-    if (valueSums.strongValue > 0) valueParts.push(`${((valueSums.strongValue / valueSums.totalValue) * 100).toFixed(1)}% in Strong holdings`);
-    if (valueSums.mixedValue > 0) valueParts.push(`${((valueSums.mixedValue / valueSums.totalValue) * 100).toFixed(1)}% in Mixed holdings`);
-    if (valueSums.weakValue > 0) valueParts.push(`${((valueSums.weakValue / valueSums.totalValue) * 100).toFixed(1)}% in Weak holdings`);
+    if (valueSums.excellentValue > 0) valueParts.push(`${((valueSums.excellentValue / valueSums.totalValue) * 100).toFixed(1)}% in Excellent holdings`);
+    if (valueSums.solidValue > 0) valueParts.push(`${((valueSums.solidValue / valueSums.totalValue) * 100).toFixed(1)}% in Solid holdings`);
+    if (valueSums.cautionValue > 0) valueParts.push(`${((valueSums.cautionValue / valueSums.totalValue) * 100).toFixed(1)}% in Caution holdings`);
+    if (valueSums.avoidValue > 0) valueParts.push(`${((valueSums.avoidValue / valueSums.totalValue) * 100).toFixed(1)}% in Avoid holdings`);
     if (valueSums.insufficientValue > 0) valueParts.push(`${((valueSums.insufficientValue / valueSums.totalValue) * 100).toFixed(1)}% in Insufficient Data`);
     valueStr = valueParts.length > 0 ? valueParts.join(", ") : "0%";
   }
@@ -193,14 +200,14 @@ export function buildPortfolioSummaryPrompt(
   if (opportunities?.strong_unheld) {
     opportunityLines = opportunities.strong_unheld.length > 0
       ? opportunities.strong_unheld.slice(0, 3).map((verdict) => 
-          `- Strong unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}`
+          `- Excellent/Solid unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}`
         )
-      : ["- No strong unheld opportunities were detected in the current run."];
+      : ["- No Excellent/Solid unheld opportunities were detected in the current run."];
   } else {
-    const strongUnheld = verdicts.filter((verdict) => verdict.signal === "Strong");
+    const strongUnheld = verdicts.filter((verdict) => verdict.signal === "Excellent" || verdict.signal === "Solid");
     opportunityLines = strongUnheld.length > 0
-      ? strongUnheld.map((verdict) => `- Strong unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}`)
-      : ["- No strong unheld opportunities were detected in the current run."];
+      ? strongUnheld.map((verdict) => `- Excellent/Solid unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}`)
+      : ["- No Excellent/Solid unheld opportunities were detected in the current run."];
   }
 
   // Build underrepresented sectors context
@@ -256,6 +263,58 @@ function formatGroupForPrompt(group: ComparisonGroup): string {
   return `${label[group.group_type]}:\n${lines.join("\n")}`;
 }
 
+function formatFundamentalValue(value: number | string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "unavailable";
+  return Number.isFinite(Number(value)) ? String(value) : "unavailable";
+}
+
+function buildFundamentalsBlock(verdict: HoldingVerdict): string {
+  const fundamentals = verdict.holding_fundamentals;
+  const fields = [
+    ["P/E", fundamentals?.pe_ratio],
+    ["Forward P/E", fundamentals?.forward_pe],
+    ["Debt/Equity", fundamentals?.debt_to_equity],
+    ["Current ratio", fundamentals?.current_ratio],
+    ["ROE %", fundamentals?.roe_percent],
+    ["Free cash flow", fundamentals?.free_cash_flow],
+    ["Net income", fundamentals?.net_income],
+    ["Net income growth %", fundamentals?.net_income_growth_percent],
+    ["Revenue growth %", fundamentals?.revenue_growth_percent],
+    ["Dividend yield %", fundamentals?.dividend_yield_percent],
+    ["Beta", fundamentals?.beta],
+    ["Analyst rating", fundamentals?.analyst_rating],
+    ["Price target upside %", fundamentals?.price_target_upside_percent],
+    ["Shares change %", fundamentals?.shares_change_percent],
+  ];
+  const holdingLines = fields.map(([label, value]) => `- ${label}: ${formatFundamentalValue(value as number | string | null | undefined)}`);
+
+  const peerEntries = verdict.groups
+    .flatMap((group) => group.entries)
+    .map((entry) => entry.fundamentals)
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+  const peerMetrics = [
+    ["ROE %", "roe_percent"],
+    ["Revenue growth %", "revenue_growth_percent"],
+    ["Debt/Equity", "debt_to_equity"],
+  ] as const;
+  const peerLines = peerMetrics.map(([label, key]) => {
+    const values = peerEntries
+      .map((entry) => entry[key])
+      .filter((value): value is number => value !== null && Number.isFinite(value));
+    const average = values.length > 0
+      ? values.reduce((sum, value) => sum + value, 0) / values.length
+      : null;
+    return `- Peer average ${label}: ${average === null ? "unavailable" : average.toFixed(2)} (${values.length} usable peers)`;
+  });
+
+  return `
+HOLDING FUNDAMENTALS (all available fields; unavailable means no value was collected):
+${holdingLines.join("\n")}
+PEER FUNDAMENTALS SUMMARY (same comparison groups; simple averages, not z-scores):
+${peerLines.join("\n")}
+  `.trim();
+}
+
 function buildAnalysisBasis(verdict: HoldingVerdict): string {
   const entries = verdict.groups.flatMap((group) => group.entries);
   const usableEntries = entries.filter((entry) => entry.gap_percent !== null);
@@ -277,6 +336,9 @@ function buildAnalysisBasis(verdict: HoldingVerdict): string {
   - Comparable entries with usable returns: ${usableEntries.length}/${entries.length}
   - Coverage: ${verdict.coverage_percent !== null ? `${verdict.coverage_percent.toFixed(1)}%` : "unavailable"}
   - Judge signal: ${verdict.signal}
+  - Performance grade: ${verdict.performance_grade}
+  - Financial Health grade: ${verdict.financial_health_grade}
+  - Technical grade: ${verdict.technical_grade}
   - Gap range versus comparables: ${largestDeficit ? `${largestDeficit.gap_percent!.toFixed(1)}pp to ${largestLead!.gap_percent!.toFixed(1)}pp` : "unavailable"}
   - Largest lead: ${largestLead ? `${largestLead.ticker} (${largestLead.gap_percent!.toFixed(1)}pp)` : "unavailable"}
   - Largest deficit: ${largestDeficit ? `${largestDeficit.ticker} (${largestDeficit.gap_percent!.toFixed(1)}pp)` : "unavailable"}
@@ -346,15 +408,17 @@ YOUR RETURN: ${verdict.holding_return_percent !== null ? verdict.holding_return_
 CURRENT POSITION VALUE: ${verdict.holding_current_value_egp !== null ? verdict.holding_current_value_egp.toLocaleString() + " EGP" : "not available — do not suggest a rotation split without this"}
 YOUR COMPUTED RISK TIER: ${verdict.holding_risk_tier ?? "unknown"}
 TECHNICAL ANALYSIS: ${verdict.technical_signal ? `${verdict.technical_signal.trend}; ${verdict.technical_signal.patterns.length > 0 ? verdict.technical_signal.patterns.map((pattern) => `${pattern.direction} ${pattern.name} (${pattern.date})`).join(", ") : "no recent candlestick pattern"}; confidence ${verdict.technical_signal.confidence !== null ? verdict.technical_signal.confidence.toFixed(2) : "unavailable"}` : "unavailable — do not infer chart direction"}
+${buildFundamentalsBlock(verdict)}
 DATA QUALITY: holding snapshot ${verdict.data_quality.holding_snapshot_status}${verdict.data_quality.holding_snapshot_age_hours !== null ? ` (${verdict.data_quality.holding_snapshot_age_hours.toFixed(1)} hours old)` : ""}; ${verdict.data_quality.comparable_with_return_count}/${verdict.data_quality.comparable_count} comparables have usable returns
 
 COMPARISON JUDGE'S SIGNAL: ${verdict.signal}
 FLAGS RAISED: ${verdict.flags.length > 0 ? verdict.flags.join(", ") : "none"}${alerts?.signalTrend && alerts.signalTrend.length >= 2 ? `\nSIGNAL TREND (last ${alerts.signalTrend.length} runs, oldest to newest): ${alerts.signalTrend.map((row) => row.signal).join(", ")}` : ""}
 ${alerts?.portfolioSummary ? `
 PORTFOLIO-WIDE COMPARISON JUDGE SUMMARY (same run; use as context, do not repeat every detail):
-- Strong holdings: ${alerts.portfolioSummary.strong_count}
-- Mixed holdings: ${alerts.portfolioSummary.mixed_count}
-- Weak holdings: ${alerts.portfolioSummary.weak_count}
+- Excellent holdings: ${alerts.portfolioSummary.excellent_count}
+- Solid holdings: ${alerts.portfolioSummary.solid_count}
+- Caution holdings: ${alerts.portfolioSummary.caution_count}
+- Avoid holdings: ${alerts.portfolioSummary.avoid_count}
 - Insufficient Data holdings: ${alerts.portfolioSummary.insufficient_data_count}
 - Overall read: ${alerts.portfolioSummary.summary_text}` : ""}
 

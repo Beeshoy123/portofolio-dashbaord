@@ -2,6 +2,7 @@
 // Core data structures for portfolio comparison verdicts and alert system
 
 import type { FundamentalsSnapshot } from "./fundamentalsTypes";
+import type { FinancialHealthGrade } from "./financialHealth";
 
 export type AssetRole =
   | "money_market_reserve"
@@ -63,7 +64,11 @@ export interface HoldingVerdict {
   };
   return_period: "return_1y" | "return_6m" | "return_3m";
   groups: ComparisonGroup[];
-  signal: "Strong" | "Mixed" | "Weak" | "Insufficient Data";
+  signal: "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data";
+  performance_grade: "Strong" | "Mixed" | "Weak" | "Insufficient Data";
+  financial_health_grade: FinancialHealthGrade;
+  technical_grade: "Red Flag" | "Weak" | "Strong" | "Neutral" | "Insufficient Data";
+  final_label: "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data";
   coverage_percent: number | null;
   flags: string[];
   data_completeness_warning: boolean;

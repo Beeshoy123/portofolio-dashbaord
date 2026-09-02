@@ -19,7 +19,13 @@ import { pool } from "../lib/dbPool";
 // watched it fire a few times (same caveat as STALE_DAYS in timeStop.ts).
 const LOOKBACK_DAYS = 30;
 
-const SIGNAL_RANK: Record<string, number> = { Weak: 0, Mixed: 1, Strong: 2 };
+const SIGNAL_RANK: Record<string, number> = {
+  "Insufficient Data": 0,
+  Avoid: 1,
+  Caution: 2,
+  Solid: 3,
+  Excellent: 4,
+};
 
 interface VerdictHistoryRow {
   signal: string;

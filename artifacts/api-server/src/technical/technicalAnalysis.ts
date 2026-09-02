@@ -1,5 +1,9 @@
 import { allPatterns, patternChain } from "candlestick";
 import { pool } from "../lib/dbPool";
+
+// Role note: Chart Reader is a Gatherer. It collects candles, trend, and
+// pattern evidence for the Deciders; it does not produce investment labels.
+
 const YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/";
 
 type Candle = { date: string; open: number; high: number; low: number; close: number; volume: number | null };

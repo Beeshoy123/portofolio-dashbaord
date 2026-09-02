@@ -1,6 +1,9 @@
 // Comparison Judge — Core Verdict Engine
 // Compares each holding against peers, benchmarks, and direct stocks
 // Outputs verdicts that the Alert System monitors and Smart Advisor uses
+// Role note: Comparison Judge is a Decider. It consumes the raw fields
+// collected by the Gatherers (Price Checker and Chart Reader) and produces
+// the multi-factor verdict; it must not be treated as a data collector.
 //
 // FILE STRUCTURE:
 // ├── Types & Constants
@@ -12,6 +15,87 @@
 import { pool } from "../lib/dbPool";
 import type { AssetRole, HoldingVerdict, ComparisonGroup, ComparisonEntry, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
+import { computeFinancialHealthGrade } from "./financialHealth";
+
+export type TechnicalGrade =
+  | "Red Flag"
+  | "Weak"
+  | "Strong"
+  | "Neutral"
+  | "Insufficient Data";
+
+export function computeTechnicalGrade(
+  technicalSignal: TechnicalSignal | null,
+): TechnicalGrade {
+  if (!technicalSignal || !technicalSignal.raw_fetch_ok) {
+    return "Insufficient Data";
+  }
+
+  const hasBearishPattern = technicalSignal.patterns.some(
+    (pattern) => pattern.direction === "bearish",
+  );
+
+  if (technicalSignal.trend === "downtrend" && hasBearishPattern) {
+    return "Red Flag";
+  }
+
+  if (
+    technicalSignal.trend === "downtrend"
+    || technicalSignal.reversal_risk === "elevated"
+  ) {
+    return "Weak";
+  }
+
+  if (
+    technicalSignal.trend === "uptrend"
+    && !hasBearishPattern
+  ) {
+    return "Strong";
+  }
+
+  return "Neutral";
+}
+
+export function combineIntoFinalLabel(
+  performanceGrade: "Strong" | "Mixed" | "Weak" | "Insufficient Data",
+  financialHealthGrade: "Red Flag" | "Weak" | "Strong" | "Neutral" | "Insufficient Data",
+  technicalGrade: TechnicalGrade,
+): "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data" {
+  if (performanceGrade === "Insufficient Data") {
+    return "Insufficient Data";
+  }
+
+  // Disqualification cap: a serious weakness in the business or chart should
+  // never be hidden by an otherwise strong return profile.
+  if (financialHealthGrade === "Red Flag" || technicalGrade === "Red Flag") {
+    return "Avoid";
+  }
+
+  if (
+    performanceGrade === "Strong"
+    && financialHealthGrade !== "Weak"
+    && financialHealthGrade !== "Insufficient Data"
+    && technicalGrade !== "Weak"
+  ) {
+    return "Excellent";
+  }
+
+  if (
+    (performanceGrade === "Strong" || performanceGrade === "Mixed")
+    && (financialHealthGrade === "Strong" || financialHealthGrade === "Neutral")
+  ) {
+    return "Solid";
+  }
+
+  if (
+    performanceGrade === "Strong"
+    && (financialHealthGrade === "Weak" || technicalGrade === "Weak")
+  ) {
+    return "Caution";
+  }
+
+  return "Caution";
+}
 
 // Minimum number of comparable entries (with usable returns) needed to issue a "Strong" signal.
 // Below this threshold, signals are capped at "Mixed" even if win rate would qualify as "Strong".
@@ -146,8 +230,8 @@ async function getLatestSnapshots(runId?: number): Promise<Map<number, SnapshotR
 async function getTechnicalSignals(runId?: number): Promise<Map<number, TechnicalSignal>> {
   if (runId === undefined) return new Map();
   try {
-    const result = await pool.query<{ watchlist_id: number; candle_date: string | null; trend: TechnicalSignal["trend"]; patterns: unknown; confidence: string | number | null; raw_fetch_ok: boolean }>(
-      `SELECT DISTINCT ON (watchlist_id) watchlist_id, candle_date, trend, patterns, confidence, raw_fetch_ok
+    const result = await pool.query<{ watchlist_id: number; candle_date: string | null; trend: TechnicalSignal["trend"]; patterns: unknown; confidence: string | number | null; reversal_risk: TechnicalSignal["reversal_risk"] | null; raw_fetch_ok: boolean }>(
+      `SELECT DISTINCT ON (watchlist_id) watchlist_id, candle_date, trend, patterns, confidence, reversal_risk, raw_fetch_ok
        FROM technical_signals WHERE run_id = $1 ORDER BY watchlist_id, created_at DESC`,
       [runId],
     );
@@ -157,7 +241,7 @@ async function getTechnicalSignals(runId?: number): Promise<Map<number, Technica
       patterns: Array.isArray(row.patterns) ? row.patterns as TechnicalSignal["patterns"] : [],
       confidence: row.confidence === null ? null : Number(row.confidence),
       raw_fetch_ok: row.raw_fetch_ok,
-      reversal_risk: "none",
+      reversal_risk: row.reversal_risk ?? "none",
     }]));
   } catch (error) {
     console.warn("[judge] technical_signals unavailable; continuing without chart evidence", error);
@@ -294,11 +378,12 @@ async function judgeHolding(
   if (loses > beats && comparableEntries.length > 0) flags.push("underperforming_comparables");
   if (groups.some((group) => group.incomplete_count > 0)) flags.push("incomplete_comparison_data");
 
-  // Calculate raw signal based on win rate, then apply minimum sample size threshold.
-  // This prevents thin-sample false confidence: a "Strong" from 3-of-5 thin comparables
-  // is capped at "Mixed" to reflect the reduced reliability.
-  // Note: we only cap upward ("Strong" → "Mixed"), never downgrade "Mixed" or "Weak".
-  let signal: "Strong" | "Mixed" | "Weak" | "Insufficient Data" = comparableEntries.length === 0
+  // Performance category: calculate raw return-based grade from win rate,
+  // then apply the minimum sample-size threshold. This keeps the proven
+  // return logic intact while renaming it to the new category vocabulary.
+  // Note: we only cap upward ("Strong" → "Mixed"), never downgrade
+  // "Mixed" or "Weak".
+  let performanceGrade: "Strong" | "Mixed" | "Weak" | "Insufficient Data" = comparableEntries.length === 0
     ? "Insufficient Data"
     : beats / comparableEntries.length >= 0.6
       ? "Strong"
@@ -306,12 +391,14 @@ async function judgeHolding(
         ? "Mixed"
         : "Weak";
 
-  // Cap "Strong" signal at "Mixed" if the comparable sample is below the minimum threshold.
-  if (signal === "Strong" && comparableEntries.length < MIN_RELIABLE_COMPARABLES) {
-    signal = "Mixed";
+  // Cap "Strong" performance at "Mixed" if the comparable sample is below
+  // the minimum threshold.
+  if (performanceGrade === "Strong" && comparableEntries.length < MIN_RELIABLE_COMPARABLES) {
+    performanceGrade = "Mixed";
     flags.push("thin_comparable_sample");
   }
-  if (signal === "Strong" && technicalSignals.get(holding.id)?.trend === "downtrend") {
+
+  if (performanceGrade === "Strong" && technicalSignals.get(holding.id)?.trend === "downtrend") {
     flags.push("technical_divergence");
   }
   if (technicalSignals.get(holding.id)?.reversal_risk === "elevated") {
@@ -342,6 +429,26 @@ async function judgeHolding(
     ? buildFundamentalsSnapshot(fundamentals.get(holding.id), holding.sector)
     : null;
 
+  const peerGroup = groups.flatMap((group) => group.entries.map((entry) => ({
+    fundamentals: entry.fundamentals,
+  })));
+
+  const financialHealthGrade = computeFinancialHealthGrade(
+    { fundamentals: holdingFundamentals },
+    peerGroup,
+  );
+
+  const technicalGrade = computeTechnicalGrade(technicalSignals.get(holding.id) ?? null);
+  const finalLabel = combineIntoFinalLabel(
+    performanceGrade,
+    financialHealthGrade,
+    technicalGrade,
+  );
+  // Final combined signal now reflects the multi-factor grid, while the
+  // performance_grade field continues to preserve the original return-only
+  // breakdown for debugging and comparison.
+  const signal: HoldingVerdict["signal"] = finalLabel;
+
   const verdict: HoldingVerdict = {
     holding_ticker: holding.ticker,
     holding_name: holding.name,
@@ -362,6 +469,10 @@ async function judgeHolding(
     return_period: period,
     groups,
     signal,
+    performance_grade: performanceGrade,
+    financial_health_grade: financialHealthGrade,
+    technical_grade: technicalGrade,
+    final_label: finalLabel,
     coverage_percent: coveragePercent,
     flags,
     data_completeness_warning: holdingReturn === null || groups.some((group) => group.incomplete_count > 0),
@@ -463,7 +574,7 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
     const strong_unheld = allVerdicts.filter(
       (verdict) =>
         !watchlistMap.get(verdict.holding_ticker.toUpperCase() as any)?.is_held &&
-        verdict.signal === "Strong"
+        (verdict.signal === "Excellent" || verdict.signal === "Solid")
     );
 
     // Compute sector allocation for held holdings
@@ -532,7 +643,8 @@ export async function judgeOneHolding(
     const holding = watchlist.find((row) => row.ticker === ticker.toUpperCase());
     if (!holding) return null;
     if (isEmergencyReserveFund(holding)) return null;
-    return await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, runId);
+    const portfolioValueBreakdown = await getPortfolioValueBreakdown();
+    return await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, portfolioValueBreakdown, runId);
   } catch (err) {
     console.error(`[judgeOneHolding] failed for ${ticker}:`, err);
     throw new Error(`Comparison Judge could not evaluate ${ticker}`, { cause: err });

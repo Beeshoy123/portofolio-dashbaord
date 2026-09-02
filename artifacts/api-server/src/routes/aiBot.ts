@@ -136,18 +136,20 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           ];
           let portfolioSummaryContext: {
             summary_text: string;
-            strong_count: number;
-            mixed_count: number;
-            weak_count: number;
+            excellent_count: number;
+            solid_count: number;
+            caution_count: number;
+            avoid_count: number;
             insufficient_data_count: number;
           } | undefined;
 
           // Portfolio Summary must succeed — it's essential for per-holding context
           const counts = verdicts.reduce(
             (result, verdict) => {
-              if (verdict.signal === "Strong") result.strong++;
-              else if (verdict.signal === "Mixed") result.mixed++;
-              else if (verdict.signal === "Weak") result.weak++;
+              if (verdict.signal === "Excellent") result.excellent++;
+              else if (verdict.signal === "Solid") result.solid++;
+              else if (verdict.signal === "Caution") result.caution++;
+              else if (verdict.signal === "Avoid") result.avoid++;
               else if (verdict.signal === "Insufficient Data") result.insufficientData++;
 
               if (verdict.flags && verdict.flags.length > 0) {
@@ -167,9 +169,10 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               return result;
             },
             {
-              strong: 0,
-              mixed: 0,
-              weak: 0,
+              excellent: 0,
+              solid: 0,
+              caution: 0,
+              avoid: 0,
               insufficientData: 0,
               flaggedCount: 0,
               coverageSum: 0,
@@ -191,30 +194,35 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               const val = verdict.holding_current_value_egp;
               if (typeof val === "number" && Number.isFinite(val) && val > 0) {
                 acc.totalValue += val;
-                if (verdict.signal === "Strong") acc.strongValue += val;
-                else if (verdict.signal === "Mixed") acc.mixedValue += val;
-                else if (verdict.signal === "Weak") acc.weakValue += val;
+                if (verdict.signal === "Excellent") acc.excellentValue += val;
+                else if (verdict.signal === "Solid") acc.solidValue += val;
+                else if (verdict.signal === "Caution") acc.cautionValue += val;
+                else if (verdict.signal === "Avoid") acc.avoidValue += val;
                 else if (verdict.signal === "Insufficient Data") acc.insufficientValue += val;
               }
               return acc;
             },
             {
               totalValue: 0,
-              strongValue: 0,
-              mixedValue: 0,
-              weakValue: 0,
+              excellentValue: 0,
+              solidValue: 0,
+              cautionValue: 0,
+              avoidValue: 0,
               insufficientValue: 0,
             },
           );
 
-          const strongValuePercent = valueSums.totalValue > 0
-            ? Number(((valueSums.strongValue / valueSums.totalValue) * 100).toFixed(1))
+          const excellentValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.excellentValue / valueSums.totalValue) * 100).toFixed(1))
             : null;
-          const mixedValuePercent = valueSums.totalValue > 0
-            ? Number(((valueSums.mixedValue / valueSums.totalValue) * 100).toFixed(1))
+          const solidValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.solidValue / valueSums.totalValue) * 100).toFixed(1))
             : null;
-          const weakValuePercent = valueSums.totalValue > 0
-            ? Number(((valueSums.weakValue / valueSums.totalValue) * 100).toFixed(1))
+          const cautionValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.cautionValue / valueSums.totalValue) * 100).toFixed(1))
+            : null;
+          const avoidValuePercent = valueSums.totalValue > 0
+            ? Number(((valueSums.avoidValue / valueSums.totalValue) * 100).toFixed(1))
             : null;
           const insufficientValuePercent = valueSums.totalValue > 0
             ? Number(((valueSums.insufficientValue / valueSums.totalValue) * 100).toFixed(1))
@@ -242,29 +250,32 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               const fallbackSummaryText = `Only ${succeededCount} of ${totalExpectedHoldings} holdings could be judged this run — not enough data for a reliable portfolio summary. Retry the run for a complete picture.`;
               portfolioSummaryContext = {
                 summary_text: fallbackSummaryText,
-                strong_count: counts.strong,
-                mixed_count: counts.mixed,
-                weak_count: counts.weak,
+                excellent_count: counts.excellent,
+                solid_count: counts.solid,
+                caution_count: counts.caution,
+                avoid_count: counts.avoid,
                 insufficient_data_count: counts.insufficientData,
               };
               await pool.query(
                 `INSERT INTO portfolio_summaries
-                  (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent, decision, confidence, evidence, risks, next_review_days)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                  (run_id, summary_text, excellent_count, solid_count, caution_count, avoid_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, excellent_value_percent, solid_value_percent, caution_value_percent, avoid_value_percent, insufficient_value_percent, decision, confidence, evidence, risks, next_review_days)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
                  ON CONFLICT (run_id) DO UPDATE SET
                    summary_text = EXCLUDED.summary_text,
-                   strong_count = EXCLUDED.strong_count,
-                   mixed_count = EXCLUDED.mixed_count,
-                   weak_count = EXCLUDED.weak_count,
+                   excellent_count = EXCLUDED.excellent_count,
+                   solid_count = EXCLUDED.solid_count,
+                   caution_count = EXCLUDED.caution_count,
+                   avoid_count = EXCLUDED.avoid_count,
                    insufficient_data_count = EXCLUDED.insufficient_data_count,
                    model_used = EXCLUDED.model_used,
                    flagged_count = EXCLUDED.flagged_count,
                    avg_coverage_percent = EXCLUDED.avg_coverage_percent,
                    reversal_risk_count = EXCLUDED.reversal_risk_count,
                    divergence_count = EXCLUDED.divergence_count,
-                   strong_value_percent = EXCLUDED.strong_value_percent,
-                   mixed_value_percent = EXCLUDED.mixed_value_percent,
-                   weak_value_percent = EXCLUDED.weak_value_percent,
+                   excellent_value_percent = EXCLUDED.excellent_value_percent,
+                   solid_value_percent = EXCLUDED.solid_value_percent,
+                   caution_value_percent = EXCLUDED.caution_value_percent,
+                   avoid_value_percent = EXCLUDED.avoid_value_percent,
                    insufficient_value_percent = EXCLUDED.insufficient_value_percent,
                    decision = EXCLUDED.decision,
                    confidence = EXCLUDED.confidence,
@@ -275,18 +286,20 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 [
                   runId,
                   fallbackSummaryText,
-                  counts.strong,
-                  counts.mixed,
-                  counts.weak,
+                  counts.excellent,
+                  counts.solid,
+                  counts.caution,
+                  counts.avoid,
                   counts.insufficientData,
                   "deterministic-fallback",
                   counts.flaggedCount,
                   avgCoveragePercent,
                   counts.reversalRiskCount,
                   counts.divergenceCount,
-                  strongValuePercent,
-                  mixedValuePercent,
-                  weakValuePercent,
+                  excellentValuePercent,
+                  solidValuePercent,
+                  cautionValuePercent,
+                  avoidValuePercent,
                   insufficientValuePercent,
                   null, // decision — not available for deterministic fallback
                   null, // confidence
@@ -336,35 +349,38 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 portfolioNextReviewDays = portfolioSummary.next_review_days;
               } catch (genError) {
                 console.error("[ai-bot] generatePortfolioSummary failed; falling back to deterministic summary:", genError);
-                summaryText = `Portfolio summary could not be generated by AI for this run. Evaluated ${succeededCount} of ${totalExpectedHoldings} holdings: ${counts.strong} Strong, ${counts.mixed} Mixed, ${counts.weak} Weak, ${counts.insufficientData} Insufficient Data.`;
+                summaryText = `Portfolio summary could not be generated by AI for this run. Evaluated ${succeededCount} of ${totalExpectedHoldings} holdings: ${counts.excellent} Excellent, ${counts.solid} Solid, ${counts.caution} Caution, ${counts.avoid} Avoid, ${counts.insufficientData} Insufficient Data.`;
                 modelUsed = "fallback";
               }
 
               portfolioSummaryContext = {
                 summary_text: summaryText,
-                strong_count: counts.strong,
-                mixed_count: counts.mixed,
-                weak_count: counts.weak,
+                excellent_count: counts.excellent,
+                solid_count: counts.solid,
+                caution_count: counts.caution,
+                avoid_count: counts.avoid,
                 insufficient_data_count: counts.insufficientData,
               };
               await pool.query(
                 `INSERT INTO portfolio_summaries
-                  (run_id, summary_text, strong_count, mixed_count, weak_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent, decision, confidence, evidence, risks, next_review_days)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+                  (run_id, summary_text, excellent_count, solid_count, caution_count, avoid_count, insufficient_data_count, model_used, flagged_count, avg_coverage_percent, reversal_risk_count, divergence_count, excellent_value_percent, solid_value_percent, caution_value_percent, avoid_value_percent, insufficient_value_percent, decision, confidence, evidence, risks, next_review_days)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
                  ON CONFLICT (run_id) DO UPDATE SET
                    summary_text = EXCLUDED.summary_text,
-                   strong_count = EXCLUDED.strong_count,
-                   mixed_count = EXCLUDED.mixed_count,
-                   weak_count = EXCLUDED.weak_count,
+                   excellent_count = EXCLUDED.excellent_count,
+                   solid_count = EXCLUDED.solid_count,
+                   caution_count = EXCLUDED.caution_count,
+                   avoid_count = EXCLUDED.avoid_count,
                    insufficient_data_count = EXCLUDED.insufficient_data_count,
                    model_used = EXCLUDED.model_used,
                    flagged_count = EXCLUDED.flagged_count,
                    avg_coverage_percent = EXCLUDED.avg_coverage_percent,
                    reversal_risk_count = EXCLUDED.reversal_risk_count,
                    divergence_count = EXCLUDED.divergence_count,
-                   strong_value_percent = EXCLUDED.strong_value_percent,
-                   mixed_value_percent = EXCLUDED.mixed_value_percent,
-                   weak_value_percent = EXCLUDED.weak_value_percent,
+                   excellent_value_percent = EXCLUDED.excellent_value_percent,
+                   solid_value_percent = EXCLUDED.solid_value_percent,
+                   caution_value_percent = EXCLUDED.caution_value_percent,
+                   avoid_value_percent = EXCLUDED.avoid_value_percent,
                    insufficient_value_percent = EXCLUDED.insufficient_value_percent,
                    decision = EXCLUDED.decision,
                    confidence = EXCLUDED.confidence,
@@ -375,18 +391,20 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 [
                   runId,
                   summaryText,
-                  counts.strong,
-                  counts.mixed,
-                  counts.weak,
+                  counts.excellent,
+                  counts.solid,
+                  counts.caution,
+                  counts.avoid,
                   counts.insufficientData,
                   modelUsed,
                   counts.flaggedCount,
                   avgCoveragePercent,
                   counts.reversalRiskCount,
                   counts.divergenceCount,
-                  strongValuePercent,
-                  mixedValuePercent,
-                  weakValuePercent,
+                  excellentValuePercent,
+                  solidValuePercent,
+                  cautionValuePercent,
+                  avoidValuePercent,
                   insufficientValuePercent,
                   portfolioDecision,
                   portfolioConfidence,
@@ -444,6 +462,36 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             } catch (error) {
               advisorFailureCount++;
               console.error(`[ai-bot] Smart Advisor failed for ${verdict.holding_ticker}`, error);
+              try {
+                await pool.query(
+                  `INSERT INTO advisor_recommendations
+                    (watchlist_id, recommendation_text, model_used, run_id,
+                     decision, confidence, evidence, risks, next_review_days,
+                     watch_trigger, do_not_act_reasons, thesis_risk)
+                   SELECT id, $1, $2, $4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+                   FROM comparison_watchlist
+                   WHERE ticker = $3
+                   ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
+                   DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
+                                 model_used = EXCLUDED.model_used,
+                                 decision = NULL,
+                                 confidence = NULL,
+                                 evidence = NULL,
+                                 risks = NULL,
+                                 next_review_days = NULL,
+                                 watch_trigger = NULL,
+                                 do_not_act_reasons = NULL,
+                                 thesis_risk = NULL`,
+                  [
+                    "Recommendation could not be generated this run — see server logs for details.",
+                    "error",
+                    verdict.holding_ticker,
+                    runId,
+                  ],
+                );
+              } catch (persistenceError) {
+                console.error(`[ai-bot] Could not persist Smart Advisor failure for ${verdict.holding_ticker}`, persistenceError);
+              }
             }
           });
 
@@ -567,4 +615,4 @@ router.get("/ai-bot/status", async (_req, res) => {
   }
 });
 
-export default router;
+export default router;

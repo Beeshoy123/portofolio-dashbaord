@@ -1,5 +1,9 @@
 // Comparison Judge — Scraper Orchestrator
 //
+// Role note: Price Checker is a Gatherer. It collects and persists raw
+// market and fundamentals fields for the Deciders; it does not grade assets
+// or make portfolio decisions.
+//
 // Fundamentals come from stockanalysis.com and are stored alongside the
 // FoudaLens comparison snapshots for the downstream judge and advisor.
 //

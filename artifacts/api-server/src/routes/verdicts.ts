@@ -36,10 +36,10 @@ router.get("/portfolio-summary", async (req, res) => {
   }
 
   try {
-    let query = `SELECT id, run_id, summary_text, strong_count, mixed_count, weak_count,
-                        insufficient_data_count, flagged_count, avg_coverage_percent,
+    let query = `SELECT id, run_id, summary_text, excellent_count, solid_count, caution_count, avoid_count,
+              insufficient_data_count, flagged_count, avg_coverage_percent,
                         reversal_risk_count, divergence_count,
-                        strong_value_percent, mixed_value_percent, weak_value_percent, insufficient_value_percent,
+              excellent_value_percent, solid_value_percent, caution_value_percent, avoid_value_percent, insufficient_value_percent,
                         decision, confidence, evidence, risks, next_review_days,
                         model_used, generated_at
                  FROM portfolio_summaries`;
@@ -55,17 +55,19 @@ router.get("/portfolio-summary", async (req, res) => {
       id: number;
       run_id: number;
       summary_text: string;
-      strong_count: number;
-      mixed_count: number;
-      weak_count: number;
+      excellent_count: number;
+      solid_count: number;
+      caution_count: number;
+      avoid_count: number;
       insufficient_data_count: number;
       flagged_count: number | null;
       avg_coverage_percent: number | string | null;
       reversal_risk_count: number | null;
       divergence_count: number | null;
-      strong_value_percent: number | string | null;
-      mixed_value_percent: number | string | null;
-      weak_value_percent: number | string | null;
+      excellent_value_percent: number | string | null;
+      solid_value_percent: number | string | null;
+      caution_value_percent: number | string | null;
+      avoid_value_percent: number | string | null;
       insufficient_value_percent: number | string | null;
       decision: string | null;
       confidence: number | null;
@@ -83,17 +85,19 @@ router.get("/portfolio-summary", async (req, res) => {
       id: summary.id,
       run_id: summary.run_id,
       summary_text: summary.summary_text,
-      strong_count: summary.strong_count,
-      mixed_count: summary.mixed_count,
-      weak_count: summary.weak_count,
+      excellent_count: summary.excellent_count,
+      solid_count: summary.solid_count,
+      caution_count: summary.caution_count,
+      avoid_count: summary.avoid_count,
       insufficient_data_count: summary.insufficient_data_count,
       flagged_count: summary.flagged_count !== null ? Number(summary.flagged_count) : 0,
       avg_coverage_percent: summary.avg_coverage_percent !== null ? Number(summary.avg_coverage_percent) : null,
       reversal_risk_count: summary.reversal_risk_count !== null ? Number(summary.reversal_risk_count) : 0,
       divergence_count: summary.divergence_count !== null ? Number(summary.divergence_count) : 0,
-      strong_value_percent: summary.strong_value_percent !== null ? Number(summary.strong_value_percent) : null,
-      mixed_value_percent: summary.mixed_value_percent !== null ? Number(summary.mixed_value_percent) : null,
-      weak_value_percent: summary.weak_value_percent !== null ? Number(summary.weak_value_percent) : null,
+      excellent_value_percent: summary.excellent_value_percent !== null ? Number(summary.excellent_value_percent) : null,
+      solid_value_percent: summary.solid_value_percent !== null ? Number(summary.solid_value_percent) : null,
+      caution_value_percent: summary.caution_value_percent !== null ? Number(summary.caution_value_percent) : null,
+      avoid_value_percent: summary.avoid_value_percent !== null ? Number(summary.avoid_value_percent) : null,
       insufficient_value_percent: summary.insufficient_value_percent !== null ? Number(summary.insufficient_value_percent) : null,
       decision: summary.decision ?? null,
       confidence: summary.confidence !== null ? Number(summary.confidence) : null,
