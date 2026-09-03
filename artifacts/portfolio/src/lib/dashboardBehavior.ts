@@ -275,6 +275,7 @@ export function initDashboardBehavior(
 
     const aiBotWorkspace = el("ai-bot-workspace-mount");
     if (aiBotWorkspace) aiBotWorkspace.style.display = view === "ai" ? "" : "none";
+    window.dispatchEvent(new CustomEvent("portfolio-view-changed", { detail: { view } }));
 
     const rv = el("comparison-judge-section");
     if (rv) {

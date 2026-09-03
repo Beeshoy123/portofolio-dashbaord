@@ -3,7 +3,7 @@
 -- Values: "none" (default), "watch" (uptrend with neutral patterns), "elevated" (uptrend with bearish patterns)
 
 ALTER TABLE "technical_signals"
-ADD COLUMN "reversal_risk" text DEFAULT 'none';
+ADD COLUMN IF NOT EXISTS "reversal_risk" text DEFAULT 'none';
 
 -- Index for quick filtering by reversal risk
 CREATE INDEX IF NOT EXISTS "idx_technical_signals_reversal_risk"

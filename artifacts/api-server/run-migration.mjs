@@ -2,8 +2,10 @@ import fs from 'fs';
 import { Pool } from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '.env') });
 const databaseUrl = process.env.DATABASE_URL;
 
 if (!databaseUrl) {
@@ -25,6 +27,8 @@ async function runMigration() {
       '009_bot_runs.sql',
       '010_engine_run_links.sql',
       '011_advisor_run_idempotency.sql',
+      '012_technical_signals.sql',
+      '013_index_60_session_return.sql',
       '014_advisor_structured_output.sql',
       '015_portfolio_summary.sql',
       '016_advisor_recommendation_type.sql',

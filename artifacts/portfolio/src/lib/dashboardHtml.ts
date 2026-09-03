@@ -996,9 +996,6 @@ ${buildUsdRealityCard(p, d, usdReality)}
 
 </div><!-- /bento -->
 
-<!-- AI BOT WORKSPACE — focused entity analysis mounted by App.tsx -->
-<div id="ai-bot-workspace-mount" style="display:none;margin-top:var(--gap)"></div>
-
 <!-- CERTIFICATES DETAIL -->
 <div id="certs-placeholder" style="display:none;margin-top:var(--gap)">
   <div class="card dark" style="padding:26px 28px;margin-bottom:var(--gap)">

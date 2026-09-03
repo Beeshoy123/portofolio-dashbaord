@@ -122,6 +122,23 @@
 
 ## 🔍 AI PIPELINE DEBUGGING GUIDE (Fast-Track Navigation)
 
+## 🛡️ AI WORKSPACE REGRESSION GUARDRAILS (PERMANENT)
+
+These rules protect the five-engine AI workspace from disappearing, flashing, or losing state during future prompts and refactors:
+
+1. `AiBotWorkspace` must be rendered exactly once from `App.tsx`.
+2. Its `#ai-bot-workspace-mount` must remain outside the `containerRef` element whose contents are replaced by `buildDashboardHtml()` and `innerHTML`.
+3. Do not render additional `AiBotWorkspace` instances in loading, error, empty-data, or success branches. Keep one persistent instance and show state inside it.
+4. Portfolio refreshes may rebuild the legacy dashboard markup, but must never unmount or recreate the React AI workspace.
+5. Preserve the active dashboard view and keep `portfolio-view-changed` visibility synchronization intact.
+6. Before completing any AI workspace change, verify:
+   - `pnpm.cmd typecheck`
+   - Editor diagnostics for `App.tsx` and `AiBotWorkspace.tsx`
+   - `git diff --check`
+   - Browser console has no `AiBotWorkspace` runtime errors
+
+If a future prompt asks to change loading, error, visibility, or engine presentation, modify the persistent workspace state and its internal panels. Never solve it by adding another conditional mount or moving the mount back into generated HTML.
+
 **To make future debugging even faster, use these three memory files in order:**
 
 ### **Step 1: Identify the Issue Path**

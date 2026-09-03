@@ -13,6 +13,7 @@
 // └── Main Entry Points (judgeHolding, judgeAllHoldings, findOpportunities)
 
 import { pool } from "../lib/dbPool";
+import { analyzePortfolioOpportunities } from "../advisor/opportunityAnalysis";
 import type { AssetRole, HoldingVerdict, ComparisonGroup, ComparisonEntry, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
 import { computeFinancialHealthGrade } from "./financialHealth";
@@ -551,6 +552,38 @@ export interface OpportunitiesAnalysis {
     portfolio_allocation_percent: number;
     strong_candidates: HoldingVerdict[];
   }>;
+  sector_concentration_in_opportunities: Array<{
+    sector: string;
+    count: number;
+    tickers: string[];
+  }>;
+  sectors_no_strong_exposure: Array<{
+    sector: string;
+    held_strong_count: number;
+    held_mixed_count: number;
+    held_weak_count: number;
+    unheld_strong_entities: Array<{
+      ticker: string;
+      name: string;
+      return_percent: number | null;
+      signal?: string;
+    }>;
+  }>;
+  unheld_outperforming_held: Array<{
+    unheld_ticker: string;
+    unheld_name: string;
+    unheld_return: number | null;
+    held_ticker: string;
+    held_name: string;
+    held_return: number | null;
+    gap_percent: number;
+    risk_comparison: string;
+  }>;
+  risk_tier_comparison: {
+    portfolio_avg_risk: string;
+    opportunities_avg_risk: string;
+    higher_risk_opportunities: number;
+  };
 }
 
 /**
@@ -618,7 +651,16 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
       }
     }
 
-    return { strong_unheld, underrepresented_sectors };
+    const detailedAnalysis = analyzePortfolioOpportunities(allVerdicts);
+
+    return {
+      strong_unheld,
+      underrepresented_sectors,
+      sector_concentration_in_opportunities: detailedAnalysis.sector_concentration_in_opportunities,
+      sectors_no_strong_exposure: detailedAnalysis.sectors_no_strong_exposure,
+      unheld_outperforming_held: detailedAnalysis.unheld_outperforming_held,
+      risk_tier_comparison: detailedAnalysis.risk_tier_comparison,
+    };
   } catch (err) {
     console.error("[findOpportunities] failed:", err);
     throw new Error("Opportunities analysis failed", { cause: err });

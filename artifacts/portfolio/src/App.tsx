@@ -4,7 +4,6 @@
 // into recommendations, and Alerts monitors verdict/history changes. The
 // dashboard coordinates their order and presents them as one bot workflow.
 import { useEffect, useRef } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useGetPortfolio,
@@ -114,7 +113,9 @@ export default function App() {
   const updateFundMutation = useUpdateFund();
   const createSnapshotMutation = useCreateGrowthSnapshot();
   const containerRef = useRef<HTMLDivElement>(null);
-  const aiBotRootRef = useRef<Root | null>(null);
+  const lastSuccessfulPortfolioRef = useRef<Portfolio | null>(null);
+
+  if (portfolio) lastSuccessfulPortfolioRef.current = portfolio;
 
   const notSeeded =
     isError &&
@@ -125,20 +126,17 @@ export default function App() {
   // When the database is empty, render the full dashboard layout anyway
   // using zeroed placeholder data, so every widget/card/heatmap keeps its
   // real styling instead of being replaced by a blank state.
-  const dataToRender = portfolio ?? (notSeeded ? EMPTY_PORTFOLIO : undefined);
+  const retainedPortfolio = portfolio ?? lastSuccessfulPortfolioRef.current;
+  const dataToRender = retainedPortfolio ?? (notSeeded ? EMPTY_PORTFOLIO : undefined);
 
   const usdReality = dataToRender ? buildUsdReality(dataToRender) : null;
 
   useEffect(() => {
     if (!dataToRender || !containerRef.current) return;
 
+    const activeView = containerRef.current.querySelector('.bento')?.getAttribute('data-view') ?? 'total';
     const derived = computeDerived(dataToRender);
     containerRef.current.innerHTML = buildDashboardHtml(dataToRender, derived, usdReality);
-
-    const aiBotMount = containerRef.current.querySelector('#ai-bot-workspace-mount');
-    aiBotRootRef.current?.unmount();
-    aiBotRootRef.current = aiBotMount ? createRoot(aiBotMount) : null;
-    aiBotRootRef.current?.render(<AiBotWorkspace />);
 
     const invalidate = () =>
       queryClient.invalidateQueries({ queryKey: getGetPortfolioQueryKey() });
@@ -158,46 +156,42 @@ export default function App() {
         if (!notSeeded) await invalidate();
       },
     });
+    (window as unknown as { setView?: (view: string) => void }).setView?.(activeView);
 
     return () => {
-      aiBotRootRef.current?.unmount();
-      aiBotRootRef.current = null;
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataToRender]);
 
-  if (isLoading) {
-    return (
-      <div className="portfolio-loading-screen">
-        <div className="portfolio-loading-spinner" />
-        <div>Loading your portfolio…</div>
-      </div>
-    );
-  }
-
-  if (isError && !notSeeded) {
-    return (
-      <div className="portfolio-loading-screen">
-        <div style={{ fontSize: 32 }}>⚠️</div>
-        <div>Couldn't load your portfolio.</div>
-        <div style={{ fontSize: 12, color: '#8a9a95' }}>
-          {error instanceof Error ? error.message : 'Unknown error'}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
-      {notSeeded && (
+      {isLoading ? (
+        <div className="portfolio-loading-screen portfolio-status-banner">
+          <div className="portfolio-loading-spinner" />
+          <div>Loading your portfolio…</div>
+        </div>
+      ) : isError && !notSeeded && !retainedPortfolio ? (
+        <div className="portfolio-loading-screen portfolio-status-banner">
+          <div style={{ fontSize: 32 }}>⚠️</div>
+          <div>Couldn't load your portfolio.</div>
+          <div style={{ fontSize: 12, color: '#8a9a95' }}>{error instanceof Error ? error.message : 'Unknown error'}</div>
+        </div>
+      ) : notSeeded ? (
         <div className="portfolio-alert-banner">
           ⚠️ No data found — the database is empty. Every widget below is
           showing placeholder zeros, not real figures.
         </div>
+      ) : isError && retainedPortfolio ? (
+        <div className="portfolio-alert-banner">Portfolio refresh failed. Showing the last successful portfolio data.</div>
+      ) : null}
+      {!isLoading && !(isError && !notSeeded && !retainedPortfolio) && (
+        <div className="flex flex-col gap-6">
+          <div ref={containerRef} className="w-full" />
+        </div>
       )}
-      <div className="flex flex-col gap-6">
-        <div ref={containerRef} className="w-full" />
+      <div id="ai-bot-workspace-mount" className="w-full" style={{ display: isLoading || (isError && !notSeeded && !retainedPortfolio) ? '' : 'none' }}>
+        <AiBotWorkspace />
       </div>
     </>
   );

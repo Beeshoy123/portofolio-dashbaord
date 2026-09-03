@@ -381,7 +381,10 @@ router.get("/opportunities", async (req: Request, res: Response) => {
       [runId]
     );
 
-    return res.json(result.rows);
+    return res.json({
+      ...(await findOpportunities(runId)),
+      persisted_opportunities: result.rows,
+    });
   } catch (err) {
     console.error("[advisor] GET opportunities failed:", err);
     return res.status(500).json({ error: "Failed to fetch opportunities" });
