@@ -5,15 +5,19 @@ import { supabase } from '../lib/supabaseClient';
 import { type Lang, getSavedLang, translateEntityName, translateSector } from '../lib/i18n';
 
 type Snapshot = {
+  id?: number;
   ticker: string;
   name: string;
   entity_type: string;
   is_held: boolean;
   sector: string | null;
+  manager?: string | null;
   nav_or_price: number | string | null;
   return_30d_percent: number | string | null;
+  return_60d_percent: number | string | null;
   return_ytd_percent: number | string | null;
   return_1y_percent: number | string | null;
+  cagr_percent: number | string | null;
   total_score: number | string | null;
   risk_level: string | null;
   signal: string | null;
@@ -26,18 +30,55 @@ type Snapshot = {
   current_ratio: number | string | null;
   revenue_growth_percent: number | string | null;
   dividend_yield_percent: number | string | null;
+  market_cap: number | string | null;
+  sector_rank: number | null;
   beta: number | string | null;
 };
 
-type Candle = { date: string; open: number; high: number; low: number; close: number };
-type TechnicalSignal = { ticker: string; trend: string; confidence: number | string | null; candle_date: string | null; patterns: Array<{ name: string; direction: string }>; reversal_risk?: "none" | "watch" | "elevated"; candles: Candle[] };
+type Candle = { date: string; open: number; high: number; low: number; close: number; volume?: number | null };
+type TechnicalSignal = {
+  watchlist_id?: number;
+  run_id?: number;
+  ticker: string;
+  name?: string;
+  entity_type?: string;
+  trend: string;
+  confidence: number | string | null;
+  candle_date: string | null;
+  patterns: Array<{ name: string; date?: string; direction: string }>;
+  reversal_risk?: "none" | "watch" | "elevated";
+  raw_fetch_ok?: boolean;
+  candles: Candle[];
+  created_at?: string;
+};
 type ComparisonEntry = {
   ticker: string;
+  name?: string;
+  asset_role?: string;
   return_percent: number | null;
+  sector_rank?: number | null;
+  stock_signal?: string | null;
   gap_percent: number | null;
   computed_risk_tier: 'Low' | 'Medium' | 'High' | null;
   risk_mismatch: boolean;
   foudalens_risk_level: string | null;
+  fundamentals?: {
+    pe_ratio: number | null;
+    forward_pe: number | null;
+    debt_to_equity: number | null;
+    current_ratio: number | null;
+    roe_percent: number | null;
+    free_cash_flow: number | null;
+    net_income: number | null;
+    net_income_growth_percent: number | null;
+    revenue_growth_percent: number | null;
+    dividend_yield_percent: number | null;
+    beta: number | null;
+    analyst_rating: string | null;
+    price_target_upside_percent: number | null;
+    shares_change_percent: number | null;
+    flags: Array<{ flag: string; detail: string }>;
+  } | null;
 };
 
 type ComparisonGroup = {
@@ -53,6 +94,8 @@ type Verdict = {
   holding_name?: string;
   holding_return_percent: number | null;
   holding_current_value_egp?: number | null;
+  holding_portfolio_weight_percent?: number | null;
+  portfolio_total_value_egp?: number | null;
   holding_risk_tier?: 'Low' | 'Medium' | 'High' | null;
   holding_asset_role?: string;
   is_held?: boolean;
@@ -82,6 +125,20 @@ type Verdict = {
   data_completeness_warning?: boolean;
   fundamentals_flags_found?: boolean;
   holding_fundamentals?: {
+    pe_ratio?: number | null;
+    forward_pe?: number | null;
+    debt_to_equity?: number | null;
+    current_ratio?: number | null;
+    roe_percent?: number | null;
+    free_cash_flow?: number | null;
+    net_income?: number | null;
+    net_income_growth_percent?: number | null;
+    revenue_growth_percent?: number | null;
+    dividend_yield_percent?: number | null;
+    beta?: number | null;
+    analyst_rating?: string | null;
+    price_target_upside_percent?: number | null;
+    shares_change_percent?: number | null;
     flags?: Array<{ flag: string; detail: string }>;
   } | null;
 };
@@ -112,6 +169,9 @@ export type TimeStopAlert = {
   days_in_current_state?: number;
   stagnant_days?: number | null;
   threshold_days?: number;
+  stagnant_since?: string | null;
+  current_signal?: string | null;
+  current_flags?: string[];
   message?: string;
 };
 
@@ -122,6 +182,9 @@ export type ThesisAlert = {
   signal_degraded?: boolean;
   prior_signal?: string;
   current_signal?: string;
+  compared_signal?: string | null;
+  compared_at?: string | null;
+  newly_appeared_flags?: string[];
   message?: string;
 };
 
@@ -135,6 +198,7 @@ export type DrawdownAlert = {
 };
 
 export type AlertsSummary = {
+  generatedAt?: string;
   timeStops?: TimeStopAlert[];
   theses?: ThesisAlert[];
   drawdown?: DrawdownAlert | null;
@@ -203,6 +267,28 @@ type OpportunitiesAnalysis = {
       confidence_tier?: "high" | "moderate" | "low";
     }>;
   }>;
+  sectors_no_strong_exposure?: Array<{
+    sector: string;
+    held_strong_count: number;
+    held_mixed_count: number;
+    held_weak_count: number;
+    unheld_strong_entities: Array<{ ticker: string; name: string; return_percent: number | null; signal?: string }>;
+  }>;
+  unheld_outperforming_held?: Array<{
+    unheld_ticker: string;
+    unheld_name: string;
+    unheld_return: number | null;
+    held_ticker: string;
+    held_name: string;
+    held_return: number | null;
+    gap_percent: number;
+    risk_comparison: string;
+  }>;
+  risk_tier_comparison?: {
+    portfolio_avg_risk: string;
+    opportunities_avg_risk: string;
+    higher_risk_opportunities: number;
+  };
 };
 
 const VERDICT_FLAG_MAP: Record<string, { en: string; ar: string; category: 'info' | 'warning' }> = {
