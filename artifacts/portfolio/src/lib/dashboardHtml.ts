@@ -1133,8 +1133,6 @@ ${buildUsdRealityCard(p, d, usdReality)}
   </div>
 </div>
 
-<footer><span data-i18n="footer.updated">Last updated:</span> <span id="last-updated"></span> · <span data-i18n="footer.sub">Prices via open APIs · Funds: manual NAV</span></footer>
-
 </div><!-- /dashboard-root -->
 `;
 }

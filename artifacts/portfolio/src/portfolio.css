@@ -583,6 +583,10 @@ html[lang="ar"] .sort-popover {
 
 .ai-bot-workspace { margin: 0 var(--gap) 24px; border: 1px solid rgba(18, 160, 143, .22); border-radius: 18px; overflow: hidden; background: linear-gradient(145deg, #101e1c, #132a27 58%, #10211f); color: var(--ink); box-shadow: 0 20px 50px rgba(0, 0, 0, .18); }
 .ai-bot-workspace { border: 0; border-radius: 0; overflow: visible; background: transparent; box-shadow: none; }
+.ai-bot-workspace[data-pipeline-scope="entity"] [data-pipeline-section="portfolio"],
+.ai-bot-workspace[data-pipeline-scope="portfolio"] [data-pipeline-section="entity"] {
+  display: none;
+}
 .ai-bot-workspace-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px 22px; background: linear-gradient(100deg, rgba(18, 160, 143, .18), transparent 64%); border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .ai-bot-workspace-brand { display: flex; align-items: center; gap: 12px; }
 .ai-bot-workspace-icon { display: grid; width: 40px; height: 40px; place-items: center; border: 1px solid rgba(95, 225, 208, .35); border-radius: 12px; background: rgba(18, 160, 143, .2); color: #6fe5d7; }
@@ -602,6 +606,23 @@ html[lang="ar"] .sort-popover {
 .ai-bot-pipeline-scope button { border: 0; border-radius: 5px; background: transparent; color: #78948f; padding: 5px 8px; cursor: pointer; font-size: 9px; font-weight: 700; }
 .ai-bot-pipeline-scope button.is-active { background: rgba(85, 207, 192, .18); color: #d5e5e0; }
 .ai-bot-engine-actions { display: flex; align-items: center; gap: 12px; }
+.ai-bot-section-toggle { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 1px solid rgba(95, 225, 208, .28); border-radius: 6px; background: rgba(18, 160, 143, .1); color: #72dfd1; cursor: pointer; }
+.ai-bot-section-toggle:hover { background: rgba(18, 160, 143, .22); }
+.ai-bot-section-toggle svg { width: 14px; transition: transform .2s ease; }
+.ai-bot-legacy-safety-section { display: none; }
+.ai-bot-card-collapsed > .ai-bot-panel-heading ~ * { display: none; }
+.ai-bot-advisor-engine.ai-bot-card-collapsed > .ai-bot-panel,
+.ai-bot-alerts-engine.ai-bot-card-collapsed > .ai-bot-panel,
+.ai-bot-opportunity-engine.ai-bot-card-collapsed > .ai-bot-opportunities-section,
+.ai-bot-comparison-engine.ai-bot-card-collapsed > .ai-bot-market-comparison,
+.ai-bot-comparison-engine.ai-bot-card-collapsed > .ai-bot-panel,
+.ai-bot-focused-engine.ai-bot-card-collapsed > .ai-bot-fundamentals,
+.ai-bot-focused-engine.ai-bot-card-collapsed > .ai-bot-analysis-grid,
+.ai-bot-portfolio-advisor-card.ai-bot-card-collapsed > :not(.ai-bot-portfolio-advisor-heading) { display: none; }
+.ai-bot-opportunity-engine > .ai-bot-opportunities-section > .comparison-group-header { display: none; }
+.ai-bot-card-collapsed > .ai-bot-engine-header .ai-bot-section-toggle svg,
+.ai-bot-card-collapsed > .ai-bot-panel-heading .ai-bot-section-toggle svg,
+.ai-bot-card-collapsed > .ai-bot-portfolio-advisor-heading .ai-bot-section-toggle svg { transform: rotate(-90deg); }
 .ai-bot-market-button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid rgba(95, 225, 208, .28); border-radius: 7px; padding: 7px 10px; background: rgba(18, 160, 143, .12); color: #72dfd1; font-size: 10px; font-weight: 800; cursor: pointer; }
 .ai-bot-market-button:hover { background: rgba(18, 160, 143, .22); }
 .ai-bot-market-button svg { width: 13px; }
@@ -804,6 +825,9 @@ html[lang="ar"] .sort-popover {
 /* Portfolio Summary Sections */
 .ai-bot-summary-section, .ai-bot-opportunities-section, .ai-bot-summary-analysis { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
 .ai-bot-summary-section:last-child, .ai-bot-summary-analysis:last-child { border-bottom: 0; }
+.ai-bot-portfolio-advisor-card { margin-top: 18px; padding: 16px; border: 1px solid rgba(95, 225, 208, .18); border-radius: 11px; background: rgba(18, 160, 143, .06); }
+.ai-bot-portfolio-advisor-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.ai-bot-portfolio-advisor-heading > svg { width: 18px; color: #55cfc0; }
 .ai-bot-summary-title { display: block; color: #58cbbd; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; margin-bottom: 10px; }
 .ai-bot-summary-holdings { color: #dceae6; font-size: 12px; line-height: 1.6; }
 .ai-bot-summary-holdings span { font-weight: 700; margin: 0 2px; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }

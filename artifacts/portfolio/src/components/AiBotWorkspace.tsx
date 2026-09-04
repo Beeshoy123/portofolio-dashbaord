@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Activity, ArrowLeft, ArrowRight, Brain, Gauge, List, RefreshCw, TrendingDown, TrendingUp, X } from 'lucide-react';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Activity, ArrowLeft, ArrowRight, Brain, ChevronDown, Gauge, RefreshCw, TrendingDown, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { type Lang, getSavedLang, translateEntityName, translateSector } from '../lib/i18n';
 
@@ -391,12 +390,24 @@ function getVerdictFlagMeta(flag: string, lang: Lang): { label: string; category
 }
 
 async function json<T>(url: string): Promise<T> {
-  const headers = new Headers();
+  const request = async (accessToken?: string) => {
+    const headers = new Headers();
+    if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+    return fetch(url, { headers, cache: 'no-store' });
+  };
+
+  let sessionToken: string | undefined;
   if (supabase) {
     const { data } = await supabase.auth.getSession();
-    if (data.session?.access_token) headers.set('Authorization', `Bearer ${data.session.access_token}`);
+    sessionToken = data.session?.access_token;
   }
-  const response = await fetch(url, { headers, cache: 'no-store' });
+
+  let response = await request(sessionToken);
+  if (response.status === 401 && supabase) {
+    const { data } = await supabase.auth.refreshSession();
+    sessionToken = data.session?.access_token;
+    if (sessionToken) response = await request(sessionToken);
+  }
   if (!response.ok) throw new Error(`AI Bot request failed: ${url} (${response.status})`);
   return response.json() as Promise<T>;
 }
@@ -698,9 +709,10 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
     [lang === 'ar' ? 'مؤشرات' : 'Indices', snapshots.filter((snapshot) => snapshot.entity_type === 'index')],
   ] as const;
   const value = (number: number | string | null, suffix = '') => number === null ? '—' : `${Number(number).toFixed(1)}${suffix}`;
+  const shortReturn = (snapshot: Snapshot) => snapshot.entity_type === 'index' ? snapshot.return_60d_percent : snapshot.return_30d_percent;
   
   // Sort each group by YTD return (highest first), nulls last
-  const sortedGroups = groups.map(([label, group]) => [
+  const sortedGroups: Array<readonly [string, Snapshot[]]> = groups.map(([label, group]) => [
     label,
     [...group].sort((a, b) => {
       const ytdA = a.return_ytd_percent !== null ? Number(a.return_ytd_percent) : -Infinity;
@@ -710,7 +722,7 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
       if (ytdB === -Infinity) return -1;
       return ytdB - ytdA;
     }),
-  ]) as typeof groups;
+  ]);
   return (
     <div className="ai-bot-market-comparison">
       <div className="ai-bot-market-comparison-heading">
@@ -733,7 +745,7 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
                   <th>{lang === 'ar' ? 'الرمز' : 'Ticker'}</th>
                   <th>{lang === 'ar' ? 'الاسم' : 'Name'}</th>
                   <th>{lang === 'ar' ? 'السعر / NAV' : 'Price / NAV'}</th>
-                  <th>{lang === 'ar' ? '30 يوم' : '30d'}</th>
+                  <th>{lang === 'ar' ? '30 يوم / 60 للمؤشرات' : '30d / 60d indices'}</th>
                   <th>{lang === 'ar' ? 'من بداية العام' : 'YTD'}</th>
                   <th>{lang === 'ar' ? 'التقييم' : 'Score'}</th>
                 </tr>
@@ -747,7 +759,7 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
                     </td>
                     <td>{translateEntityName(snapshot.name || snapshot.ticker, lang)}</td>
                     <td>{snapshot.nav_or_price === null ? '—' : Number(snapshot.nav_or_price).toLocaleString()}</td>
-                    <td className={Number(snapshot.return_30d_percent) >= 0 ? 'ai-positive' : 'ai-negative'}>{value(snapshot.return_30d_percent, '%')}</td>
+                    <td className={Number(shortReturn(snapshot)) >= 0 ? 'ai-positive' : 'ai-negative'}>{value(shortReturn(snapshot), '%')}</td>
                     <td className={Number(snapshot.return_ytd_percent) >= 0 ? 'ai-positive' : 'ai-negative'}>{value(snapshot.return_ytd_percent, '%')}</td>
                     <td>{snapshot.total_score === null ? '—' : `${Number(snapshot.total_score).toFixed(0)}/100`}</td>
                   </tr>
@@ -758,6 +770,59 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
         </div>
       ))}
     </div>
+  );
+}
+
+function PortfolioAlerts({ alertsData, lang }: { alertsData: AlertsSummary | null; lang: Lang }) {
+  const drawdown = alertsData?.portfolio?.drawdown ?? alertsData?.drawdown;
+  const alertEntries = Object.entries(alertsData?.alerts ?? {});
+  const drawdownPercent = drawdown?.current_drawdown_percent ?? drawdown?.drawdown_percent;
+  return (
+    <article className="ai-bot-panel ai-bot-alerts-panel">
+      <div className="ai-bot-alert-evidence-grid">
+        {drawdown && (
+          <section className={`ai-bot-alert-evidence-card ${(drawdown.is_elevated || drawdown.is_alert) ? 'is-alert' : 'is-ok'}`}>
+            <h4>{lang === 'ar' ? 'التراجع' : 'Drawdown'}</h4>
+            <div className="ai-bot-alert-state">{drawdown.is_elevated || drawdown.is_alert ? (lang === 'ar' ? 'مرتفع' : 'Elevated') : (lang === 'ar' ? 'طبيعي' : 'Normal')}</div>
+            <dl>
+              <div><dt>{lang === 'ar' ? 'التراجع الحالي' : 'Current drawdown'}</dt><dd>{drawdownPercent == null ? unavailableValue(lang) : `${Number(drawdownPercent).toFixed(1)}%`}</dd></div>
+              <div><dt>{lang === 'ar' ? 'قيمة الذروة' : 'Peak value'}</dt><dd>{drawdown.peak_value ?? unavailableValue(lang)}</dd></div>
+              <div><dt>{lang === 'ar' ? 'القيمة الحالية' : 'Current value'}</dt><dd>{drawdown.current_value ?? unavailableValue(lang)}</dd></div>
+            </dl>
+          </section>
+        )}
+      </div>
+      {alertEntries.length > 0 ? (
+        <div className="ai-bot-alert-summary">
+          <strong>{lang === 'ar' ? 'ملخص تنبيهات المحفظة' : 'Portfolio Alert Summary'}</strong>
+          <div className="ai-bot-alert-table-wrap">
+            <table>
+              <thead><tr><th>{lang === 'ar' ? 'الرمز' : 'Ticker'}</th><th>{lang === 'ar' ? 'الوقف الزمني' : 'Time Stop'}</th><th>{lang === 'ar' ? 'الأطروحة' : 'Thesis'}</th><th>{lang === 'ar' ? 'الإشارة الحالية' : 'Current signal'}</th></tr></thead>
+              <tbody>{alertEntries.map(([ticker, alert]) => <tr key={ticker}>
+                <td><b>{ticker}</b></td>
+                <td>{alert.timeStop ? (alert.timeStop.is_stagnant ? (lang === 'ar' ? 'نشط' : 'Active') : (lang === 'ar' ? 'غير نشط' : 'Inactive')) : unavailableValue(lang)}</td>
+                <td>{alert.thesis ? (alert.thesis.has_reversal || alert.thesis.signal_degraded ? (lang === 'ar' ? 'متدهورة' : 'Degraded') : (lang === 'ar' ? 'سليمة' : 'Intact')) : unavailableValue(lang)}</td>
+                <td>{alert.thesis?.current_signal ? formatSignal(alert.thesis.current_signal, lang) : unavailableValue(lang)}</td>
+              </tr>)}</tbody>
+            </table>
+          </div>
+        </div>
+      ) : !drawdown && <p>{lang === 'ar' ? 'لا توجد تنبيهات للمحفظة متاحة.' : 'No portfolio alerts are available.'}</p>}
+    </article>
+  );
+}
+
+function EntityAlerts({ entity, timeStop, thesis, drawdown, lang }: { entity: Snapshot; timeStop?: TimeStopAlert; thesis?: ThesisAlert; drawdown?: DrawdownAlert | null; lang: Lang }) {
+  const hasDrawdownAlert = Boolean(drawdown);
+  return (
+    <article className="ai-bot-panel ai-bot-alerts-panel">
+      <div className="ai-bot-alert-evidence-grid">
+        {timeStop && <section className={`ai-bot-alert-evidence-card ${timeStop.is_stagnant ? 'is-alert' : 'is-ok'}`}><h4>{lang === 'ar' ? 'وقف زمني' : 'Time Stop'}</h4><div className="ai-bot-alert-state">{timeStop.is_stagnant ? (lang === 'ar' ? 'نشط' : 'Active') : (lang === 'ar' ? 'غير نشط' : 'Inactive')}</div><p>{timeStop.message || unavailableValue(lang)}</p></section>}
+        {thesis && <section className={`ai-bot-alert-evidence-card ${(thesis.has_reversal || thesis.signal_degraded) ? 'is-alert' : 'is-ok'}`}><h4>{lang === 'ar' ? 'فحص الأطروحة' : 'Thesis Check'}</h4><div className="ai-bot-alert-state">{thesis.has_reversal || thesis.signal_degraded ? (lang === 'ar' ? 'متدهورة' : 'Degraded') : (lang === 'ar' ? 'سليمة' : 'Intact')}</div><p>{thesis.message || unavailableValue(lang)}</p></section>}
+        {hasDrawdownAlert && <section className={`ai-bot-alert-evidence-card ${(drawdown?.is_elevated || drawdown?.is_alert) ? 'is-alert' : 'is-ok'}`}><h4>{lang === 'ar' ? 'التراجع' : 'Drawdown'}</h4><div className="ai-bot-alert-state">{drawdown?.is_elevated || drawdown?.is_alert ? (lang === 'ar' ? 'مرتفع' : 'Elevated') : (lang === 'ar' ? 'طبيعي' : 'Normal')}</div><p>{drawdown?.current_drawdown_percent ?? drawdown?.drawdown_percent ?? unavailableValue(lang)}{drawdown?.current_drawdown_percent !== undefined || drawdown?.drawdown_percent !== undefined ? '%' : ''}</p></section>}
+      </div>
+      {!timeStop && !thesis && !hasDrawdownAlert && <p>{lang === 'ar' ? 'لا توجد تنبيهات متاحة لهذا الأصل.' : `No alerts are available for ${entity.ticker}.`}</p>}
+    </article>
   );
 }
 
@@ -776,17 +841,23 @@ export function AiBotWorkspace() {
   const [filterMode, setFilterMode] = useState<'held' | 'all'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showMarketComparison, setShowMarketComparison] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
-  const [isOpportunitiesExpanded, setIsOpportunitiesExpanded] = useState(false);
+  const [isOpportunitiesExpanded, setIsOpportunitiesExpanded] = useState(true);
   const [isRawMarketDataExpanded, setIsRawMarketDataExpanded] = useState(false);
   const [isTechnicalEvidenceExpanded, setIsTechnicalEvidenceExpanded] = useState(false);
+  const [isFocusedDeskExpanded, setIsFocusedDeskExpanded] = useState(false);
+  const [isEntityComparisonExpanded, setIsEntityComparisonExpanded] = useState(false);
+  const [isEntityAdvisorExpanded, setIsEntityAdvisorExpanded] = useState(false);
+  const [isEntityAlertsExpanded, setIsEntityAlertsExpanded] = useState(false);
+  const [isPortfolioMarketExpanded, setIsPortfolioMarketExpanded] = useState(false);
+  const [isPortfolioComparisonExpanded, setIsPortfolioComparisonExpanded] = useState(false);
+  const [isPortfolioAlertsExpanded, setIsPortfolioAlertsExpanded] = useState(false);
+  const [isPortfolioAdvisorExpanded, setIsPortfolioAdvisorExpanded] = useState(false);
   const [pipelineScope, setPipelineScope] = useState<'entity' | 'portfolio'>('entity');
   const hasEntityDataRef = useRef(false);
 
   const focusPipelineScope = (scope: 'entity' | 'portfolio') => {
     setPipelineScope(scope);
-    document.querySelector(`[data-pipeline-section="${scope}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   useEffect(() => {
@@ -927,29 +998,6 @@ export function AiBotWorkspace() {
     : undefined;
   const portfolioDrawdown = alertsData?.portfolio?.drawdown ?? alertsData?.drawdown;
   const trendDown = signal?.trend === 'downtrend';
-  const currentGroupKeys = (verdict?.groups ?? []).map(
-    (group) => `${entity?.ticker || ''}_${group.group_type}`,
-  );
-  const hasCollapsedSection =
-    !isRawMarketDataExpanded ||
-    !isTechnicalEvidenceExpanded ||
-    (Boolean(opportunitiesData) && !isOpportunitiesExpanded) ||
-    currentGroupKeys.some((key) => !expandedGroups[key]);
-
-  const toggleAllSections = () => {
-    const targetExpandedState = hasCollapsedSection;
-    if (opportunitiesData) setIsOpportunitiesExpanded(targetExpandedState);
-    setIsRawMarketDataExpanded(targetExpandedState);
-    setIsTechnicalEvidenceExpanded(targetExpandedState);
-    setExpandedGroups((previous) => {
-      const next = { ...previous };
-      currentGroupKeys.forEach((key) => {
-        next[key] = targetExpandedState;
-      });
-      return next;
-    });
-  };
-
   // Analyze strong unheld entities as opportunities
   const opportunities = useMemo(() => {
     const tierWeight: Record<'high' | 'moderate' | 'low', number> = {
@@ -1119,21 +1167,20 @@ export function AiBotWorkspace() {
           <div className="ai-bot-workspace-brand">
             <span className="ai-bot-workspace-icon"><Brain /></span>
             <div>
-              <span className="ai-bot-eyebrow">{lang === 'ar' ? 'بوت الذكاء الاصطناعي / تحليل الأصول' : 'AI Bot / entity intelligence'}</span>
-              <h2>{lang === 'ar' ? 'مكتب التوصيات المركّز' : 'Focused recommendation desk'}</h2>
-              <p>{lang === 'ar' ? 'السعر والرسم البياني والمقارنة والتوصيات لكل أصل على حدة.' : 'Price, chart, comparison, and advice for one entity at a time.'}</p>
+              <span className="ai-bot-eyebrow">{pipelineScope === 'entity' ? (lang === 'ar' ? 'بوت الذكاء الاصطناعي / تحليل الأصول' : 'AI Bot / entity intelligence') : (lang === 'ar' ? 'بوت الذكاء الاصطناعي / تحليل المحفظة' : 'AI Bot / portfolio intelligence')}</span>
+              <h2>{pipelineScope === 'entity' ? (lang === 'ar' ? 'مكتب التوصيات المركّز' : 'Focused recommendation desk') : (lang === 'ar' ? 'مكتب تحليل المحفظة' : 'Portfolio analysis desk')}</h2>
+              <p>{pipelineScope === 'entity' ? (lang === 'ar' ? 'السعر والرسم البياني والمقارنة والتوصيات لكل أصل على حدة.' : 'Price, chart, comparison, and advice for one entity at a time.') : (lang === 'ar' ? 'مقارنة السوق وحكم المحفظة والفرص والمستشار الذكي.' : 'Market comparison, portfolio judgment, opportunities, and Smart Advisor.')}</p>
             </div>
           </div>
-          <div className="ai-bot-run-state">
-            <span />
-            <span>{lang === 'ar' ? `تشغيل ${runId ?? 'الأحدث'}` : `Run ${runId ?? 'latest'}`}</span>
+          <div className="ai-bot-engine-actions">
+            <div className="ai-bot-run-state">
+              <span />
+              <span>{lang === 'ar' ? `تشغيل ${runId ?? 'الأحدث'}` : `Run ${runId ?? 'latest'}`}</span>
+            </div>
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsFocusedDeskExpanded((expanded) => !expanded)} aria-expanded={isFocusedDeskExpanded} aria-label={isFocusedDeskExpanded ? 'Collapse focused desk' : 'Expand focused desk'} title={isFocusedDeskExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
           </div>
         </header>
-        <section className="ai-bot-engine ai-bot-market-engine">
-          <div className="ai-bot-engine-header">
-            <div><h3>{lang === 'ar' ? 'ذكاء السوق' : 'Market Intelligence'}</h3></div>
-            <Gauge />
-          </div>
+        <section className="ai-bot-engine ai-bot-focused-engine">
           {loading ? <div className="ai-bot-workspace-loading" role="status"><span className="ai-bot-loading-spinner" />{lang === 'ar' ? 'جارٍ تحميل بيانات بوت الذكاء الاصطناعي…' : 'Loading AI Bot data…'}</div> : error || hasFailedGathererSnapshot ? <div className="ai-bot-workspace-state ai-bot-gatherer-failed" role="alert"><strong>{lang === 'ar' ? 'فشل جامع البيانات' : 'Gatherer failed'}</strong><span>{error || (lang === 'ar' ? 'تعذر جلب بيانات سوقية مكتملة لهذا التشغيل.' : 'The gatherer did not return completed market data for this run.')}</span></div> : <div className="ai-bot-workspace-state"><span>{lang === 'ar' ? 'لا تتوفر بيانات سوقية مكتملة لهذا التشغيل.' : 'No completed market data is available for this run.'}</span></div>}
         </section>
         <section className="ai-bot-engine ai-bot-chart-engine"><div className="ai-bot-engine-header"><div><h3>{lang === 'ar' ? 'قارئ الرسم البياني' : 'Chart Reader'}</h3><p>{lang === 'ar' ? 'الاتجاه والشموع والنماذج الفنية.' : 'Trend, candles, and technical patterns.'}</p></div><TrendingUp /></div><article className="ai-bot-panel"><p>{loading ? (lang === 'ar' ? 'جارٍ تحميل الإشارات الفنية…' : 'Loading technical signals…') : dataLoadErrors.signals ? (lang === 'ar' ? 'تعذر تحميل بيانات الرسم البياني.' : 'Chart Reader data failed to load.') : (lang === 'ar' ? 'لا توجد إشارات فنية متاحة.' : 'No technical signals available.')}</p></article></section>
@@ -1167,19 +1214,22 @@ export function AiBotWorkspace() {
   }
 
   return (
-    <section className="ai-bot-workspace" data-pipeline-section="entity">
+    <section className="ai-bot-workspace" data-pipeline-scope={pipelineScope}>
       <header className="ai-bot-workspace-header">
         <div className="ai-bot-workspace-brand">
           <span className="ai-bot-workspace-icon"><Brain /></span>
           <div>
-            <span className="ai-bot-eyebrow">{lang === 'ar' ? 'بوت الذكاء الاصطناعي / تحليل الأصول' : 'AI Bot / entity intelligence'}</span>
-            <h2>{lang === 'ar' ? 'مكتب التوصيات المركّز' : 'Focused recommendation desk'}</h2>
-            <p>{lang === 'ar' ? 'السعر والرسم البياني والمقارنة والتوصيات لكل أصل على حدة.' : 'Price, chart, comparison, and advice for one entity at a time.'}</p>
+            <span className="ai-bot-eyebrow">{pipelineScope === 'entity' ? (lang === 'ar' ? 'بوت الذكاء الاصطناعي / تحليل الأصول' : 'AI Bot / entity intelligence') : (lang === 'ar' ? 'بوت الذكاء الاصطناعي / تحليل المحفظة' : 'AI Bot / portfolio intelligence')}</span>
+            <h2>{pipelineScope === 'entity' ? (lang === 'ar' ? 'مكتب التوصيات المركّز' : 'Focused recommendation desk') : (lang === 'ar' ? 'مكتب تحليل المحفظة' : 'Portfolio analysis desk')}</h2>
+            <p>{pipelineScope === 'entity' ? (lang === 'ar' ? 'السعر والرسم البياني والمقارنة والتوصيات لكل أصل على حدة.' : 'Price, chart, comparison, and advice for one entity at a time.') : (lang === 'ar' ? 'مقارنة السوق وحكم المحفظة والفرص والمستشار الذكي.' : 'Market comparison, portfolio judgment, opportunities, and Smart Advisor.')}</p>
           </div>
         </div>
-        <div className="ai-bot-run-state">
-          <span />
-          <span>{lang === 'ar' ? `تشغيل ${runId ?? 'الأحدث'}` : `Run ${runId ?? 'latest'}`}</span>
+        <div className="ai-bot-engine-actions">
+          <div className="ai-bot-run-state">
+            <span />
+            <span>{lang === 'ar' ? `تشغيل ${runId ?? 'الأحدث'}` : `Run ${runId ?? 'latest'}`}</span>
+          </div>
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsFocusedDeskExpanded((expanded) => !expanded)} aria-expanded={isFocusedDeskExpanded} aria-label={isFocusedDeskExpanded ? 'Collapse focused desk' : 'Expand focused desk'} title={isFocusedDeskExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
         </div>
         <div className="ai-bot-pipeline-scope" role="group" aria-label={lang === 'ar' ? 'نطاق عرض خط التحليل' : 'Pipeline display scope'}>
           <button type="button" className={pipelineScope === 'entity' ? 'is-active' : ''} onClick={() => focusPipelineScope('entity')}>{lang === 'ar' ? 'حسب الأصل' : 'Per Entity'}</button>
@@ -1187,7 +1237,7 @@ export function AiBotWorkspace() {
         </div>
       </header>
 
-      <nav className="ai-bot-entity-nav" aria-label={lang === 'ar' ? 'التنقل بين الأصول' : 'Entity navigation'}>
+      <nav className="ai-bot-entity-nav" data-pipeline-section="entity" aria-label={lang === 'ar' ? 'التنقل بين الأصول' : 'Entity navigation'}>
         <div className="ai-bot-entity-filters">
           <button
             type="button"
@@ -1202,31 +1252,6 @@ export function AiBotWorkspace() {
             onClick={() => setFilterMode('all')}
           >
             {lang === 'ar' ? `الكل (${allEntities.length})` : `All (${allEntities.length})`}
-          </button>
-          <button
-            type="button"
-            className="comparison-group-collapse-btn ai-bot-master-collapse-btn"
-            onClick={toggleAllSections}
-            aria-label={hasCollapsedSection ? (lang === 'ar' ? 'توسيع كل الأقسام' : 'Expand all sections') : (lang === 'ar' ? 'طي كل الأقسام' : 'Collapse all sections')}
-            title={hasCollapsedSection ? (lang === 'ar' ? 'توسيع كل الأقسام' : 'Expand all sections') : (lang === 'ar' ? 'طي كل الأقسام' : 'Collapse all sections')}
-          >
-            <svg
-              width="11"
-              height="11"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              style={{
-                transform: hasCollapsedSection ? 'rotate(0deg)' : 'rotate(180deg)',
-                transition: 'transform 0.2s ease',
-              }}
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
-            <span>{hasCollapsedSection ? (lang === 'ar' ? 'توسيع الكل' : 'Expand all') : (lang === 'ar' ? 'طي الكل' : 'Collapse all')}</span>
           </button>
         </div>
         <button
@@ -1252,14 +1277,14 @@ export function AiBotWorkspace() {
         </button>
       </nav>
 
-      <div className="ai-bot-entity-summary">
+      <div className="ai-bot-entity-summary" data-pipeline-section="entity">
         <div>
           <span>{lang === 'ar' ? 'سعر السوق / NAV' : 'Market price / NAV'}</span>
           <strong>{entity.nav_or_price === null ? '—' : Number(entity.nav_or_price).toLocaleString()}</strong>
         </div>
         <div>
-          <span>{lang === 'ar' ? 'عائد 30 يوم' : '30 day return'}</span>
-          <strong className={Number(entity.return_30d_percent) >= 0 ? 'ai-positive' : 'ai-negative'}>{pct(entity.return_30d_percent)}</strong>
+          <span>{entity.entity_type === 'index' ? (lang === 'ar' ? 'عائد 60 يوم' : '60 day return') : (lang === 'ar' ? 'عائد 30 يوم' : '30 day return')}</span>
+          <strong className={Number(entity.entity_type === 'index' ? entity.return_60d_percent : entity.return_30d_percent) >= 0 ? 'ai-positive' : 'ai-negative'}>{pct(entity.entity_type === 'index' ? entity.return_60d_percent : entity.return_30d_percent)}</strong>
         </div>
         <div>
           <span>{lang === 'ar' ? 'العائد منذ بداية العام' : 'YTD return'}</span>
@@ -1274,7 +1299,7 @@ export function AiBotWorkspace() {
         </div>
       </div>
       {Object.keys(dataLoadErrors).length > 0 && (
-        <div className="ai-bot-data-load-warning" role="status">
+        <div className="ai-bot-data-load-warning" data-pipeline-section="entity" role="status">
           <strong>{lang === 'ar' ? 'بيانات جزئية' : 'Partial data'}</strong>
           <span>{Object.keys(dataLoadErrors).map((key) => {
             const labels: Record<string, string> = { signals: lang === 'ar' ? 'الرسم البياني' : 'Chart Reader', verdicts: lang === 'ar' ? 'حكم المقارنة' : 'Comparison Judge', recommendations: lang === 'ar' ? 'المستشار' : 'Smart Advisor', summary: lang === 'ar' ? 'ملخص المحفظة' : 'Portfolio summary', opportunities: lang === 'ar' ? 'الفرص' : 'Opportunities', alerts: lang === 'ar' ? 'التنبيهات' : 'Alerts' };
@@ -1283,20 +1308,7 @@ export function AiBotWorkspace() {
         </div>
       )}
 
-      <section className="ai-bot-engine ai-bot-market-engine">
-        <div className="ai-bot-engine-header">
-          <div><h3>{lang === 'ar' ? 'ذكاء السوق' : 'Market Intelligence'}</h3></div>
-          <div className="ai-bot-engine-actions">
-            <button
-              type="button"
-              className="ai-bot-market-button"
-              onClick={() => setShowMarketComparison((visible) => !visible)}
-            >
-              {showMarketComparison ? <X /> : <List />} {showMarketComparison ? (lang === 'ar' ? 'إغلاق المقارنة' : 'Close comparison') : (lang === 'ar' ? 'مقارنة السوق' : 'Market comparison')}
-            </button>
-            <Gauge />
-          </div>
-        </div>
+      <section className={`ai-bot-engine ai-bot-focused-engine ${isFocusedDeskExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="entity">
         {fundamentals.length > 0 && (
           <section className="ai-bot-fundamentals">
             <div className="ai-bot-fundamentals-heading">
@@ -1386,21 +1398,19 @@ export function AiBotWorkspace() {
               </span>
               <span>{signal?.candle_date ?? (lang === 'ar' ? 'لا يوجد تاريخ شمعة' : 'No candle date')}</span>
             </div>
-            <TechnicalEvidence signal={signal} lang={lang} open={isTechnicalEvidenceExpanded} onToggle={setIsTechnicalEvidenceExpanded} />
+            <TechnicalEvidence signal={signal ?? null} lang={lang} open={isTechnicalEvidenceExpanded} onToggle={setIsTechnicalEvidenceExpanded} />
           </article>
         </div>
-        <Dialog open={showMarketComparison} onOpenChange={setShowMarketComparison}>
-          <DialogContent className="max-w-4xl max-h-[90vh]">
-            <MarketComparison snapshots={snapshots} lang={lang} />
-          </DialogContent>
-        </Dialog>
-        <article className="ai-bot-panel ai-bot-verdict-panel">
+        <article className={`ai-bot-panel ai-bot-verdict-panel ${isEntityComparisonExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="entity">
           <div className="ai-bot-panel-heading">
             <div>
               <h3>{lang === 'ar' ? 'حكم المقارنة' : 'Comparison Judge'}</h3>
               <span>{lang === 'ar' ? 'الأصل المحدد' : 'Selected entity'}</span>
             </div>
-            <Activity />
+            <div className="ai-bot-engine-actions">
+              <button type="button" className="ai-bot-section-toggle" onClick={() => setIsEntityComparisonExpanded((expanded) => !expanded)} aria-expanded={isEntityComparisonExpanded} aria-label={isEntityComparisonExpanded ? 'Collapse Comparison Judge' : 'Expand Comparison Judge'} title={isEntityComparisonExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+              <Activity />
+            </div>
           </div>
           {verdict ? (
             <>
@@ -1783,13 +1793,30 @@ export function AiBotWorkspace() {
         </article>
       </section>
 
-      <section className="ai-bot-engine ai-bot-comparison-engine" data-pipeline-section="portfolio">
+      <section className={`ai-bot-engine ai-bot-market-engine ${isPortfolioMarketExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="portfolio">
+        <div className="ai-bot-engine-header">
+          <div>
+            <h3>{lang === 'ar' ? 'مقارنة السوق' : 'Market Comparison'}</h3>
+            <p>{lang === 'ar' ? 'لقطة كاملة لقائمة المتابعة.' : 'Full watchlist snapshot across all entities.'}</p>
+          </div>
+          <div className="ai-bot-engine-actions">
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioMarketExpanded((expanded) => !expanded)} aria-expanded={isPortfolioMarketExpanded} aria-label={isPortfolioMarketExpanded ? 'Collapse Market Comparison' : 'Expand Market Comparison'} title={isPortfolioMarketExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <Activity />
+          </div>
+        </div>
+        <MarketComparison snapshots={snapshots} lang={lang} />
+      </section>
+
+      <section className={`ai-bot-engine ai-bot-comparison-engine ${isPortfolioComparisonExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="portfolio">
         <div className="ai-bot-engine-header">
           <div>
             <h3>{lang === 'ar' ? 'حكم المقارنة' : 'Comparison Judge'}</h3>
             <p>{lang === 'ar' ? 'نظرة شاملة على جميع حيازات المحفظة.' : 'Portfolio-wide view across all holdings.'}</p>
           </div>
-          <Activity />
+          <div className="ai-bot-engine-actions">
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioComparisonExpanded((expanded) => !expanded)} aria-expanded={isPortfolioComparisonExpanded} aria-label={isPortfolioComparisonExpanded ? 'Collapse portfolio Comparison Judge' : 'Expand portfolio Comparison Judge'} title={isPortfolioComparisonExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <Activity />
+          </div>
         </div>
         <article className="ai-bot-panel ai-bot-verdict-panel">
           {portfolioSummary ? (
@@ -1836,65 +1863,26 @@ export function AiBotWorkspace() {
                 </div>
               </div>
               
-              {opportunitiesData && (
-                <div className="ai-bot-opportunities-section">
-                  <div
-                    className="comparison-group-header"
-                    style={{ cursor: 'pointer', userSelect: 'none', marginBottom: isOpportunitiesExpanded ? '10px' : '0' }}
-                    onClick={() => setIsOpportunitiesExpanded((prev) => !prev)}
-                    role="button"
-                    tabIndex={0}
-                    aria-expanded={isOpportunitiesExpanded}
-                    aria-label={`${lang === 'ar' ? 'الفرص الاستثمارية' : 'Investment Opportunities'} - ${isOpportunitiesExpanded ? (lang === 'ar' ? 'طي القسم' : 'Collapse section') : (lang === 'ar' ? 'توسيع القسم' : 'Expand section')}`}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        setIsOpportunitiesExpanded((prev) => !prev);
-                      }
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        className="comparison-group-collapse-btn"
-                        aria-hidden="true"
-                        title={!isOpportunitiesExpanded ? (lang === 'ar' ? 'توسيع الفرص' : 'Expand opportunities') : (lang === 'ar' ? 'طي الفرص' : 'Collapse opportunities')}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setIsOpportunitiesExpanded((prev) => !prev);
-                        }}
-                      >
-                        <svg
-                          width="11"
-                          height="11"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          style={{
-                            transform: !isOpportunitiesExpanded ? (lang === 'ar' ? 'rotate(90deg)' : 'rotate(-90deg)') : 'rotate(0deg)',
-                            transition: 'transform 0.2s ease',
-                          }}
-                        >
-                          <polyline points="6 9 12 15 18 9" />
-                        </svg>
-                      </button>
-                      <h4 className="ai-bot-summary-title" style={{ margin: 0 }}>
-                        {lang === 'ar' ? '🎯 الفرص' : '🎯 Opportunities'}
-                      </h4>
-                    </div>
-                    <div className="comparison-group-summary">
-                      <span className="ai-bot-tally-chip ai-bot-tally-win">
-                        {lang === 'ar' ? `${opportunities.length} مرشحة` : `${opportunities.length} Available`}
-                      </span>
-                    </div>
-                  </div>
-
-                  {isOpportunitiesExpanded && (
-                    <>
+              </>
+          ) : (
+            <p>{lang === 'ar' ? 'سيظهر ملخص المحفظة بعد اكتمال تشغيل حكم المقارنة.' : 'Portfolio summary will appear after Comparison Judge completes for this run.'}</p>
+          )}
+        </article>
+      </section>
+      <section className={`ai-bot-engine ai-bot-opportunity-engine ${isOpportunitiesExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="portfolio">
+        <div className="ai-bot-engine-header">
+          <div>
+            <h3>{lang === 'ar' ? 'ماسح الفرص' : 'Opportunity Scanner'}</h3>
+            <p>{lang === 'ar' ? 'فرص محتملة وفجوات القطاعات على مستوى المحفظة.' : 'Potential opportunities and sector gaps across the portfolio.'}</p>
+          </div>
+          <div className="ai-bot-engine-actions">
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsOpportunitiesExpanded((expanded) => !expanded)} aria-expanded={isOpportunitiesExpanded} aria-label={isOpportunitiesExpanded ? 'Collapse Opportunity Scanner' : 'Expand Opportunity Scanner'} title={isOpportunitiesExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <Activity />
+          </div>
+        </div>
+        {opportunitiesData ? (
+          <div className="ai-bot-opportunities-section" data-pipeline-role="opportunity-scanner">
+                  <>
                       {sectorConcentrationNote && (
                         <div
                           className="ai-bot-opportunity-context-note"
@@ -1956,8 +1944,7 @@ export function AiBotWorkspace() {
                         </div>
                         )) : <p className="comparison-pending-label">{lang === 'ar' ? 'لم يتم العثور على مرشحين ممتازين أو متينين غير محتفظ بهم في هذا التشغيل.' : 'No Excellent/Solid unheld candidates were detected for this run.'}</p>}
                       </div>
-                      {opportunitiesData && (
-                        <div className="ai-bot-opportunity-workspace">
+                      <div className="ai-bot-opportunity-workspace">
                           <section className="ai-bot-opportunity-block">
                             <h5>{lang === 'ar' ? 'تفاصيل المرشحين غير المحتفظ بهم' : 'Unheld Candidate Details'}</h5>
                             <div className="ai-bot-opportunity-table-wrap">
@@ -1991,75 +1978,83 @@ export function AiBotWorkspace() {
                           {opportunitiesData.unheld_outperforming_held?.length ? <section className="ai-bot-opportunity-block"><h5>{lang === 'ar' ? 'فجوات العائد: غير محتفظ به مقابل محتفظ به' : 'Unheld vs Held Return Gaps'}</h5><div className="ai-bot-opportunity-table-wrap"><table><thead><tr><th>{lang === 'ar' ? 'غير محتفظ به' : 'Unheld'}</th><th>{lang === 'ar' ? 'محتفظ به' : 'Held'}</th><th>{lang === 'ar' ? 'فجوة العائد' : 'Return gap'}</th><th>{lang === 'ar' ? 'مقارنة المخاطر' : 'Risk comparison'}</th></tr></thead><tbody>{opportunitiesData.unheld_outperforming_held.map((pair, index) => <tr key={`${pair.unheld_ticker}-${pair.held_ticker}-${index}`}><td><b>{pair.unheld_ticker}</b> · {translateEntityName(pair.unheld_name, lang)}<br /><small>{pair.unheld_return === null ? unavailableValue(lang) : `${Number(pair.unheld_return).toFixed(1)}%`}</small></td><td><b>{pair.held_ticker}</b> · {translateEntityName(pair.held_name, lang)}<br /><small>{pair.held_return === null ? unavailableValue(lang) : `${Number(pair.held_return).toFixed(1)}%`}</small></td><td className="ai-positive">{Number(pair.gap_percent).toFixed(1)} pp</td><td>{pair.risk_comparison || unavailableValue(lang)}</td></tr>)}</tbody></table></div></section> : null}
                           {opportunitiesData.risk_tier_comparison && <section className="ai-bot-opportunity-risk"><h5>{lang === 'ar' ? 'مقارنة المخاطر' : 'Risk Comparison'}</h5><span>{lang === 'ar' ? 'متوسط مخاطر المحفظة' : 'Portfolio average risk'} <b>{opportunitiesData.risk_tier_comparison.portfolio_avg_risk || unavailableValue(lang)}</b></span><span>{lang === 'ar' ? 'متوسط مخاطر الفرص' : 'Opportunity average risk'} <b>{opportunitiesData.risk_tier_comparison.opportunities_avg_risk || unavailableValue(lang)}</b></span><span>{lang === 'ar' ? 'فرص أعلى مخاطرة' : 'Higher-risk opportunities'} <b>{opportunitiesData.risk_tier_comparison.higher_risk_opportunities}</b></span></section>}
                         </div>
-                      )}
-                    </>
-                  )}
+                  </>
+                </div>
+          ) : (
+            <div className="ai-bot-opportunities-section" data-pipeline-role="opportunity-scanner">
+              <p className="comparison-pending-label">
+                {dataLoadErrors.opportunities
+                  ? (lang === 'ar' ? 'تعذر تحميل بيانات ماسح الفرص لهذا التشغيل.' : 'Opportunity Scanner data failed to load for this run.')
+                  : (lang === 'ar' ? 'لا توجد بيانات فرص متاحة لهذا التشغيل.' : 'No opportunity data is available for this run.')}
+              </p>
+            </div>
+                    )}
+              
+      </section>
+      <section className={`ai-bot-engine ai-bot-alerts-engine ${isPortfolioAlertsExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="portfolio">
+        <div className="ai-bot-engine-header">
+          <div>
+            <h3>{lang === 'ar' ? 'تنبيهات المحفظة' : 'Portfolio Alerts'}</h3>
+            <p>{lang === 'ar' ? 'تنبيهات على مستوى المحفظة بالكامل: الوقف الزمني وسلامة الأطروحة والتراجع.' : 'Whole-portfolio alerts: Time Stop, Thesis Check, and portfolio drawdown.'}</p>
+          </div>
+          <div className="ai-bot-engine-actions">
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioAlertsExpanded((expanded) => !expanded)} aria-expanded={isPortfolioAlertsExpanded} aria-label={isPortfolioAlertsExpanded ? 'Collapse portfolio alerts' : 'Expand portfolio alerts'} title={isPortfolioAlertsExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <Activity />
+          </div>
+        </div>
+        <PortfolioAlerts alertsData={alertsData} lang={lang} />
+      </section>
+      <section className={`ai-bot-engine ai-bot-advisor-engine ai-bot-portfolio-advisor-engine ${isPortfolioAdvisorExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="portfolio">
+        <div className="ai-bot-engine-header">
+          <div>
+            <h3>{lang === 'ar' ? 'المستشار الذكي للمحفظة' : 'Portfolio Smart Advisor'}</h3>
+            <p>{lang === 'ar' ? 'توصية على مستوى المحفظة بناءً على جميع الحيازات.' : 'Portfolio-level recommendation based on all holdings.'}</p>
+          </div>
+          <div className="ai-bot-engine-actions">
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioAdvisorExpanded((expanded) => !expanded)} aria-expanded={isPortfolioAdvisorExpanded} aria-label={isPortfolioAdvisorExpanded ? 'Collapse portfolio Smart Advisor' : 'Expand portfolio Smart Advisor'} title={isPortfolioAdvisorExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <Brain />
+          </div>
+        </div>
+        <article className="ai-bot-panel ai-bot-advice-panel">
+          {portfolioSummary ? (
+            <>
+              {portfolioSummary.decision && (
+                <div className="ai-bot-portfolio-decision-row">
+                  <div className={`ai-bot-decision-pill ai-bot-decision-${portfolioSummary.decision}`}>{getDecisionMeta(portfolioSummary.decision, lang).label}</div>
+                  {portfolioSummary.confidence !== null && portfolioSummary.confidence !== undefined && <span className="ai-bot-portfolio-confidence">{lang === 'ar' ? `الثقة: ${portfolioSummary.confidence}%` : `Confidence: ${portfolioSummary.confidence}%`}</span>}
                 </div>
               )}
-              
-              <div className="ai-bot-summary-analysis">
-                <h4 className="ai-bot-summary-title">{lang === 'ar' ? 'قراءة المستشار الشاملة للمحفظة' : 'Portfolio-wide Advisor Read'}</h4>
-                {portfolioSummary.decision ? (
-                  <>
-                    <div className="ai-bot-portfolio-decision-row">
-                      <div className={`ai-bot-decision-pill ai-bot-decision-${portfolioSummary.decision}`}>
-                        {getDecisionMeta(portfolioSummary.decision, lang).label}
-                      </div>
-                      {portfolioSummary.confidence !== null && portfolioSummary.confidence !== undefined && (
-                        <span className="ai-bot-portfolio-confidence">
-                          {lang === 'ar' ? `الثقة: ${portfolioSummary.confidence}%` : `Confidence: ${portfolioSummary.confidence}%`}
-                        </span>
-                      )}
-                    </div>
-                    <p className="ai-bot-recommendation">{formatSummaryText(portfolioSummary.summary_text, lang)}</p>
-                    {portfolioSummary.evidence && portfolioSummary.evidence.length > 0 && (
-                      <div className="ai-bot-portfolio-list-section">
-                        <span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--evidence">{lang === 'ar' ? 'الأدلة' : 'Evidence'}</span>
-                        <ul className="ai-bot-portfolio-list">
-                          {portfolioSummary.evidence.map((item, i) => (
-                            <li key={i}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {portfolioSummary.risks && portfolioSummary.risks.length > 0 && (
-                      <div className="ai-bot-portfolio-list-section">
-                        <span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--risks">{lang === 'ar' ? 'المخاطر' : 'Risks'}</span>
-                        <ul className="ai-bot-portfolio-list ai-bot-portfolio-list--risks">
-                          {portfolioSummary.risks.map((item, i) => (
-                            <li key={i}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {portfolioSummary.next_review_days !== null && portfolioSummary.next_review_days !== undefined && (
-                      <p className="ai-bot-portfolio-next-review">
-                        {lang === 'ar'
-                          ? `مراجعة المحفظة القادمة: خلال ${portfolioSummary.next_review_days} يوم`
-                          : `Next portfolio review: in ${portfolioSummary.next_review_days} day${portfolioSummary.next_review_days === 1 ? '' : 's'}`}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  // Pre-migration row or fallback path — render summary text only, no pill
-                  <p className="ai-bot-recommendation">{formatSummaryText(portfolioSummary.summary_text, lang)}</p>
-                )}
-              </div>
-              
-              <small className="ai-bot-summary-meta">{formatModelName(portfolioSummary.model_used, lang)} / {new Date(portfolioSummary.generated_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}</small>
+              <p className="ai-bot-recommendation">{formatSummaryText(portfolioSummary.summary_text, lang)}</p>
+              {portfolioSummary.evidence && portfolioSummary.evidence.length > 0 && <div className="ai-bot-portfolio-list-section"><span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--evidence">{lang === 'ar' ? 'الأدلة' : 'Evidence'}</span><ul className="ai-bot-portfolio-list">{portfolioSummary.evidence.map((item, i) => <li key={i}>{item}</li>)}</ul></div>}
+              {portfolioSummary.risks && portfolioSummary.risks.length > 0 && <div className="ai-bot-portfolio-list-section"><span className="ai-bot-portfolio-list-label ai-bot-portfolio-list-label--risks">{lang === 'ar' ? 'المخاطر' : 'Risks'}</span><ul className="ai-bot-portfolio-list ai-bot-portfolio-list--risks">{portfolioSummary.risks.map((item, i) => <li key={i}>{item}</li>)}</ul></div>}
+              {portfolioSummary.next_review_days !== null && portfolioSummary.next_review_days !== undefined && <p className="ai-bot-portfolio-next-review">{lang === 'ar' ? `مراجعة المحفظة القادمة: خلال ${portfolioSummary.next_review_days} يوم` : `Next portfolio review: in ${portfolioSummary.next_review_days} day${portfolioSummary.next_review_days === 1 ? '' : 's'}`}</p>}
             </>
-          ) : (
-            <p>{lang === 'ar' ? 'سيظهر ملخص المحفظة بعد اكتمال تشغيل حكم المقارنة.' : 'Portfolio summary will appear after Comparison Judge completes for this run.'}</p>
-          )}
+          ) : <p>{lang === 'ar' ? 'سيظهر مستشار المحفظة بعد اكتمال التشغيل.' : 'Portfolio Smart Advisor will appear after the run completes.'}</p>}
         </article>
       </section>
-      <section className="ai-bot-engine ai-bot-advisor-engine">
+      <section className={`ai-bot-engine ai-bot-alerts-engine ${isEntityAlertsExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="entity">
+        <div className="ai-bot-engine-header">
+          <div>
+            <h3>{lang === 'ar' ? `تنبيهات الأصل: ${entity.ticker}` : `Entity Alerts: ${entity.ticker}`}</h3>
+            <p>{lang === 'ar' ? `تنبيهات للأصل المحدد فقط: ${translateEntityName(entity.name || entity.ticker, lang)}.` : `Alerts for the selected entity only: ${translateEntityName(entity.name || entity.ticker, lang)}.`}</p>
+          </div>
+          <div className="ai-bot-engine-actions">
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsEntityAlertsExpanded((expanded) => !expanded)} aria-expanded={isEntityAlertsExpanded} aria-label={isEntityAlertsExpanded ? 'Collapse entity alerts' : 'Expand entity alerts'} title={isEntityAlertsExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <Activity />
+          </div>
+        </div>
+        {entity && <EntityAlerts entity={entity} timeStop={entityTimeStop} thesis={entityThesis} drawdown={portfolioDrawdown} lang={lang} />}
+      </section>
+      <section className={`ai-bot-engine ai-bot-advisor-engine ${isEntityAdvisorExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="entity">
         <div className="ai-bot-engine-header">
           <div>
             <h3>{lang === 'ar' ? 'المستشار الذكي' : 'Smart Advisor'}</h3>
             <p>{lang === 'ar' ? 'التوصية النهائية بناءً على التحليل المكتمل.' : 'Final recommendation based on the completed analysis.'}</p>
           </div>
-          <Brain />
+          <div className="ai-bot-engine-actions">
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsEntityAdvisorExpanded((expanded) => !expanded)} aria-expanded={isEntityAdvisorExpanded} aria-label={isEntityAdvisorExpanded ? 'Collapse Smart Advisor' : 'Expand Smart Advisor'} title={isEntityAdvisorExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <Brain />
+          </div>
         </div>
         <article className="ai-bot-panel ai-bot-advice-panel">
           {recommendation?.model_used === 'error' ? (
@@ -2196,7 +2191,7 @@ export function AiBotWorkspace() {
 
               {/* 3.5: Automated Safety & Alert Checks — Time Stop, Thesis, Drawdown */}
               {(entityTimeStop || entityThesis || portfolioDrawdown) && (
-                <div className="ai-bot-advice-section ai-bot-advice-safety-section">
+                <div className="ai-bot-advice-section ai-bot-advice-safety-section ai-bot-legacy-safety-section">
                   <span className="comparison-holding-eyebrow">{lang === 'ar' ? 'فحوصات الأمان الآلية' : 'Automated Safety Checks'}</span>
                   <div className="ai-bot-safety-grid">
 

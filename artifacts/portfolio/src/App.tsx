@@ -193,6 +193,7 @@ export default function App() {
       <div id="ai-bot-workspace-mount" className="w-full" style={{ display: isLoading || (isError && !notSeeded && !retainedPortfolio) ? '' : 'none' }}>
         <AiBotWorkspace />
       </div>
+      <footer><span data-i18n="footer.updated">Last updated:</span> <span id="last-updated"></span> · <span data-i18n="footer.sub">Prices via open APIs · Funds: manual NAV</span></footer>
     </>
   );
 }
