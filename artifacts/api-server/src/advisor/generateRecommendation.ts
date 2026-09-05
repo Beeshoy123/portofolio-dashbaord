@@ -325,8 +325,9 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
   }
 
   if (!res || !res.ok) {
+    const providerPath = qwenApiKey ? "Qwen -> Gemini" : "Gemini";
     throw new Error(
-      `[generateRecommendation] Gemini API error ${res?.status ?? "unknown"}: ${lastErrorBody}`
+      `[generateRecommendation] Provider path ${providerPath}; API error ${res?.status ?? "unknown"}: ${lastErrorBody}`
     );
   }
 
@@ -478,7 +479,8 @@ export async function generatePortfolioSummary(
   }
 
   if (!res || !res.ok) {
-    throw new Error(`[generatePortfolioSummary] AI API error ${res?.status ?? "unknown"}: ${lastErrorBody}`);
+    const providerPath = qwenApiKey ? "Qwen -> Gemini" : "Gemini";
+    throw new Error(`[generatePortfolioSummary] Provider path ${providerPath}; AI API error ${res?.status ?? "unknown"}: ${lastErrorBody}`);
   }
 
   const data = (await res.json()) as GeminiResponse & {

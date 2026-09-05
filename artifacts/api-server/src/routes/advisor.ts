@@ -70,6 +70,7 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
     const result = await pool.query(
       `SELECT ar.id, ar.recommendation_text, ar.model_used, ar.generated_at,
               ar.decision, ar.confidence, ar.thesis_risk, ar.evidence, ar.risks, ar.next_review_days,
+              ar.generation_status, ar.error_message,
               ar.watch_trigger, ar.do_not_act_reasons
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
@@ -90,6 +91,8 @@ router.get("/recommendations/:ticker", async (req: Request, res: Response) => {
       recommendation_text: row.recommendation_text,
       model_used: row.model_used,
       generated_at: row.generated_at,
+      generation_status: row.generation_status,
+      error_message: row.error_message,
       structured: formatStructuredRecommendation(row),
     });
   } catch (err) {
@@ -109,6 +112,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
       `SELECT DISTINCT ON (cw.ticker) 
               cw.ticker, ar.recommendation_text, ar.model_used, ar.generated_at,
              ar.decision, ar.confidence, ar.thesis_risk, ar.evidence, ar.risks, ar.next_review_days,
+             ar.generation_status, ar.error_message,
               ar.watch_trigger, ar.do_not_act_reasons
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
@@ -129,6 +133,8 @@ router.get("/recommendations", async (req: Request, res: Response) => {
       recommendation_text: row.recommendation_text,
       model_used: row.model_used,
       generated_at: row.generated_at,
+      generation_status: row.generation_status,
+      error_message: row.error_message,
       structured: formatStructuredRecommendation(row),
     }));
 
@@ -178,12 +184,14 @@ router.post("/retry-smart-advisor", async (req: Request, res: Response) => {
         });
         await pool.query(
           `INSERT INTO advisor_recommendations
-             (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, thesis_risk, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons)
-           SELECT id, $1, $2, $4, $5, $6, $7, $8, $9, $10, $11, $12
+             (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, thesis_risk, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons, generation_status, error_message)
+           SELECT id, $1, $2, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'succeeded', NULL
            FROM comparison_watchlist WHERE ticker = $3
            ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
            DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
                          model_used = EXCLUDED.model_used,
+                         generation_status = 'succeeded',
+                         error_message = NULL,
                          decision = EXCLUDED.decision,
                          confidence = EXCLUDED.confidence,
                          thesis_risk = EXCLUDED.thesis_risk,
@@ -210,7 +218,26 @@ router.post("/retry-smart-advisor", async (req: Request, res: Response) => {
         );
         return { ticker: verdict.holding_ticker, status: "success", model_used: recommendation.model_used };
       } catch (error) {
-        return { ticker: verdict.holding_ticker, status: "failed", reason: String(error) };
+        const reason = error instanceof Error ? error.message : String(error);
+        await pool.query(
+          `INSERT INTO advisor_recommendations
+             (watchlist_id, recommendation_text, model_used, run_id, generation_status, error_message)
+           SELECT id, $1, 'error', $3, 'failed', $2
+           FROM comparison_watchlist WHERE ticker = $4
+           ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
+           DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
+                         model_used = EXCLUDED.model_used,
+                         generation_status = EXCLUDED.generation_status,
+                         error_message = EXCLUDED.error_message,
+                         generated_at = EXCLUDED.generated_at`,
+          [
+            "Recommendation could not be generated during retry.",
+            reason,
+            runId,
+            verdict.holding_ticker,
+          ],
+        );
+        return { ticker: verdict.holding_ticker, status: "failed", reason };
       }
     });
 

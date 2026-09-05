@@ -349,6 +349,7 @@ html[lang="ar"] .sort-popover {
   transition: opacity .15s;
 }
 .icon-btn:hover { opacity: .8; }
+.settings-icon { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* Smart Advisor */
 .smart-advisor-panel {
@@ -803,6 +804,8 @@ html[lang="ar"] .sort-popover {
 .ai-bot-gatherer-failed strong { font-size: 11px; }
 .ai-bot-data-load-warning { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 12px 0; padding: 8px 10px; border: 1px solid rgba(217,154,43,.3); border-radius: 7px; background: rgba(217,154,43,.08); color: #e7b85b; font-size: 10px; }
 .ai-bot-data-load-warning span { color: #c9b987; }
+.ai-bot-quality-gate-warning { display: flex; flex-wrap: wrap; gap: 6px 10px; margin: 10px 12px 0; padding: 9px 10px; border: 1px solid rgba(224, 110, 70, .38); border-radius: 7px; background: rgba(224, 110, 70, .10); color: #f09060; font-size: 10px; }
+.ai-bot-quality-gate-warning span, .ai-bot-quality-gate-warning small { color: #d8b2a0; }
 
 /* Enhanced Comparison Judge Report Card & Educational Styles */
 .ai-bot-verdict-section { padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid rgba(255, 255, 255, .08); }
@@ -2010,4 +2013,263 @@ footer {
   .bento .card[data-view-card="health"],
   .bento .card[data-view-card="segments"] { grid-column: span 1; }
   .card.r-2 { grid-row: span 1; }
+}
+
+/* ── AI Insights light-mode prototype ──────────────────────────────── */
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-workspace {
+  margin: 0 var(--gap) 24px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 18px 45px rgba(17, 24, 39, .08);
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-workspace-header {
+  padding: 20px 22px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-workspace-icon {
+  border-color: #d1d5db;
+  background: #f9fafb;
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-workspace h2,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine-header h3,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-panel-heading h3 {
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-run-state,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine-header p,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-workspace-header p {
+  color: #6b7280;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-pipeline-scope {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-pipeline-scope button {
+  color: #6b7280;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-pipeline-scope button.is-active {
+  background: #111827;
+  color: #ffffff;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine {
+  border-color: #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, .06);
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine-header {
+  background: #fafafa;
+  border-bottom-color: #e5e7eb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine-header > div > span,
+body:not(.dark) #ai-bot-workspace-mount .comparison-holding-eyebrow {
+  color: #0f766e;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine-header > svg,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-panel-heading > svg {
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-section-toggle {
+  border-color: #d1d5db;
+  background: #ffffff;
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine .ai-bot-panel {
+  background: #ffffff;
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-analysis-grid,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-summary,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-nav {
+  border-color: #e5e7eb;
+  background: #ffffff;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-price-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-chart-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-fundamentals,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-market-comparison,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-block,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advice-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-alerts-panel {
+  border-color: #e5e7eb;
+  background: #ffffff;
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-market-comparison,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunities-section {
+  box-shadow: none;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-market-table-wrap,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-table-wrap,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-portfolio-judge-table-wrap {
+  border-color: #e5e7eb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-market-table-wrap th,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-table-wrap th,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-portfolio-judge-table-wrap th {
+  background: #f9fafb;
+  color: #6b7280;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-market-table-wrap td,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-table-wrap td,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-portfolio-judge-table-wrap td {
+  color: #374151;
+  border-top-color: #f0f1f3;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-market-table-wrap td:first-child,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-table-wrap td:first-child {
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-card-collapsed > .ai-bot-engine-header .ai-bot-section-toggle svg {
+  transform: rotate(-90deg);
+}
+
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-nav {
+  background: #ffffff;
+  border-bottom-color: #e5e7eb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-current span,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-current small,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-summary span,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-price-main span,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-price-details,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-chart-footer,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-fundamentals-heading small {
+  color: #6b7280;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-current strong,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-summary strong,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-price-details b,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-raw-market-group > strong,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-raw-market-group b,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-fundamentals-heading strong,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-fundamentals-grid strong,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-panel p,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-transparency h4,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-opportunities h4,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-block h5,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-risk h5,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-portfolio-judge-transparency h4 {
+  color: #111827;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-current strong {
+  font-size: 20px;
+  letter-spacing: -.01em;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-summary > div {
+  border-right-color: #e5e7eb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-entity-nav button,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-filter-btn {
+  border-color: #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-filter-btn.is-active {
+  border-color: #0f766e;
+  background: #ecfdf5;
+  color: #0f766e;
+  box-shadow: none;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-price-main strong {
+  color: #0f766e;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-price-details,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-raw-market-data,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-verdict-section,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-summary-section,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-summary-meta,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-meta,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-metrics,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-value-metrics {
+  border-color: #e5e7eb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-panel p,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-empty-state,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-line small,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-meta span,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-metrics span,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-value-metrics span {
+  color: #4b5563;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-recommendation,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-summary-holdings,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-line span,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-table-wrap td b,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-portfolio-judge-table-wrap td b {
+  color: #111827 !important;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-transparency,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advisor-opportunities,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-portfolio-advisor-card {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-summary {
+  border-color: #e5e7eb;
+  background: #f3f4f6;
+  color: #374151;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-chart {
+  border-color: #e5e7eb;
+  background: #f9fafb;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-technical-evidence summary,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-raw-market-data summary {
+  color: #0f766e;
+}
+body:not(.dark) .bento[data-view="ai"] [data-view-card="ai-insights"] .card {
+  border-color: #e5e7eb;
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(17, 24, 39, .06);
+}
+body:not(.dark) .bento[data-view="ai"] [data-view-card="ai-insights"] [data-i18n="ai.title"] {
+  color: #111827;
+}
+body:not(.dark) .bento[data-view="ai"] [data-view-card="ai-insights"] [data-i18n="ai.subtitle"],
+body:not(.dark) .bento[data-view="ai"] [data-view-card="ai-insights"] #ai-engine-updated {
+  color: #6b7280 !important;
+}
+body:not(.dark) .bento[data-view="ai"] [data-view-card="ai-insights"] [id^="ai-stage-"] {
+  border-color: #d1d5db !important;
+  background: #f9fafb !important;
+  color: #4b5563 !important;
+}
+body:not(.dark) .bento[data-view="ai"] [data-view-card="ai-insights"] [id^="ai-stage-"] b {
+  color: #111827 !important;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-workspace {
+  border-color: #eadfce;
+  background: #faf0e6;
+  box-shadow: none;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-workspace-header {
+  background: #faf0e6;
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine {
+  border-color: #dfe3e6;
+  background: #f1f3f4;
+  box-shadow: 0 8px 22px rgba(73, 58, 40, .07);
+}
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine-header,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-engine .ai-bot-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-price-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-chart-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-fundamentals,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-market-comparison,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-opportunity-block,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-advice-panel,
+body:not(.dark) #ai-bot-workspace-mount .ai-bot-alerts-panel {
+  background: #f1f3f4;
+}
+body:not(.dark) .bento[data-view="ai"] [data-view-card="ai-insights"] .card {
+  border-color: #eadfce;
+  background: #f1f3f4;
+  box-shadow: 0 8px 22px rgba(73, 58, 40, .07);
 }

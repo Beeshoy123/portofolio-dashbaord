@@ -79,7 +79,7 @@ export const T: Record<Lang, Record<string, string>> = {
     // Gold hero stat row
     'gold.stat.avg'   : 'Avg Cost',
     'gold.stat.grams' : 'Grams Held',
-    'gold.stat.live'  : 'Live Price',
+    'gold.stat.holding': 'Holding Cost',
     // Certificates section
     'certs.hero.label': 'NBE Certificates · Total Principal',
     'certs.hero.sub'  : 'Principal Balance · EGP',
@@ -413,7 +413,7 @@ export const T: Record<Lang, Record<string, string>> = {
     // Gold hero stat row
     'gold.stat.avg'   : 'متوسط التكلفة',
     'gold.stat.grams' : 'الجرامات المحتجزة',
-    'gold.stat.live'  : 'السعر الحي',
+    'gold.stat.holding': 'تكلفة الحيازة',
     // Certificates section
     'certs.hero.label': 'شهادات البنك الأهلي · إجمالي رأس المال',
     'certs.hero.sub'  : 'رصيد رأس المال · ج.م',

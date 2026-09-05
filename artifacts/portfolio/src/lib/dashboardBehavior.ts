@@ -921,7 +921,11 @@ export function initDashboardBehavior(
         }
         if (hasPrices && gp.sellPrice24k) {
           const goldEl = el("live-gold");
-          if (goldEl) goldEl.textContent = `${fmt(gp.sellPrice24k)} EGP/g`;
+          if (goldEl) {
+            goldEl.textContent = gp.buyPrice24k
+              ? `Buy ${fmt(gp.buyPrice24k)} · Sell ${fmt(gp.sellPrice24k)} EGP/g`
+              : `${fmt(gp.sellPrice24k)} EGP/g`;
+          }
         }
         // Update the live price object so calcGoldDca uses fresh numbers.
         if (gp.buyPrice24k) liveGoldPrices.buyPrice24k = gp.buyPrice24k;
@@ -2175,7 +2179,11 @@ export function initDashboardBehavior(
     }
     if (goldExt.sellPrice24k) {
       const goldVal = el("live-gold");
-      if (goldVal) goldVal.textContent = `${fmt(goldExt.sellPrice24k)} EGP/g`;
+      if (goldVal) {
+        goldVal.textContent = goldExt.buyPrice24k
+          ? `Buy ${fmt(goldExt.buyPrice24k)} · Sell ${fmt(goldExt.sellPrice24k)} EGP/g`
+          : `${fmt(goldExt.sellPrice24k)} EGP/g`;
+      }
     }
     if (goldExt.goldPriceStatus === "live") {
       const w = el("api-warning");

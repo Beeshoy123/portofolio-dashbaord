@@ -226,6 +226,56 @@ async function getWatchlistRows(): Promise<WatchlistRow[]> {
   return result.rows;
 }
 
+function isPersistedVerdict(value: unknown, period: ReturnPeriod): value is HoldingVerdict {
+  if (!value || typeof value !== "object") return false;
+  const verdict = value as Partial<HoldingVerdict>;
+  return typeof verdict.holding_ticker === "string"
+    && verdict.holding_ticker.length > 0
+    && verdict.return_period === period
+    && typeof verdict.signal === "string"
+    && Array.isArray(verdict.groups)
+    && verdict.data_quality !== undefined;
+}
+
+async function loadPersistedVerdicts(
+  runId: number,
+  period: ReturnPeriod,
+  includeAllEntities: boolean,
+): Promise<HoldingVerdict[] | null> {
+  try {
+    const [watchlist, result] = await Promise.all([
+      getWatchlistRows(),
+      pool.query<{ raw_verdict: unknown }>(
+        `SELECT DISTINCT ON (vh.watchlist_id) vh.raw_verdict
+           FROM verdict_history vh
+           JOIN comparison_watchlist cw ON cw.id = vh.watchlist_id
+          WHERE vh.run_id = $1
+          ORDER BY vh.watchlist_id, vh.id DESC`,
+        [runId],
+      ),
+    ]);
+    const eligibleTickers = new Set(
+      watchlist
+        .filter((row) => !isEmergencyReserveFund(row) && (includeAllEntities || row.is_held))
+        .map((row) => row.ticker.toUpperCase()),
+    );
+    const persisted = result.rows
+      .map((row) => typeof row.raw_verdict === "string" ? JSON.parse(row.raw_verdict) as unknown : row.raw_verdict)
+      .filter((value): value is HoldingVerdict => isPersistedVerdict(value, period))
+      .filter((verdict) => eligibleTickers.has(verdict.holding_ticker.toUpperCase()));
+
+    if (persisted.length === 0) return null;
+    if (includeAllEntities && persisted.length < eligibleTickers.size) {
+      return null;
+    }
+    console.info(`[judge] Reused ${persisted.length} persisted verdicts for run ${runId}`);
+    return persisted;
+  } catch (error) {
+    console.warn(`[judge] Persisted verdict reuse unavailable for run ${runId}; recomputing`, error);
+    return null;
+  }
+}
+
 async function getLatestSnapshots(runId?: number): Promise<Map<number, SnapshotRow>> {
   const runFilter = runId === undefined ? "" : "AND run_id = $1";
   const result = await pool.query<SnapshotRow>(
@@ -586,7 +636,10 @@ export async function judgeAllHoldings(
     if (cached) return cached;
   }
 
-  const computation = judgeAllHoldingsUncached(period, runId, includeAllEntities, diagnostics);
+  const computation = runId === undefined
+    ? judgeAllHoldingsUncached(period, runId, includeAllEntities, diagnostics)
+    : loadPersistedVerdicts(runId, period, includeAllEntities)
+      .then((persisted) => persisted ?? judgeAllHoldingsUncached(period, runId, includeAllEntities, diagnostics));
   if (cacheKey) {
     verdictCache.set(cacheKey, computation);
     while (verdictCache.size > MAX_VERDICT_CACHE_ENTRIES) {

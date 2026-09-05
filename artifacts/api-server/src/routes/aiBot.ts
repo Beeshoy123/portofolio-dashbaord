@@ -17,6 +17,7 @@ const router = Router();
 const BOT_LOCK_ID = 1844674410;
 
 type StageState = "waiting" | "running" | "completed" | "failed";
+type StageCounts = { succeeded: number; failed: number; total: number };
 type BotStatus = {
   running: boolean;
   runId: number | null;
@@ -25,6 +26,8 @@ type BotStatus = {
   verdict_history_write_failures: string[];
   chart_reader_failures: string[];
   chart_reader_errors: string[];
+  stage_counts: Record<string, StageCounts>;
+  stage_errors: Record<string, string[]>;
   stages: {
     priceChecker: StageState;
     chartReader: StageState;
@@ -42,6 +45,8 @@ let status: BotStatus = {
   verdict_history_write_failures: [],
   chart_reader_failures: [],
   chart_reader_errors: [],
+  stage_counts: {},
+  stage_errors: {},
   stages: {
     priceChecker: "waiting",
     chartReader: "waiting",
@@ -69,6 +74,17 @@ async function runWithConcurrency<T>(
   await Promise.all(workers);
 }
 
+async function persistRunDiagnostics(
+  runId: number,
+  stageCounts: Record<string, StageCounts>,
+  stageErrors: Record<string, string[]>,
+): Promise<void> {
+  await pool.query(
+    `UPDATE bot_runs SET stage_counts = $1::jsonb, stage_errors = $2::jsonb WHERE id = $3`,
+    [JSON.stringify(stageCounts), JSON.stringify(stageErrors), runId],
+  );
+}
+
 async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
   status = {
     running: true,
@@ -78,6 +94,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
     verdict_history_write_failures: [],
     chart_reader_failures: [],
     chart_reader_errors: [],
+    stage_counts: {},
+    stage_errors: {},
     stages: {
       priceChecker: "running",
       chartReader: "waiting",
@@ -87,10 +105,21 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
     },
   };
 
+  const stageCounts: Record<string, StageCounts> = {};
+  const stageErrors: Record<string, string[]> = {};
+  const persistProgress = async () => {
+    status.stage_counts = stageCounts;
+    status.stage_errors = stageErrors;
+    await persistRunDiagnostics(runId, stageCounts, stageErrors);
+  };
+
   try {
     const summary = await runBotPipeline({
       runPriceChecker: async () => {
         const result = await runScraper(runId);
+        stageCounts.priceChecker = result;
+        if (result.failed > 0) stageErrors.priceChecker = [`${result.failed} price checks failed`];
+        await persistProgress();
         status.stages.priceChecker = result.failed === result.total ? "failed" : "completed";
         return result;
       },
@@ -100,6 +129,9 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           const result = await runTechnicalAnalysis(runId);
           status.chart_reader_failures = result.failed_tickers;
           status.chart_reader_errors = result.failure_messages;
+          stageCounts.chartReader = { succeeded: result.succeeded, failed: result.failed, total: result.total };
+          if (result.failure_messages.length > 0) stageErrors.chartReader = result.failure_messages;
+          await persistProgress();
           status.stages.chartReader = result.total > 0 && result.failed === result.total
             ? "failed"
             : "completed";
@@ -109,6 +141,9 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           return result;
         } catch (error) {
           status.stages.chartReader = "failed";
+          stageCounts.chartReader = { succeeded: 0, failed: 0, total: 0 };
+          stageErrors.chartReader = [error instanceof Error ? error.message : String(error)];
+          await persistProgress();
           console.error("[ai-bot] Chart Reader failed", error);
           return { succeeded: 0, failed: 0, total: 0 };
         }
@@ -118,11 +153,16 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
         const diagnostics: JudgeRunDiagnostics = { verdict_history_write_failures: [] };
         try {
           const result = await judgeAllHoldings("return_1y", runId, false, diagnostics);
+          stageCounts.comparisonJudge = { succeeded: result.length, failed: diagnostics.verdict_history_write_failures.length, total: result.length + diagnostics.verdict_history_write_failures.length };
+          if (diagnostics.verdict_history_write_failures.length > 0) stageErrors.comparisonJudge = diagnostics.verdict_history_write_failures;
+          await persistProgress();
           status.verdict_history_write_failures = diagnostics.verdict_history_write_failures;
           status.stages.comparisonJudge = "completed";
           return result;
         } catch (error) {
           status.stages.comparisonJudge = "failed";
+          stageErrors.comparisonJudge = [error instanceof Error ? error.message : String(error)];
+          await persistProgress();
           console.error("[ai-bot] Comparison Judge failed", error);
           return [];
         }
@@ -136,10 +176,15 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
             checkAllTheses(runId),
             computeDrawdown(runId),
           ]);
+          stageCounts.alerts = { succeeded: 1, failed: 0, total: 1 };
+          await persistProgress();
           status.stages.alerts = "completed";
           return result;
         } catch (error) {
           status.stages.alerts = "failed";
+          stageCounts.alerts = { succeeded: 0, failed: 1, total: 1 };
+          stageErrors.alerts = [error instanceof Error ? error.message : String(error)];
+          await persistProgress();
           console.error("[ai-bot] Alerts failed", error);
           return [];
         }
@@ -147,7 +192,12 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
       runSmartAdvisor: async (runId, rawVerdicts, rawAlerts) => {
         status.stages.smartAdvisor = "running";
         try {
-          const verdicts = rawVerdicts as Awaited<ReturnType<typeof judgeAllHoldings>>;
+          const allVerdicts = rawVerdicts as Awaited<ReturnType<typeof judgeAllHoldings>>;
+          const skippedVerdicts = allVerdicts.filter((verdict) => verdict.holding_return_percent === null);
+          const verdicts = allVerdicts.filter((verdict) => verdict.holding_return_percent !== null);
+          if (skippedVerdicts.length > 0) {
+            stageErrors.smartAdvisor = skippedVerdicts.map((verdict) => `${verdict.holding_ticker}: skipped because no usable return data was available`);
+          }
           const [timeStops, theses, drawdown] = rawAlerts as [
             Array<{ ticker: string; is_stagnant: boolean; stagnant_days?: number | null }>,
             Array<{ ticker: string; has_reversal: boolean; newly_appeared_flags?: string[] }>,
@@ -440,6 +490,7 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           // Track advisor generation success — if all fail, the run should not be "completed"
           let advisorSuccessCount = 0;
           let advisorFailureCount = 0;
+          const advisorFailures: string[] = [];
 
           await runWithConcurrency(verdicts, 3, async (verdict) => {
             try {
@@ -460,9 +511,20 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 portfolioSummary: portfolioSummaryContext,
               });
               await pool.query(
-                `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons)
-                 SELECT id, $1, $2, $4, $5, $6, $7, $8, $9, $10, $11 FROM comparison_watchlist WHERE ticker = $3
-                 ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL DO NOTHING`,
+                `INSERT INTO advisor_recommendations (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons, generation_status, error_message)
+                 SELECT id, $1, $2, $4, $5, $6, $7, $8, $9, $10, $11, 'succeeded', NULL FROM comparison_watchlist WHERE ticker = $3
+                 ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
+                 DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
+                               model_used = EXCLUDED.model_used,
+                               generation_status = 'succeeded',
+                               error_message = NULL,
+                               decision = EXCLUDED.decision,
+                               confidence = EXCLUDED.confidence,
+                               evidence = EXCLUDED.evidence,
+                               risks = EXCLUDED.risks,
+                               next_review_days = EXCLUDED.next_review_days,
+                               watch_trigger = EXCLUDED.watch_trigger,
+                               do_not_act_reasons = EXCLUDED.do_not_act_reasons`,
                 [
                   recommendation.recommendation_text,
                   recommendation.model_used,
@@ -485,14 +547,16 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 await pool.query(
                   `INSERT INTO advisor_recommendations
                     (watchlist_id, recommendation_text, model_used, run_id,
-                     decision, confidence, evidence, risks, next_review_days,
-                     watch_trigger, do_not_act_reasons, thesis_risk)
-                   SELECT id, $1, $2, $4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL
+                    decision, confidence, evidence, risks, next_review_days,
+                     watch_trigger, do_not_act_reasons, thesis_risk, generation_status, error_message)
+                   SELECT id, $1, $2, $4, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, $5, $6
                    FROM comparison_watchlist
                    WHERE ticker = $3
                    ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
                    DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
                                  model_used = EXCLUDED.model_used,
+                                 generation_status = EXCLUDED.generation_status,
+                                 error_message = EXCLUDED.error_message,
                                  decision = NULL,
                                  confidence = NULL,
                                  evidence = NULL,
@@ -506,13 +570,23 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                     "error",
                     verdict.holding_ticker,
                     runId,
+                    "failed",
+                    error instanceof Error ? error.message : String(error),
                   ],
                 );
+                advisorFailures.push(`${verdict.holding_ticker}: ${error instanceof Error ? error.message : String(error)}`);
               } catch (persistenceError) {
                 console.error(`[ai-bot] Could not persist Smart Advisor failure for ${verdict.holding_ticker}`, persistenceError);
               }
             }
           });
+
+          stageCounts.smartAdvisor = { succeeded: advisorSuccessCount, failed: advisorFailureCount + skippedVerdicts.length, total: allVerdicts.length };
+          stageErrors.smartAdvisor = [
+            ...(stageErrors.smartAdvisor ?? []),
+            ...advisorFailures,
+          ];
+          await persistProgress();
 
           // If no recommendations were generated, this is a failure
           if (advisorSuccessCount === 0 && verdicts.length > 0) {
@@ -533,8 +607,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
     });
     await pool.query(
       `UPDATE bot_runs SET status = $1, completed_at = now(), succeeded_count = $2,
-       failed_count = $3, total_count = $4 WHERE id = $5`,
-      [summary.failed ? "partial" : "completed", summary.succeeded, summary.failed, summary.total, summary.runId],
+       failed_count = $3, total_count = $4, stage_counts = $6::jsonb, stage_errors = $7::jsonb WHERE id = $5`,
+      [summary.failed ? "partial" : "completed", summary.succeeded, summary.failed, summary.total, summary.runId, JSON.stringify(stageCounts), JSON.stringify(stageErrors)],
     );
   } catch (err) {
     status.error = err instanceof Error ? err.message : "AI Bot run failed";
@@ -550,8 +624,8 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
     status.stages[failedStage] = "failed";
     await pool.query(
       `UPDATE bot_runs SET status = 'failed', completed_at = now(),
-       error_message = $1 WHERE id = $2 AND status = 'running'`,
-      [status.error, runId],
+       error_message = $1, stage_counts = $3::jsonb, stage_errors = $4::jsonb WHERE id = $2 AND status = 'running'`,
+      [status.error, runId, JSON.stringify(stageCounts), JSON.stringify(stageErrors)],
     );
   } finally {
     status.running = false;
@@ -631,8 +705,10 @@ router.get("/ai-bot/status", async (_req, res) => {
       started_at: string;
       completed_at: string | null;
       error_message: string | null;
+      stage_counts: Record<string, StageCounts>;
+      stage_errors: Record<string, string[]>;
     }>(
-      `SELECT id, status, started_at, completed_at, error_message
+      `SELECT id, status, started_at, completed_at, error_message, stage_counts, stage_errors
        FROM bot_runs ORDER BY id DESC LIMIT 1`,
     );
     const latest = result.rows[0];
@@ -651,6 +727,8 @@ router.get("/ai-bot/status", async (_req, res) => {
       runId: Number(latest.id),
       startedAt: latest.started_at,
       error: latest.error_message,
+      stage_counts: latest.stage_counts ?? {},
+      stage_errors: latest.stage_errors ?? {},
       chart_reader_failures: [],
       stages: {
         priceChecker: latest.status === "failed" ? "failed" : latest.status === "running" ? "running" : "completed",

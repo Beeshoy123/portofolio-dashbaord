@@ -463,9 +463,15 @@ function buildUsdRealityCard(p: Portfolio, d: Derived, usdReality: any): string 
 
 export function buildDashboardHtml(p: Portfolio, d: Derived, usdReality?: any): string {
   const goldSubCost = fmt(d.gold.avgCostPerGram);
+  const goldHoldingCostUsdPerOz = d.settings.usdEgpRate > 0 && d.gold.avgCostPerGram > 0
+    ? (d.gold.avgCostPerGram / d.settings.usdEgpRate) * 31.1034768
+    : null;
   const goldSubMkt = d.gold.livePricePerGram !== null
     ? `${fmt(d.gold.livePricePerGram)} EGP/g`
     : GOLD_PRICE_UNAVAILABLE;
+  const goldLiveLabel = p.gold.buyPrice24k !== null && p.gold.sellPrice24k !== null
+    ? `Buy ${fmt(p.gold.buyPrice24k)} · Sell ${fmt(p.gold.sellPrice24k)} EGP/g`
+    : goldSubMkt;
   // "Value" always falls back to cost basis when the live price isn't
   // available yet, so we never fabricate a market value.
   const goldValueDisplay = fmt2(d.gold.cost);
@@ -582,7 +588,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived, usdReality?: any): 
   <button class="icon-btn" onclick="openInsights()" title="Insights &amp; Actions">ℹ️</button>
   <button class="icon-btn" onclick="openAdd()" title="Add data">➕</button>
   <div class="settings-wrap">
-    <button class="icon-btn" id="settings-btn" onclick="toggleSettings()" title="Settings" aria-label="Settings">⚙️</button>
+    <button class="icon-btn" id="settings-btn" onclick="toggleSettings()" title="Settings" aria-label="Settings"><svg class="settings-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h6m6 0h6M3 12h3m6 0h9M3 18h9m6 0h3"/><circle cx="12" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="18" r="2"/></svg></button>
     <div class="settings-dropdown" id="settings-dropdown">
       <button class="settings-item" onclick="toggleDark();closeSettings()">
         <span class="settings-item-icon" id="dark-mode-icon">🌙</span>
@@ -635,7 +641,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived, usdReality?: any): 
 
 <div class="live-bar" id="live-bar" style="${liveBarStyle}">
   <span class="${goldDotClass}" id="dot-gold"></span>
-  <span class="live-pill"><span data-i18n="live.gold">Gold 24K:</span> <b id="live-gold">${goldSubMkt}</b> <span id="gold-status" class="${goldBadgeClass}">${goldBadgeText}</span></span>
+  <span class="live-pill"><span data-i18n="live.gold">Gold 24K:</span> <b id="live-gold">${goldLiveLabel}</b> <span id="gold-status" class="${goldBadgeClass}">${goldBadgeText}</span></span>
   <span class="live-dot" id="dot-xau"></span>
   <span class="live-pill"><span data-i18n="live.xau">XAU:</span> <b id="live-xau">—</b> <span style="font-size:9px;color:var(--dim)">USD/oz</span> <span id="xau-status" class="status-badge"></span></span>
   <span class="${usdDotClass}" id="dot-usd"></span>
@@ -666,8 +672,8 @@ export function buildDashboardHtml(p: Portfolio, d: Derived, usdReality?: any): 
             <div style="font-size:16px;font-weight:800;color:var(--ink)" id="gold-stat-grams">${fmt(d.gold.gramsHeld)} <span style="font-size:11px;font-weight:600;color:#5a7a74">g</span></div>
           </div>
           <div>
-            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a7a74" data-i18n="gold.stat.live">Live Price</div>
-            <div style="font-size:16px;font-weight:800;color:${d.gold.pnlAvailable ? "var(--pnl-up)" : "#5a7a74"}" id="gold-stat-live">${d.gold.pnlAvailable ? `${fmt(d.gold.livePricePerGram!)} <span style="font-size:11px;font-weight:600;color:#5a7a74">EGP/g</span>` : `<span style="font-size:11px;font-weight:600" data-i18n="attr.price.pending">live price pending</span>`}</div>
+            <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#5a7a74" data-i18n="gold.stat.holding">Holding Cost</div>
+            <div style="font-size:16px;font-weight:800;color:var(--ink)" id="gold-stat-holding">${goldHoldingCostUsdPerOz === null ? `<span style="font-size:11px;font-weight:600" data-i18n="attr.price.pending">unavailable</span>` : `$${fmt2(goldHoldingCostUsdPerOz)} <span style="font-size:11px;font-weight:600;color:#5a7a74">USD/oz</span>`}</div>
           </div>
         </div>
         <div class="math-section" id="math-total"><div id="hero-math-body"></div></div>

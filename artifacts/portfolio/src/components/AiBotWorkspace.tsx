@@ -161,6 +161,8 @@ export type Recommendation = {
   recommendation_text: string;
   model_used: string;
   generated_at: string;
+  generation_status?: 'succeeded' | 'failed' | 'skipped';
+  error_message?: string | null;
   structured?: StructuredRecommendation | null;
 };
 
@@ -210,6 +212,11 @@ export type AlertsSummary = {
   };
 };
 type DataLoadErrors = Partial<Record<'signals' | 'verdicts' | 'recommendations' | 'summary' | 'opportunities' | 'alerts' | 'verdictHistory', string>>;
+type StageCounts = { succeeded: number; failed: number; total: number };
+type PipelineDiagnostics = {
+  stage_counts?: Record<string, StageCounts>;
+  stage_errors?: Record<string, string[]>;
+};
 
 type PortfolioSummary = {
   id?: number;
@@ -269,6 +276,10 @@ type OpportunitiesAnalysis = {
   underrepresented_sectors: Array<{
     sector: string;
     portfolio_allocation_percent: number;
+    held_strong_count?: number;
+    held_caution_count?: number;
+    held_avoid_count?: number;
+    held_insufficient_data_count?: number;
     strong_candidates: Array<{
       holding_ticker: string;
       holding_name: string;
@@ -654,6 +665,11 @@ function formatModelName(model?: string | null, lang: Lang = 'en'): string {
   if (lang === 'ar') {
     if (model === 'fallback') return 'وضع احتياطي';
     if (model === 'deterministic-fallback') return 'تحليل حسابي احتياطي';
+    if (model.toLowerCase().startsWith('qwen')) return `Qwen · ${model}`;
+    if (model.toLowerCase().startsWith('gemini')) return `Gemini · ${model}`;
+  } else {
+    if (model.toLowerCase().startsWith('qwen')) return `Qwen · ${model}`;
+    if (model.toLowerCase().startsWith('gemini')) return `Gemini · ${model}`;
   }
   return model;
 }
@@ -792,13 +808,6 @@ function MarketComparison({ snapshots, lang }: { snapshots: Snapshot[]; lang: La
   ]);
   return (
     <div className="ai-bot-market-comparison">
-      <div className="ai-bot-market-comparison-heading">
-        <div>
-          <span>{lang === 'ar' ? 'مقارنة السوق' : 'Market Comparison'}</span>
-          <strong>{lang === 'ar' ? 'لقطة شاملة لقائمة المراقبة' : 'Full watchlist snapshot'}</strong>
-        </div>
-        <small>{lang === 'ar' ? 'مرتبة حسب نوع الأصل وأعلى YTD' : 'Sorted by entity group, highest YTD first'}</small>
-      </div>
       {sortedGroups.map(([label, group]) => group.length > 0 && (
         <div className="ai-bot-market-group" key={label}>
           <h4>
@@ -874,7 +883,7 @@ function PortfolioAlerts({ alertsData, lang }: { alertsData: AlertsSummary | nul
             </table>
           </div>
         </div>
-      ) : !drawdown && <p>{lang === 'ar' ? 'لا توجد تنبيهات للمحفظة متاحة.' : 'No portfolio alerts are available.'}</p>}
+      ) : !drawdown && <p>{lang === 'ar' ? 'لا توجد تنبيهات للمحفظة متاحة.' : 'No wallet alerts are available.'}</p>}
     </article>
   );
 }
@@ -906,6 +915,7 @@ export function AiBotWorkspace() {
   const [alertsData, setAlertsData] = useState<AlertsSummary | null>(null);
   const [dataLoadErrors, setDataLoadErrors] = useState<DataLoadErrors>({});
   const [runId, setRunId] = useState<number | null>(null);
+  const [pipelineDiagnostics, setPipelineDiagnostics] = useState<PipelineDiagnostics>({});
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [filterMode, setFilterMode] = useState<'held' | 'all'>('all');
   const [loading, setLoading] = useState(true);
@@ -924,6 +934,8 @@ export function AiBotWorkspace() {
   const [isPortfolioAdvisorExpanded, setIsPortfolioAdvisorExpanded] = useState(false);
   const [pipelineScope, setPipelineScope] = useState<'entity' | 'portfolio'>('entity');
   const hasEntityDataRef = useRef(false);
+  const autoOpportunityRunRef = useRef<number | null>(null);
+  const loadedOpportunityRunRef = useRef<number | null>(null);
 
   const focusPipelineScope = (scope: 'entity' | 'portfolio') => {
     setPipelineScope(scope);
@@ -944,6 +956,12 @@ export function AiBotWorkspace() {
       setIsGeneratingOpportunityReport(false);
     }
   };
+
+  useEffect(() => {
+    if (runId === null || opportunitiesData === null || autoOpportunityRunRef.current === runId) return;
+    autoOpportunityRunRef.current = runId;
+    void generateOpportunityReport();
+  }, [runId, opportunitiesData]);
 
   useEffect(() => {
     const syncVisibility = (view: string) => {
@@ -1004,7 +1022,7 @@ export function AiBotWorkspace() {
       try {
         if (!hasEntityDataRef.current) setLoading(true);
         const loadErrors: DataLoadErrors = {};
-        const status = await json<{ runId: number | null; verdict_history_write_failures?: string[]; chart_reader_failures?: string[] }>('/api/ai-bot/status');
+        const status = await json<{ runId: number | null; verdict_history_write_failures?: string[]; chart_reader_failures?: string[]; stage_counts?: Record<string, StageCounts>; stage_errors?: Record<string, string[]> }>('/api/ai-bot/status');
         if (status.verdict_history_write_failures?.length) {
           loadErrors.verdictHistory = status.verdict_history_write_failures.join(', ');
         }
@@ -1012,13 +1030,23 @@ export function AiBotWorkspace() {
           loadErrors.signals = `Failed for: ${status.chart_reader_failures.join(', ')}`;
         }
         setRunId(status.runId);
+        if (loadedOpportunityRunRef.current !== status.runId) {
+          loadedOpportunityRunRef.current = status.runId;
+          setOpportunitiesData(null);
+          setOpportunityAnalysisSummary(null);
+        }
+        setPipelineDiagnostics({ stage_counts: status.stage_counts, stage_errors: status.stage_errors });
         const suffix = status.runId === null ? '' : `?runId=${encodeURIComponent(status.runId)}`;
         const [snapshotData, signalData, verdictData, recommendationData, summaryData, oppData, alertSummary] = await Promise.all([
           json<{ snapshots: Snapshot[] }>(`/api/scraper/snapshots${suffix}`),
           json<{ signals: TechnicalSignal[] }>(`/api/technical-signals${suffix}`).catch((loadError) => { loadErrors.signals = loadError instanceof Error ? loadError.message : 'Technical signals unavailable'; return { signals: [] }; }),
           json<Verdict[]>(`/api/rotation-verdicts${suffix}${suffix ? '&' : '?'}all=true`).catch((loadError) => { loadErrors.verdicts = loadError instanceof Error ? loadError.message : 'Comparison results unavailable'; return []; }),
           status.runId === null ? Promise.resolve([] as Recommendation[]) : json<Recommendation[]>(`/api/advisor/recommendations${suffix}`).catch((loadError) => { loadErrors.recommendations = loadError instanceof Error ? loadError.message : 'Recommendations unavailable'; return []; }),
-          status.runId === null ? Promise.resolve(null) : json<PortfolioSummary>(`/api/portfolio-summary${suffix}`).catch((loadError) => { loadErrors.summary = loadError instanceof Error ? loadError.message : 'Portfolio summary unavailable'; return null; }),
+          status.runId === null ? Promise.resolve(null) : json<PortfolioSummary>(`/api/portfolio-summary${suffix}`).catch((loadError) => {
+            const message = loadError instanceof Error ? loadError.message : 'Portfolio summary unavailable';
+            if (!message.endsWith('(404)')) loadErrors.summary = message;
+            return null;
+          }),
           status.runId === null ? Promise.resolve(null) : json<OpportunitiesAnalysis>(`/api/advisor/opportunities${suffix}`).catch((loadError) => { loadErrors.opportunities = loadError instanceof Error ? loadError.message : 'Opportunities unavailable'; return null; }),
           status.runId === null ? Promise.resolve({ timeStops: [], theses: [], drawdown: null } as AlertsSummary) : json<AlertsSummary>(`/api/alerts/summary${suffix}`).catch((loadError) => { loadErrors.alerts = loadError instanceof Error ? loadError.message : 'Alerts unavailable'; return { timeStops: [], theses: [], drawdown: null }; }),
         ]);
@@ -1253,6 +1281,22 @@ export function AiBotWorkspace() {
   const portfolioHeldVerdicts = verdicts.filter((item) => item.is_held);
 
   const move = (direction: number) => setSelectedIndex((index) => Math.min(Math.max(index + direction, 0), Math.max(displayedEntities.length - 1, 0)));
+  const priceGate = pipelineDiagnostics.stage_counts?.priceChecker;
+  const chartGate = pipelineDiagnostics.stage_counts?.chartReader;
+  const advisorGate = pipelineDiagnostics.stage_counts?.smartAdvisor;
+  const qualityGateMessages = [
+    priceGate && priceGate.total > 0 && priceGate.succeeded < priceGate.total
+      ? (lang === 'ar' ? `فاحص الأسعار غير مكتمل: ${priceGate.succeeded}/${priceGate.total}` : `Price Checker incomplete: ${priceGate.succeeded}/${priceGate.total}`)
+      : null,
+    chartGate && chartGate.succeeded === 0
+      ? (lang === 'ar' ? 'قارئ الرسم البياني غير مكتمل: لم تُرجع أي إشارات.' : 'Chart Reader incomplete: 0 signals returned.')
+      : chartGate && chartGate.failed > 0
+        ? (lang === 'ar' ? `قارئ الرسم البياني جزئي: ${chartGate.succeeded}/${chartGate.total}` : `Chart Reader partial: ${chartGate.succeeded}/${chartGate.total}`)
+        : null,
+    advisorGate && advisorGate.failed > 0
+      ? (lang === 'ar' ? `المستشار تخطى أو فشل في ${advisorGate.failed} أصل` : `Smart Advisor skipped or failed for ${advisorGate.failed} entities`)
+      : null,
+  ].filter((message): message is string => Boolean(message));
 
   // Reset to first entity when filter mode changes
   useEffect(() => {
@@ -1266,7 +1310,7 @@ export function AiBotWorkspace() {
           <div className="ai-bot-workspace-brand">
             <span className="ai-bot-workspace-icon"><Eye /></span>
             <div>
-              <h2>{pipelineScope === 'entity' ? (lang === 'ar' ? 'بطاقة التركيز' : 'Focus card') : (lang === 'ar' ? 'مكتب تحليل المحفظة' : 'Portfolio analysis desk')}</h2>
+              <h2>{pipelineScope === 'entity' ? (lang === 'ar' ? 'بطاقة التركيز' : 'Focus card') : (lang === 'ar' ? 'مكتب تحليل المحفظة' : 'Wallet analysis desk')}</h2>
             </div>
           </div>
           <div className="ai-bot-engine-actions">
@@ -1316,7 +1360,7 @@ export function AiBotWorkspace() {
         <div className="ai-bot-workspace-brand">
           <span className="ai-bot-workspace-icon"><Eye /></span>
           <div>
-            <h2>{pipelineScope === 'entity' ? (lang === 'ar' ? 'بطاقة التركيز' : 'Focus card') : (lang === 'ar' ? 'مكتب تحليل المحفظة' : 'Portfolio analysis desk')}</h2>
+            <h2>{pipelineScope === 'entity' ? (lang === 'ar' ? 'بطاقة التركيز' : 'Focus card') : (lang === 'ar' ? 'مكتب تحليل المحفظة' : 'Wallet analysis desk')}</h2>
           </div>
         </div>
         <div className="ai-bot-engine-actions">
@@ -1328,9 +1372,19 @@ export function AiBotWorkspace() {
         </div>
         <div className="ai-bot-pipeline-scope" role="group" aria-label={lang === 'ar' ? 'نطاق عرض خط التحليل' : 'Pipeline display scope'}>
           <button type="button" className={pipelineScope === 'entity' ? 'is-active' : ''} onClick={() => focusPipelineScope('entity')}>{lang === 'ar' ? 'حسب الأصل' : 'Per Entity'}</button>
-          <button type="button" className={pipelineScope === 'portfolio' ? 'is-active' : ''} onClick={() => focusPipelineScope('portfolio')}>{lang === 'ar' ? 'حسب المحفظة' : 'Per Portfolio'}</button>
+          <button type="button" className={pipelineScope === 'portfolio' ? 'is-active' : ''} onClick={() => focusPipelineScope('portfolio')}>{lang === 'ar' ? 'حسب المحفظة' : 'Per Wallet'}</button>
         </div>
       </header>
+
+      {qualityGateMessages.length > 0 && (
+        <div className="ai-bot-quality-gate-warning" data-pipeline-section="portfolio" role="status">
+          <strong>{lang === 'ar' ? 'بوابات الجودة' : 'Quality gates'}</strong>
+          <span>{qualityGateMessages.join(' · ')}</span>
+          {Object.values(pipelineDiagnostics.stage_errors ?? {}).flat().length > 0 && (
+            <small>{Object.values(pipelineDiagnostics.stage_errors ?? {}).flat().slice(0, 3).join(' · ')}</small>
+          )}
+        </div>
+      )}
 
       <nav className="ai-bot-entity-nav" data-pipeline-section="entity" aria-label={lang === 'ar' ? 'التنقل بين الأصول' : 'Entity navigation'}>
         <div className="ai-bot-entity-filters">
@@ -1411,7 +1465,6 @@ export function AiBotWorkspace() {
             <div className="ai-bot-fundamentals-heading">
               <div>
                 <span>{lang === 'ar' ? 'البيانات الأساسية' : 'Fundamentals'}</span>
-                <strong>{lang === 'ar' ? 'لقطة تحليل الأسهم' : 'StockAnalysis snapshot'}</strong>
               </div>
               <small>{lang === 'ar' ? 'أحدث بيانات الإفصاح المتاحة' : 'Latest available filing data'}</small>
             </div>
@@ -1430,7 +1483,6 @@ export function AiBotWorkspace() {
             <div className="ai-bot-panel-heading">
               <div>
                 <h3>{lang === 'ar' ? 'فاحص الأسعار' : 'Price Checker'}</h3>
-                <span>{lang === 'ar' ? 'لقطة السوق' : 'Market snapshot'}</span>
               </div>
               <Gauge />
             </div>
@@ -1478,14 +1530,15 @@ export function AiBotWorkspace() {
             <div className="ai-bot-panel-heading">
               <div>
                 <h3>{lang === 'ar' ? 'قارئ الرسم البياني' : 'Chart Reader'}</h3>
-                <span>{lang === 'ar' ? 'سياق الشموع اليابانية' : 'Candlestick context'}</span>
               </div>
               {trendDown ? <TrendingDown /> : <TrendingUp />}
             </div>
             {chartReaderMessage ? (
               <div className="ai-bot-chart-empty" role="status">{chartReaderMessage}</div>
-            ) : (
+            ) : signal ? (
               <MiniCandleChart candles={signal.candles} lang={lang} />
+            ) : (
+              <div className="ai-bot-chart-empty" role="status">{lang === 'ar' ? 'لم يُرجع قارئ الرسم البياني إشارة لهذا الأصل.' : 'Chart Reader returned no signal for this entity.'}</div>
             )}
             <div className="ai-bot-chart-footer">
               <span
@@ -2129,7 +2182,7 @@ export function AiBotWorkspace() {
                           </section>
                           <section className="ai-bot-opportunity-block">
                             <h5>{lang === 'ar' ? 'ملخص التحليل المنشأ' : 'Generated Analysis Summary'}</h5>
-                            <button type="button" className="ai-bot-market-button" onClick={generateOpportunityReport} disabled={isGeneratingOpportunityReport || runId === null}>{isGeneratingOpportunityReport ? (lang === 'ar' ? 'جارٍ الإنشاء…' : 'Generating…') : (lang === 'ar' ? 'إنشاء ملخص التحليل' : 'Generate analysis summary')}</button>
+                            {isGeneratingOpportunityReport && <p className="ai-bot-advisor-empty-state">{lang === 'ar' ? 'يتم إنشاء الملخص تلقائياً لهذا التشغيل…' : 'Generating the summary automatically for this run…'}</p>}
                             {opportunityAnalysisSummary && <pre className="ai-bot-opportunity-summary">{opportunityAnalysisSummary}</pre>}
                           </section>
                         </div>
@@ -2149,10 +2202,10 @@ export function AiBotWorkspace() {
       <section className={`ai-bot-engine ai-bot-alerts-engine ${isPortfolioAlertsExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="portfolio">
         <div className="ai-bot-engine-header">
           <div>
-            <h3>{lang === 'ar' ? 'تنبيهات المحفظة' : 'Portfolio Alerts'}</h3>
+            <h3>{lang === 'ar' ? 'تنبيهات المحفظة' : 'Wallet Alerts'}</h3>
           </div>
           <div className="ai-bot-engine-actions">
-            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioAlertsExpanded((expanded) => !expanded)} aria-expanded={isPortfolioAlertsExpanded} aria-label={isPortfolioAlertsExpanded ? 'Collapse portfolio alerts' : 'Expand portfolio alerts'} title={isPortfolioAlertsExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioAlertsExpanded((expanded) => !expanded)} aria-expanded={isPortfolioAlertsExpanded} aria-label={isPortfolioAlertsExpanded ? 'Collapse wallet alerts' : 'Expand wallet alerts'} title={isPortfolioAlertsExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
             <AlertTriangle />
           </div>
         </div>
@@ -2161,10 +2214,10 @@ export function AiBotWorkspace() {
       <section className={`ai-bot-engine ai-bot-advisor-engine ai-bot-portfolio-advisor-engine ${isPortfolioAdvisorExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="portfolio">
         <div className="ai-bot-engine-header">
           <div>
-            <h3>{lang === 'ar' ? 'المستشار الذكي للمحفظة' : 'Portfolio Smart Advisor'}</h3>
+            <h3>{lang === 'ar' ? 'المستشار الذكي للمحفظة' : 'Wallet Smart Advisor'}</h3>
           </div>
           <div className="ai-bot-engine-actions">
-            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioAdvisorExpanded((expanded) => !expanded)} aria-expanded={isPortfolioAdvisorExpanded} aria-label={isPortfolioAdvisorExpanded ? 'Collapse portfolio Smart Advisor' : 'Expand portfolio Smart Advisor'} title={isPortfolioAdvisorExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
+            <button type="button" className="ai-bot-section-toggle" onClick={() => setIsPortfolioAdvisorExpanded((expanded) => !expanded)} aria-expanded={isPortfolioAdvisorExpanded} aria-label={isPortfolioAdvisorExpanded ? 'Collapse wallet Smart Advisor' : 'Expand wallet Smart Advisor'} title={isPortfolioAdvisorExpanded ? 'Collapse' : 'Expand'}><ChevronDown /></button>
             <Brain />
           </div>
         </div>
@@ -2208,11 +2261,11 @@ export function AiBotWorkspace() {
                 <p>{lang === 'ar' ? `مرشحون غير محتفظ بهم: ${opportunitiesData?.strong_unheld.length ?? 0}` : `Unheld candidates: ${opportunitiesData?.strong_unheld.length ?? 0}`}</p>
                 <p>{lang === 'ar' ? `فجوات القطاعات: ${opportunitiesData?.underrepresented_sectors.length ?? 0} · فجوات التعرض: ${opportunitiesData?.sectors_no_strong_exposure?.length ?? 0}` : `Underrepresented sectors: ${opportunitiesData?.underrepresented_sectors.length ?? 0} · No-strong-exposure sectors: ${opportunitiesData?.sectors_no_strong_exposure?.length ?? 0}`}</p>
                 <p>{lang === 'ar' ? `فجوات العائد: ${opportunitiesData?.unheld_outperforming_held?.length ?? 0} · فرص محفوظة: ${opportunitiesData?.persisted_opportunities?.length ?? 0}` : `Return-gap pairs: ${opportunitiesData?.unheld_outperforming_held?.length ?? 0} · Persisted opportunities: ${opportunitiesData?.persisted_opportunities?.length ?? 0}`}</p>
-                {opportunityAnalysisSummary ? <pre className="ai-bot-opportunity-summary">{opportunityAnalysisSummary}</pre> : <p className="ai-bot-advisor-empty-state">{lang === 'ar' ? 'لم يتم إنشاء ملخص تحليل الفرص بعد. افتح ماسح الفرص وأنشئ الملخص لرؤية النص الكامل.' : 'No generated opportunity analysis summary yet. Open Opportunity Scanner and generate the summary to see the full analysis.'}</p>}
+                {opportunityAnalysisSummary ? <pre className="ai-bot-opportunity-summary">{opportunityAnalysisSummary}</pre> : <p className="ai-bot-advisor-empty-state">{isGeneratingOpportunityReport ? (lang === 'ar' ? 'يتم إنشاء الملخص تلقائياً لهذا التشغيل…' : 'The analysis summary is being generated automatically for this run…') : (lang === 'ar' ? 'سيظهر ملخص تحليل الفرص تلقائياً بعد تحميل بيانات هذا التشغيل.' : 'The opportunity analysis summary will be generated automatically after this run loads.')}</p>}
               </div>
               {portfolioSummary.next_review_days !== null && portfolioSummary.next_review_days !== undefined && <p className="ai-bot-portfolio-next-review">{lang === 'ar' ? `مراجعة المحفظة القادمة: خلال ${portfolioSummary.next_review_days} يوم` : `Next portfolio review: in ${portfolioSummary.next_review_days} day${portfolioSummary.next_review_days === 1 ? '' : 's'}`}</p>}
             </>
-          ) : <p>{dataLoadErrors.summary ? (lang === 'ar' ? `تعذر تحميل مستشار المحفظة: ${dataLoadErrors.summary}` : `Portfolio Smart Advisor failed to load: ${dataLoadErrors.summary}`) : (lang === 'ar' ? 'سيظهر مستشار المحفظة بعد اكتمال التشغيل.' : 'Portfolio Smart Advisor will appear after the run completes.')}</p>}
+          ) : <p>{dataLoadErrors.summary ? (lang === 'ar' ? `تعذر تحميل مستشار المحفظة: ${dataLoadErrors.summary}` : `Wallet Smart Advisor failed to load: ${dataLoadErrors.summary}`) : (lang === 'ar' ? 'لا يوجد ملخص محفظة محفوظ لهذا التشغيل.' : 'No wallet summary was saved for this run.')}</p>}
         </article>
       </section>
       <section className={`ai-bot-engine ai-bot-alerts-engine ${isEntityAlertsExpanded ? '' : 'ai-bot-card-collapsed'}`} data-pipeline-section="entity">
@@ -2238,13 +2291,13 @@ export function AiBotWorkspace() {
           </div>
         </div>
         <article className="ai-bot-panel ai-bot-advice-panel">
-          {recommendation?.model_used === 'error' ? (
+          {recommendation?.generation_status === 'failed' || recommendation?.model_used === 'error' ? (
             <div className="ai-bot-advisor-error-state" role="status">
               <strong>{lang === 'ar' ? 'تعذر إنشاء التوصية لهذا الأصل' : 'Recommendation generation failed'}</strong>
               <p>
                 {lang === 'ar'
-                  ? 'تعذر على المستشار الذكي إنشاء توصية لهذا الأصل في هذا التشغيل — ستتم المحاولة في التشغيل القادم.'
-                  : 'Smart Advisor could not generate a recommendation for this entity this run — it will retry next run.'}
+                  ? `تعذر على المستشار الذكي إنشاء توصية لهذا الأصل في هذا التشغيل — ستتم المحاولة في التشغيل القادم.${recommendation.error_message ? ` السبب: ${recommendation.error_message}` : ''}`
+                  : `Smart Advisor could not generate a recommendation for this entity this run — it will retry next run.${recommendation.error_message ? ` Reason: ${recommendation.error_message}` : ''}`}
               </p>
             </div>
           ) : recommendation ? (
