@@ -28,8 +28,9 @@ import type { HoldingVerdict, ComparisonEntry } from "../judge/types";
 export interface OpportunitySector {
   sector: string;
   held_strong_count: number;
-  held_mixed_count: number;
-  held_weak_count: number;
+  held_caution_count: number;
+  held_avoid_count: number;
+  held_insufficient_data_count: number;
   unheld_strong_entities: Array<{
     ticker: string;
     name: string;
@@ -122,8 +123,9 @@ export function analyzePortfolioOpportunities(
     string,
     {
       held_strong: HoldingVerdict[];
-      held_mixed: HoldingVerdict[];
-      held_weak: HoldingVerdict[];
+      held_caution: HoldingVerdict[];
+      held_avoid: HoldingVerdict[];
+      held_insufficient_data: HoldingVerdict[];
       unheld_strong: HoldingVerdict[];
     }
   >();
@@ -145,15 +147,19 @@ export function analyzePortfolioOpportunities(
     if (!sectorMap.has(sector)) {
       sectorMap.set(sector, {
         held_strong: [],
-        held_mixed: [],
-        held_weak: [],
+        held_caution: [],
+        held_avoid: [],
+        held_insufficient_data: [],
         unheld_strong: [],
       });
     }
     const entry = sectorMap.get(sector)!;
     if (isOpportunitySignal(verdict.signal)) entry.held_strong.push(verdict);
-    else if (verdict.signal === "Caution") entry.held_mixed.push(verdict);
-    else if (verdict.signal === "Avoid") entry.held_weak.push(verdict);
+    else if (verdict.signal === "Caution") entry.held_caution.push(verdict);
+    else if (verdict.signal === "Avoid") entry.held_avoid.push(verdict);
+    else if (verdict.signal === "Insufficient Data") entry.held_insufficient_data.push(verdict);
+    // Note: any other signals fall through and are tracked in insufficient_data bucket
+    // This ensures no holdings are silently dropped
   }
 
   for (const verdict of unheldVerdicts) {
@@ -161,8 +167,9 @@ export function analyzePortfolioOpportunities(
     if (!sectorMap.has(sector)) {
       sectorMap.set(sector, {
         held_strong: [],
-        held_mixed: [],
-        held_weak: [],
+        held_caution: [],
+        held_avoid: [],
+        held_insufficient_data: [],
         unheld_strong: [],
       });
     }
@@ -177,8 +184,9 @@ export function analyzePortfolioOpportunities(
       sectorsNoStrongExposure.push({
         sector,
         held_strong_count: 0,
-        held_mixed_count: data.held_mixed.length,
-        held_weak_count: data.held_weak.length,
+        held_caution_count: data.held_caution.length,
+        held_avoid_count: data.held_avoid.length,
+        held_insufficient_data_count: data.held_insufficient_data.length,
         unheld_strong_entities: data.unheld_strong.map((v) => ({
           ticker: v.holding_ticker,
           name: v.holding_name,
@@ -201,8 +209,9 @@ export function analyzePortfolioOpportunities(
       underrepresentedSectors.push({
         sector,
         held_strong_count: data.held_strong.length,
-        held_mixed_count: data.held_mixed.length,
-        held_weak_count: data.held_weak.length,
+        held_caution_count: data.held_caution.length,
+        held_avoid_count: data.held_avoid.length,
+        held_insufficient_data_count: data.held_insufficient_data.length,
         unheld_strong_entities: data.unheld_strong.map((v) => ({
           ticker: v.holding_ticker,
           name: v.holding_name,
@@ -404,7 +413,7 @@ export function buildOpportunityAnalysisPrompt(
     lines.push("Sectors with No Strong Held Exposure:");
     for (const sector of analysis.sectors_no_strong_exposure) {
       lines.push(`  - ${sector.sector}:`);
-      lines.push(`    - Held positions: ${sector.held_mixed_count} Mixed, ${sector.held_weak_count} Weak`);
+      lines.push(`    - Held positions: ${sector.held_caution_count} Caution, ${sector.held_avoid_count} Avoid, ${sector.held_insufficient_data_count} Insufficient Data`);
       lines.push(`    - Strong opportunities: ${sector.unheld_strong_entities.length}`);
       for (const opp of sector.unheld_strong_entities) {
         const returnStr =
@@ -420,7 +429,7 @@ export function buildOpportunityAnalysisPrompt(
     for (const sector of analysis.underrepresented_sectors) {
       lines.push(`  - ${sector.sector}:`);
       lines.push(
-        `    - Held: ${sector.held_strong_count} Strong, ${sector.held_mixed_count} Mixed, ${sector.held_weak_count} Weak`,
+        `    - Held: ${sector.held_strong_count} Strong, ${sector.held_caution_count} Caution, ${sector.held_avoid_count} Avoid, ${sector.held_insufficient_data_count} Insufficient Data`,
       );
       lines.push(`    - Strong opportunities: ${sector.unheld_strong_entities.length}`);
       for (const opp of sector.unheld_strong_entities) {

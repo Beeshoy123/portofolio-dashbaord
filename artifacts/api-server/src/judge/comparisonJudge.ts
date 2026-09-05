@@ -13,7 +13,7 @@
 // └── Main Entry Points (judgeHolding, judgeAllHoldings, findOpportunities)
 
 import { pool } from "../lib/dbPool";
-import { analyzePortfolioOpportunities } from "../advisor/opportunityAnalysis";
+import { analyzePortfolioOpportunities, type PortfolioOpportunityAnalysis } from "../advisor/opportunityAnalysis";
 import type { AssetRole, HoldingVerdict, ComparisonGroup, ComparisonEntry, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
 import { computeFinancialHealthGrade } from "./financialHealth";
@@ -430,16 +430,31 @@ async function judgeHolding(
     ? buildFundamentalsSnapshot(fundamentals.get(holding.id), holding.sector)
     : null;
 
-  const peerGroup = groups.flatMap((group) => group.entries.map((entry) => ({
+  const financialHealthPeerGroup = (groups.find((group) => group.group_type === "sector_sibling")?.entries ?? []).map((entry) => ({
     fundamentals: entry.fundamentals,
-  })));
+  }));
 
   const financialHealthGrade = computeFinancialHealthGrade(
     { fundamentals: holdingFundamentals },
-    peerGroup,
+    financialHealthPeerGroup,
+    holding.sector,
   );
 
+  const financialHealthReason = financialHealthGrade === "Insufficient Data"
+    ? holding.entity_type !== "stock"
+      ? "not_applicable_fund"
+      : !holdingFundamentals
+        ? "missing_own_fundamentals"
+        : "insufficient_peers"
+    : undefined;
+
   const technicalGrade = computeTechnicalGrade(technicalSignals.get(holding.id) ?? null);
+  const technicalSignal = technicalSignals.get(holding.id) ?? null;
+  const technicalReason = technicalGrade === "Insufficient Data"
+    ? !technicalSignal || !technicalSignal.raw_fetch_ok
+      ? "no_chart_data"
+      : "insufficient_trend_history"
+    : undefined;
   const finalLabel = combineIntoFinalLabel(
     performanceGrade,
     financialHealthGrade,
@@ -472,7 +487,9 @@ async function judgeHolding(
     signal,
     performance_grade: performanceGrade,
     financial_health_grade: financialHealthGrade,
+    ...(financialHealthReason ? { financial_health_reason: financialHealthReason } : {}),
     technical_grade: technicalGrade,
+    ...(technicalReason ? { technical_reason: technicalReason } : {}),
     final_label: finalLabel,
     coverage_percent: coveragePercent,
     flags,
@@ -594,13 +611,32 @@ export interface OpportunitiesAnalysis {
  *  - Sectors where portfolio has <10% allocation but strong unheld candidates exist
  */
 export async function findOpportunities(runId?: number): Promise<OpportunitiesAnalysis> {
-  try {
-    // Get all verdicts (held and unheld)
-    const allVerdicts = await judgeAllHoldings("return_1y", runId, true);
+  let allVerdicts: HoldingVerdict[];
+  let watchlist: WatchlistRow[];
 
-    // Fetch watchlist to check is_held status and sector info
+  // Phase 1: Run comparison judge to get verdicts for all entities
+  try {
+    allVerdicts = await judgeAllHoldings("return_1y", runId, true);
+    console.log(`[findOpportunities] Phase 1: Judged ${allVerdicts.length} entities`);
+  } catch (err) {
+    const message = `[findOpportunities] Phase 1 (judgeAllHoldings) failed: ${err instanceof Error ? err.message : String(err)}`;
+    console.error(message, err);
+    throw new Error("Opportunities analysis failed at comparison judge phase", { cause: err });
+  }
+
+  // Phase 2: Fetch watchlist to classify entities as held/unheld and by sector
+  try {
     const watchlistResult = await pool.query<WatchlistRow>("SELECT * FROM comparison_watchlist");
-    const watchlist = watchlistResult.rows;
+    watchlist = watchlistResult.rows;
+    console.log(`[findOpportunities] Phase 2: Fetched ${watchlist.length} watchlist entries`);
+  } catch (err) {
+    const message = `[findOpportunities] Phase 2 (watchlist fetch) failed: ${err instanceof Error ? err.message : String(err)}`;
+    console.error(message, err);
+    throw new Error("Opportunities analysis failed at watchlist fetch phase", { cause: err });
+  }
+
+  // Phase 3: Analyze verdicts and organize by held/unheld and sector
+  try {
     const watchlistMap = new Map(watchlist.map((row) => [row.id, row]));
 
     // Filter to unheld entities with Strong signal
@@ -651,7 +687,18 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
       }
     }
 
-    const detailedAnalysis = analyzePortfolioOpportunities(allVerdicts);
+    console.log(`[findOpportunities] Phase 3: Found ${strong_unheld.length} strong unheld, ${underrepresented_sectors.length} underrepresented sectors`);
+
+    // Phase 4: Run detailed deterministic analysis
+    let detailedAnalysis: PortfolioOpportunityAnalysis;
+    try {
+      detailedAnalysis = analyzePortfolioOpportunities(allVerdicts);
+      console.log(`[findOpportunities] Phase 4: Deterministic analysis complete`);
+    } catch (analyzeErr) {
+      const message = `[findOpportunities] Phase 4 (analyzePortfolioOpportunities) failed: ${analyzeErr instanceof Error ? analyzeErr.message : String(analyzeErr)}`;
+      console.error(message, analyzeErr);
+      throw new Error("Opportunities analysis failed at portfolio opportunity analysis phase", { cause: analyzeErr });
+    }
 
     return {
       strong_unheld,
@@ -662,8 +709,9 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
       risk_tier_comparison: detailedAnalysis.risk_tier_comparison,
     };
   } catch (err) {
-    console.error("[findOpportunities] failed:", err);
-    throw new Error("Opportunities analysis failed", { cause: err });
+    const message = `[findOpportunities] Phase 3 (verdict analysis) failed: ${err instanceof Error ? err.message : String(err)}`;
+    console.error(message, err);
+    throw new Error("Opportunities analysis failed at verdict analysis phase", { cause: err });
   }
 }
 

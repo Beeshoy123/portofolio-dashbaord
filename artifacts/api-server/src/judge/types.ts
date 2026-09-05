@@ -4,6 +4,15 @@
 import type { FundamentalsSnapshot } from "./fundamentalsTypes";
 import type { FinancialHealthGrade } from "./financialHealth";
 
+export type FinancialHealthReason =
+  | "not_applicable_fund"
+  | "insufficient_peers"
+  | "missing_own_fundamentals";
+
+export type TechnicalReason =
+  | "no_chart_data"
+  | "insufficient_trend_history";
+
 export type AssetRole =
   | "money_market_reserve"
   | "income_fund"
@@ -67,7 +76,9 @@ export interface HoldingVerdict {
   signal: "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data";
   performance_grade: "Strong" | "Mixed" | "Weak" | "Insufficient Data";
   financial_health_grade: FinancialHealthGrade;
+  financial_health_reason?: FinancialHealthReason;
   technical_grade: "Red Flag" | "Weak" | "Strong" | "Neutral" | "Insufficient Data";
+  technical_reason?: TechnicalReason;
   final_label: "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data";
   coverage_percent: number | null;
   flags: string[];

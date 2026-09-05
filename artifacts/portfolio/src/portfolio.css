@@ -598,10 +598,24 @@ html[lang="ar"] .sort-popover {
 .ai-bot-run-state > span:first-child { width: 7px; height: 7px; border-radius: 50%; background: #55d19b; box-shadow: 0 0 0 4px rgba(85, 209, 155, .12); }
 .ai-bot-engine { margin-top: 12px; border: 1px solid rgba(18, 160, 143, .18); border-radius: 14px; overflow: hidden; background: linear-gradient(145deg, #101e1c, #132a27 58%, #10211f); box-shadow: 0 12px 28px rgba(0, 0, 0, .12); }
 .ai-bot-engine-header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 18px; border-bottom: 1px solid rgba(255, 255, 255, .07); background: rgba(18, 160, 143, .07); }
+.ai-bot-engine-header > div:first-child { flex: 1; }
+.ai-bot-engine-header > .ai-bot-engine-actions { display: contents; }
+.ai-bot-engine-header > svg, .ai-bot-engine-header > .ai-bot-engine-actions > svg { order: -1; }
+.ai-bot-engine-header > .ai-bot-engine-actions > .ai-bot-section-toggle { order: 1; }
 .ai-bot-engine-header > div > span { display: block; color: #58cbbd; font-size: 9px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
 .ai-bot-engine-header h3 { margin-top: 3px; color: #e7f2ef; font-family: 'Sora', sans-serif; font-size: 14px; }
 .ai-bot-engine-header p { margin-top: 3px; color: #78948f; font-size: 10px; }
-.ai-bot-engine-header > svg { width: 18px; color: #55cfc0; }
+.ai-bot-engine-header > svg, .ai-bot-engine-header > .ai-bot-engine-actions > svg,
+.ai-bot-panel-heading > svg, .ai-bot-panel-heading > .ai-bot-engine-actions > svg {
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  border: 1px solid rgba(95, 225, 208, .28);
+  border-radius: 10px;
+  background: rgba(18, 160, 143, .1);
+  color: #6fe5d7;
+}
 .ai-bot-pipeline-scope { display: flex; gap: 4px; padding: 3px; border: 1px solid rgba(85, 207, 192, .2); border-radius: 7px; background: rgba(0, 0, 0, .12); }
 .ai-bot-pipeline-scope button { border: 0; border-radius: 5px; background: transparent; color: #78948f; padding: 5px 8px; cursor: pointer; font-size: 9px; font-weight: 700; }
 .ai-bot-pipeline-scope button.is-active { background: rgba(85, 207, 192, .18); color: #d5e5e0; }
@@ -681,8 +695,11 @@ html[lang="ar"] .sort-popover {
 .ai-bot-single-view { padding: 12px; }
 .ai-bot-panel { min-width: 0; padding: 16px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 13px; background: rgba(255, 255, 255, .035); }
 .ai-bot-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ai-bot-panel-heading > div:first-child { flex: 1; }
+.ai-bot-panel-heading > .ai-bot-engine-actions { display: contents; }
+.ai-bot-panel-heading > svg, .ai-bot-panel-heading > .ai-bot-engine-actions > svg { order: -1; }
+.ai-bot-panel-heading > .ai-bot-engine-actions > .ai-bot-section-toggle { order: 1; }
 .ai-bot-panel-heading h3 { margin-top: 3px; color: #e7f2ef; font-family: 'Sora', sans-serif; font-size: 14px; }
-.ai-bot-panel-heading > svg { width: 18px; color: #55cfc0; }
 .ai-bot-price-main { margin: 26px 0 22px; }
 .ai-bot-price-main strong { display: block; color: #62d9a4; font-family: 'Sora', sans-serif; font-size: 34px; }
 .ai-bot-price-main span { color: #78948f; font-size: 10px; }
@@ -734,6 +751,7 @@ html[lang="ar"] .sort-popover {
 .ai-bot-verdict-pill { display: inline-block; margin: 22px 0 12px; border-radius: 8px; padding: 8px 14px; font-family: 'Sora', sans-serif; font-size: 18px; font-weight: 800; }
 .ai-bot-glossary-hint { position: relative; display: inline-flex; align-items: center; vertical-align: middle; }
 .ai-bot-glossary-button { display: inline-grid; width: 20px; height: 20px; place-items: center; border: 1px solid rgba(88, 203, 189, .45); border-radius: 50%; background: rgba(88, 203, 189, .10); color: #58cbbd; font-size: 12px; font-weight: 800; line-height: 1; cursor: pointer; }
+.ai-bot-glossary-button.info-icon { border: 0; padding: 0; font-family: inherit; }
 .ai-bot-glossary-button:hover, .ai-bot-glossary-button:focus-visible { background: rgba(88, 203, 189, .22); outline: 2px solid rgba(88, 203, 189, .3); outline-offset: 2px; }
 .ai-bot-glossary-popover { position: absolute; z-index: 5; top: calc(100% + 8px); left: 0; width: min(280px, 72vw); padding: 9px 11px; border: 1px solid rgba(88, 203, 189, .28); border-radius: 7px; background: #142321; color: #dceae6; box-shadow: 0 12px 28px rgba(0, 0, 0, .28); font-size: 11px; font-weight: 500; line-height: 1.5; }
 .ai-bot-grid-grade-header { display: flex; align-items: center; gap: 8px; }
@@ -741,6 +759,7 @@ html[lang="ar"] .sort-popover {
 .ai-bot-grid-grade { min-width: 0; padding: 9px 10px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 7px; background: rgba(255, 255, 255, .03); }
 .ai-bot-grid-grade-label { display: flex; align-items: center; justify-content: space-between; gap: 5px; color: #78948f; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .ai-bot-grid-grade-label .ai-bot-glossary-button { width: 16px; height: 16px; font-size: 10px; }
+.ai-bot-grid-grade-label .ai-bot-glossary-button.info-icon { width: 15px; height: 15px; font-size: 9px; }
 .ai-bot-grid-grade > strong { display: block; margin-top: 6px; color: #dceae6; font-size: 11px; }
 .ai-bot-grid-grade-header > .ai-bot-glossary-hint .ai-bot-glossary-popover { left: auto; right: 0; }
 .ai-bot-verdict-excellent { background: rgba(85, 209, 155, .18); color: #6bf2b7; border: 1px solid rgba(85, 209, 155, .45); }
@@ -862,6 +881,7 @@ html[lang="ar"] .sort-popover {
 .ai-bot-opportunity-risk h5 { width: 100%; margin-bottom: 0; }
 .ai-bot-opportunity-risk span { color: #78948f; font-size: 9px; }
 .ai-bot-opportunity-risk b { margin-left: 4px; color: #dceae6; }
+.ai-bot-opportunity-summary { max-height: 280px; overflow: auto; margin: 10px 0 0; padding: 10px; border: 1px solid rgba(255,255,255,.08); border-radius: 7px; background: rgba(0,0,0,.18); color: #a8c5be; font: inherit; font-size: 10px; line-height: 1.55; white-space: pre-wrap; }
 .ai-bot-opp-ticker { display: inline-block; min-width: 60px; font-family: monospace; font-weight: 800; color: #e7d85f; font-size: 11px; }
 .ai-bot-opp-name { flex: 1; color: #a8c5be; font-size: 11px; }
 .ai-bot-opp-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; background: rgba(85, 209, 155, .14); color: #62d9a4; font-size: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
@@ -983,6 +1003,22 @@ html[lang="ar"] .sort-popover {
 
 /* Next review line */
 .ai-bot-portfolio-next-review { margin-top: 12px; color: #64857e; font-size: 10px; font-style: italic; }
+.ai-bot-advisor-transparency, .ai-bot-advisor-opportunities { margin-top: 14px; padding: 11px; border: 1px solid rgba(95, 225, 208, .14); border-radius: 8px; background: rgba(5, 14, 13, .2); }
+.ai-bot-advisor-transparency h4, .ai-bot-advisor-opportunities h4 { margin: 0 0 9px; color: #dceae6; font-size: 11px; }
+.ai-bot-advisor-meta, .ai-bot-advisor-metrics, .ai-bot-advisor-value-metrics { display: flex; flex-wrap: wrap; gap: 7px 12px; }
+.ai-bot-advisor-meta span, .ai-bot-advisor-metrics span, .ai-bot-advisor-value-metrics span { color: #78948f; font-size: 10px; }
+.ai-bot-advisor-meta b, .ai-bot-advisor-metrics b, .ai-bot-advisor-value-metrics b { margin-left: 3px; color: #dceae6; }
+.ai-bot-advisor-metrics, .ai-bot-advisor-value-metrics { margin-top: 9px; padding-top: 9px; border-top: 1px solid rgba(255,255,255,.07); }
+.ai-bot-advisor-empty-state { margin: 6px 0 0; color: #78948f; font-size: 10px; font-style: italic; }
+.ai-bot-advisor-opportunities p { margin: 4px 0; color: #9ab3ad; font-size: 10px; }
+.ai-bot-portfolio-judge-transparency { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); }
+.ai-bot-portfolio-judge-transparency h4 { margin-bottom: 9px; color: #dceae6; font-size: 11px; }
+.ai-bot-portfolio-judge-table-wrap { overflow-x: auto; margin-top: 10px; }
+.ai-bot-portfolio-judge-table-wrap table { width: 100%; min-width: 980px; border-collapse: collapse; color: #a8c5be; font-size: 9px; }
+.ai-bot-portfolio-judge-table-wrap th, .ai-bot-portfolio-judge-table-wrap td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,.07); text-align: left; vertical-align: top; }
+.ai-bot-portfolio-judge-table-wrap th { color: #78948f; font-size: 8px; text-transform: uppercase; white-space: nowrap; }
+.ai-bot-portfolio-judge-table-wrap td b { color: #dceae6; }
+.ai-bot-portfolio-judge-table-wrap td small { color: #78948f; }
 
 @media (max-width: 700px) {
   .ai-bot-grid-grades { grid-template-columns: 1fr; }

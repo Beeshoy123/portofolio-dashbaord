@@ -1,4 +1,5 @@
 import type { FundamentalsSnapshot } from "./fundamentalsTypes";
+import { isBankLikeSector } from "./fundamentalsCheck";
 
 export type FinancialHealthGrade =
   | "Red Flag"
@@ -68,6 +69,7 @@ function numericValueForMetric(
 export function computeFinancialHealthGrade(
   holding: { fundamentals: FundamentalsSnapshot | null } | null,
   peerGroup: Array<{ fundamentals: FundamentalsSnapshot | null }>,
+  sector: string | null | undefined,
 ): FinancialHealthGrade {
   const holdingFundamentals = holding?.fundamentals ?? null;
   if (!holdingFundamentals) return "Insufficient Data";
@@ -83,6 +85,11 @@ export function computeFinancialHealthGrade(
   const zScores: number[] = [];
 
   for (const metric of FINANCIAL_HEALTH_METRICS) {
+    // Bank-like sectors have structurally higher leverage, and ComparisonEntry
+    // does not carry peer sectors reliably enough to form a bank-only D/E pool.
+    // Exclude D/E for the holding rather than comparing it to mixed-sector peers.
+    if (metric === "debt_to_equity" && isBankLikeSector(sector)) continue;
+
     const holdingValue = numericValueForMetric(holdingFundamentals, metric);
     if (holdingValue === null || !Number.isFinite(holdingValue)) continue;
 

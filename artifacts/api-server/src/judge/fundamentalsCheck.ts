@@ -43,6 +43,11 @@ interface FundamentalsRow {
   shares_change_percent: number | null;
 }
 
+export function isBankLikeSector(sector: string | null | undefined): boolean {
+  if (!sector) return false;
+  return /bank|financ/i.test(sector);
+}
+
 /** Pulls the latest stock_fundamentals row per watchlist entity. */
 export async function getLatestFundamentals(runId?: number): Promise<Map<number, FundamentalsRow>> {
   const runFilter = runId === undefined ? "" : "AND run_id = $1";
@@ -120,12 +125,12 @@ export function buildFundamentalsFlags(
 ): FundamentalsFlag[] {
   if (!f) return [];
   const flags: FundamentalsFlag[] = [];
-  const isBankLikeSector = /bank|financ/i.test(sector);
+  const bankLikeSector = isBankLikeSector(sector);
 
   if (
     f.debt_to_equity !== null &&
     f.debt_to_equity > FUNDAMENTALS_FLAG_THRESHOLDS.HIGH_DEBT_TO_EQUITY &&
-    !isBankLikeSector
+    !bankLikeSector
   ) {
     flags.push({
       flag: "high_debt_load",

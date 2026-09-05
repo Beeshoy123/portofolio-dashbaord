@@ -139,6 +139,34 @@ These rules protect the five-engine AI workspace from disappearing, flashing, or
 
 If a future prompt asks to change loading, error, visibility, or engine presentation, modify the persistent workspace state and its internal panels. Never solve it by adding another conditional mount or moving the mount back into generated HTML.
 
+## AI PIPELINE TRANSPARENCY AND EDUCATION (PERMANENT PRODUCT RULE)
+
+The AI pipeline is a transparent, educational workspace. Every engine must visibly expose the features and evidence it uses so a user can learn how the result was produced.
+
+### No Hidden Engine Features
+
+- Do not silently omit backend fields, analysis categories, scores, grades, reasons, confidence values, data-quality signals, warnings, or derived metrics from the frontend.
+- Every engine output must have a visible UI representation, including positive results, negative results, insufficient-data results, loading states, empty states, and error states.
+- If a feature is available in an API response or backend analysis object, wire it to the relevant engine panel. Do not leave it backend-only or accessible only through developer tools.
+- Show the meaning and provenance of important values: what was measured, which inputs were used, how many peers or observations were available, and why a result was graded or marked insufficient.
+- For nested analysis, display nested details rather than only a parent count or ticker list. Users should be able to inspect the evidence behind sector, peer, alert, opportunity, and recommendation summaries.
+- Preserve the existing information/help control pattern beside educational explanations. Tooltips and expandable details may organize information, but they must not hide the existence of a feature or result.
+- Make API fields and frontend types stay aligned. When vocabulary changes in the backend, update the frontend contract and visible labels together; stale aliases must not silently discard data.
+- Clearly label unavailable, not applicable, insufficient, and failed states. Never represent a meaningful state only as a blank cell or bare dash when a reason is available.
+- If a backend feature is intentionally internal and should not be user-facing, document that decision in code and in this file. Otherwise, treat it as a required visible feature.
+
+### AI Engine Completion Checklist
+
+Before completing an AI pipeline engine change, verify:
+
+- [ ] Every backend output field has a frontend type and a visible rendering path.
+- [ ] Every nested collection has visible item-level details, not only aggregate counts.
+- [ ] Grades include their reason, evidence, confidence, coverage, and data freshness where available.
+- [ ] Loading, empty, insufficient-data, not-applicable, and error states are visibly distinct.
+- [ ] Collapsing an engine only changes layout visibility; it must not delete or replace its available information.
+- [ ] The browser UI was checked in both English and Arabic where the engine supports both languages.
+- [ ] No engine feature is hidden solely because it is inconvenient to fit in the current compact layout; use a clearly labeled expandable detail area instead.
+
 **To make future debugging even faster, use these three memory files in order:**
 
 ### **Step 1: Identify the Issue Path**
