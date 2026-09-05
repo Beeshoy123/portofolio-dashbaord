@@ -14,7 +14,7 @@ router.get("/technical-signals", async (req, res) => {
        FROM technical_signals ts
        JOIN comparison_watchlist cw ON cw.id = ts.watchlist_id
        WHERE ($1::bigint IS NULL OR ts.run_id = $1::bigint)
-         AND cw.entity_type IN ('stock', 'fund')
+         AND cw.entity_type IN ('stock', 'fund', 'index')
          AND COALESCE(cw.funds_table_key, '') <> 'abr'
          AND cw.ticker <> 'ABR'
        ORDER BY ts.watchlist_id, ts.created_at DESC`,

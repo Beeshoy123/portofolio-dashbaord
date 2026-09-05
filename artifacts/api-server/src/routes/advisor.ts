@@ -139,6 +139,88 @@ router.get("/recommendations", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/retry-smart-advisor", async (req: Request, res: Response) => {
+  try {
+    const runId = parseRunId(req.query.runId);
+    if (runId === null) return res.status(400).json({ error: "runId is required" });
+
+    const requestedTickers = Array.isArray(req.body?.tickers)
+      ? req.body.tickers
+        .filter((ticker: unknown): ticker is string => typeof ticker === "string" && ticker.trim().length > 0)
+        .map((ticker: string) => ticker.trim().toUpperCase())
+      : [];
+    if (requestedTickers.length === 0) {
+      return res.status(400).json({ error: "tickers must contain at least one ticker" });
+    }
+
+    const runResult = await pool.query<{ id: number }>(
+      `SELECT id FROM bot_runs WHERE id = $1 AND status IN ('completed', 'partial')`,
+      [runId],
+    );
+    if (runResult.rows.length === 0) {
+      return res.status(409).json({ error: "Run must be completed or partial before retrying Smart Advisor" });
+    }
+
+    const allVerdicts = await judgeAllHoldings("return_1y", runId);
+    const verdicts = allVerdicts.filter((verdict) => requestedTickers.includes(verdict.holding_ticker.toUpperCase()));
+    const [timeStops, theses, drawdown] = await Promise.all([
+      checkAllTimeStops(runId),
+      checkAllTheses(runId),
+      computeDrawdown(runId),
+    ]);
+
+    const results = await mapWithConcurrency(verdicts, 3, async (verdict) => {
+      try {
+        const recommendation = await generateRecommendation(verdict, {
+          timeStop: timeStops.find((alert) => alert.ticker === verdict.holding_ticker),
+          thesis: theses.find((alert) => alert.ticker === verdict.holding_ticker),
+          drawdown,
+        });
+        await pool.query(
+          `INSERT INTO advisor_recommendations
+             (watchlist_id, recommendation_text, model_used, run_id, decision, confidence, thesis_risk, evidence, risks, next_review_days, watch_trigger, do_not_act_reasons)
+           SELECT id, $1, $2, $4, $5, $6, $7, $8, $9, $10, $11, $12
+           FROM comparison_watchlist WHERE ticker = $3
+           ON CONFLICT (watchlist_id, run_id) WHERE run_id IS NOT NULL
+           DO UPDATE SET recommendation_text = EXCLUDED.recommendation_text,
+                         model_used = EXCLUDED.model_used,
+                         decision = EXCLUDED.decision,
+                         confidence = EXCLUDED.confidence,
+                         thesis_risk = EXCLUDED.thesis_risk,
+                         evidence = EXCLUDED.evidence,
+                         risks = EXCLUDED.risks,
+                         next_review_days = EXCLUDED.next_review_days,
+                         watch_trigger = EXCLUDED.watch_trigger,
+                         do_not_act_reasons = EXCLUDED.do_not_act_reasons,
+                         generated_at = EXCLUDED.generated_at`,
+          [
+            recommendation.recommendation_text,
+            recommendation.model_used,
+            verdict.holding_ticker,
+            runId,
+            recommendation.structured.decision,
+            recommendation.structured.confidence,
+            recommendation.structured.thesis_risk,
+            JSON.stringify(recommendation.structured.evidence),
+            JSON.stringify(recommendation.structured.risks),
+            recommendation.structured.next_review_days,
+            recommendation.structured.watch_trigger,
+            JSON.stringify(recommendation.structured.do_not_act_reasons),
+          ],
+        );
+        return { ticker: verdict.holding_ticker, status: "success", model_used: recommendation.model_used };
+      } catch (error) {
+        return { ticker: verdict.holding_ticker, status: "failed", reason: String(error) };
+      }
+    });
+
+    return res.json({ runId, requested_tickers: requestedTickers, results });
+  } catch (error) {
+    console.error("[advisor] retry-smart-advisor failed:", error);
+    return res.status(500).json({ error: "Smart Advisor retry failed" });
+  }
+});
+
 // Generate recommendations for all holdings (can be called manually)
 router.post("/generate", async (req: Request, res: Response) => {
   let lockClient: PoolClient | null = null;
@@ -368,22 +450,28 @@ router.get("/opportunities", async (req: Request, res: Response) => {
     const runId = parseRunId(req.query.runId);
     if (runId === null) return res.status(400).json({ error: "runId is required" });
 
-    const result = await pool.query(
-      `SELECT DISTINCT ON (cw.ticker, ao.opportunity_type)
-              cw.ticker, cw.name, ao.opportunity_text, ao.model_used, ao.generated_at, ao.opportunity_type
-       FROM advisor_opportunities ao
-       JOIN comparison_watchlist cw ON ao.watchlist_id = cw.id
-       WHERE ao.run_id = $1
-         AND cw.ticker <> 'ABR'
-         AND COALESCE(cw.funds_table_key, '') <> 'abr'
-         AND lower(cw.name) NOT LIKE '%bareeq%'
-       ORDER BY cw.ticker, ao.opportunity_type, ao.generated_at DESC`,
-      [runId]
-    );
+    let persistedRows: unknown[] = [];
+    try {
+      const result = await pool.query(
+        `SELECT DISTINCT ON (cw.ticker, ao.opportunity_type)
+                cw.ticker, cw.name, ao.opportunity_text, ao.model_used, ao.generated_at, ao.opportunity_type
+         FROM advisor_opportunities ao
+         JOIN comparison_watchlist cw ON ao.watchlist_id = cw.id
+         WHERE ao.run_id = $1
+           AND cw.ticker <> 'ABR'
+           AND COALESCE(cw.funds_table_key, '') <> 'abr'
+           AND lower(cw.name) NOT LIKE '%bareeq%'
+         ORDER BY cw.ticker, ao.opportunity_type, ao.generated_at DESC`,
+        [runId]
+      );
+      persistedRows = result.rows;
+    } catch (persistenceError) {
+      console.error("[advisor] persisted opportunity read failed; returning deterministic analysis", persistenceError);
+    }
 
     return res.json({
       ...(await findOpportunities(runId)),
-      persisted_opportunities: result.rows,
+      persisted_opportunities: persistedRows,
     });
   } catch (err) {
     console.error("[advisor] GET opportunities failed:", err);

@@ -36,6 +36,8 @@ function envNumber(name: string, fallback: number, minimum: number, maximum: num
 }
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL?.trim() || "gemini-3.6-flash";
+const GEMINI_FALLBACK_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite"];
+const QWEN_MODEL = process.env.QWEN_MODEL?.trim() || "qwen-plus-latest";
 const GEMINI_TEMPERATURE = envNumber("GEMINI_TEMPERATURE", 0.4, 0, 2);
 const GEMINI_MAX_OUTPUT_TOKENS = envNumber("GEMINI_MAX_OUTPUT_TOKENS", 2048, 128, 8192);
 const GEMINI_TIMEOUT_MS = envNumber("GEMINI_TIMEOUT_MS", 45_000, 5_000, 120_000);
@@ -186,7 +188,12 @@ export async function verifyGeminiModel(): Promise<void> {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function parseStructuredResponse(text: string): StructuredAdvisorResult {
-  const candidate = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  const objectStart = cleaned.indexOf("{");
+  const objectEnd = cleaned.lastIndexOf("}");
+  const candidate = objectStart >= 0 && objectEnd > objectStart
+    ? cleaned.slice(objectStart, objectEnd + 1)
+    : cleaned;
   let parsed: unknown;
   try {
     parsed = JSON.parse(candidate);
@@ -252,35 +259,82 @@ export async function generateRecommendation(
 Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
 {"decision":"consider_entry|consider_rotation|watch_and_wait|hold","confidence":0,"summary":"...","thesis_risk":"...","evidence":["..."],"risks":["..."],"next_review_days":30,"watch_trigger":"...","do_not_act_reasons":["..."]}`;
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
-      contents: [{ parts: [{ text: dataBlock }] }],
-      generationConfig: {
-        temperature: GEMINI_TEMPERATURE,
-        maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
-        responseMimeType: "application/json",
-        responseSchema: GEMINI_RESPONSE_SCHEMA,
-      },
-    }),
-    },
-  );
+  const qwenApiKey = process.env.QWEN_API_KEY;
+  let res: Response | undefined;
+  let selectedModel = GEMINI_MODEL;
+  let lastErrorBody = "";
+  if (qwenApiKey) {
+    try {
+      const qwenResponse = await fetch("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${qwenApiKey}`,
+          "Content-Type": "application/json",
+        },
+        signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+        body: JSON.stringify({
+          model: QWEN_MODEL,
+          messages: [
+            { role: "system", content: SYSTEM_INSTRUCTIONS },
+            { role: "user", content: dataBlock },
+          ],
+          temperature: GEMINI_TEMPERATURE,
+          max_tokens: GEMINI_MAX_OUTPUT_TOKENS,
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (qwenResponse.ok) {
+        res = qwenResponse;
+        selectedModel = QWEN_MODEL;
+      } else {
+        lastErrorBody = await qwenResponse.text();
+        console.warn(`[Smart Advisor] Qwen returned ${qwenResponse.status}; trying Gemini fallback.`);
+      }
+    } catch (error) {
+      console.warn(`[Smart Advisor] Qwen attempt failed; trying Gemini fallback: ${error}`);
+    }
+  }
 
-  if (!res.ok) {
-    const errorBody = await res.text();
+  if (!res) {
+    const models = [...new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS])];
+    for (const model of models) {
+      selectedModel = model;
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
+            contents: [{ parts: [{ text: dataBlock }] }],
+            generationConfig: {
+              temperature: GEMINI_TEMPERATURE,
+              maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+              responseMimeType: "application/json",
+              responseSchema: GEMINI_RESPONSE_SCHEMA,
+            },
+          }),
+        },
+      );
+      if (res.ok) break;
+      lastErrorBody = await res.text();
+      if (res.status !== 429 && res.status !== 503) break;
+      console.warn(`[Smart Advisor] ${model} returned ${res.status}; trying the next configured model.`);
+    }
+  }
+
+  if (!res || !res.ok) {
     throw new Error(
-      `[generateRecommendation] Gemini API error ${res.status}: ${errorBody}`
+      `[generateRecommendation] Gemini API error ${res?.status ?? "unknown"}: ${lastErrorBody}`
     );
   }
 
-  const data = (await res.json()) as GeminiResponse;
-  const text: string | undefined =
-    data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const data = (await res.json()) as GeminiResponse & {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    ?? data?.choices?.[0]?.message?.content;
 
   if (!text) {
     // FIX (bug #1 from audit): previously threw a generic "had no text"
@@ -318,7 +372,7 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
     holding_ticker: verdict.holding_ticker,
     recommendation_text: recommendationText,
     generated_at: new Date().toISOString(),
-    model_used: GEMINI_MODEL,
+    model_used: selectedModel,
     structured,
   };
 }
@@ -357,33 +411,81 @@ export async function generatePortfolioSummary(
     throw new Error("[generatePortfolioSummary] GEMINI_API_KEY not found in environment");
   }
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS }] },
-        contents: [{ parts: [{ text: buildPortfolioSummaryPrompt(verdicts, opportunities, evaluationScope) }] }],
-        generationConfig: {
-          temperature: GEMINI_TEMPERATURE,
-          maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
-          responseMimeType: "application/json",
-          responseSchema: PORTFOLIO_SUMMARY_RESPONSE_SCHEMA,
+  const portfolioPrompt = buildPortfolioSummaryPrompt(verdicts, opportunities, evaluationScope);
+  const qwenApiKey = process.env.QWEN_API_KEY;
+  let res: Response | undefined;
+  let selectedModel = GEMINI_MODEL;
+  let lastErrorBody = "";
+
+  if (qwenApiKey) {
+    try {
+      const qwenResponse = await fetch("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${qwenApiKey}`,
+          "Content-Type": "application/json",
         },
-
-      }),
-    },
-  );
-
-  if (!res.ok) {
-    const errorBody = await res.text();
-    throw new Error(`[generatePortfolioSummary] Gemini API error ${res.status}: ${errorBody}`);
+        signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+        body: JSON.stringify({
+          model: QWEN_MODEL,
+          messages: [
+            { role: "system", content: PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS },
+            { role: "user", content: portfolioPrompt },
+          ],
+          temperature: GEMINI_TEMPERATURE,
+          max_tokens: GEMINI_MAX_OUTPUT_TOKENS,
+          response_format: { type: "json_object" },
+        }),
+      });
+      if (qwenResponse.ok) {
+        res = qwenResponse;
+        selectedModel = QWEN_MODEL;
+      } else {
+        lastErrorBody = await qwenResponse.text();
+        console.warn(`[Smart Advisor] Qwen portfolio summary returned ${qwenResponse.status}; trying Gemini fallback.`);
+      }
+    } catch (error) {
+      console.warn(`[Smart Advisor] Qwen portfolio summary failed; trying Gemini fallback: ${error}`);
+    }
   }
 
-  const data = (await res.json()) as GeminiResponse;
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!res) {
+    for (const model of [...new Set([GEMINI_MODEL, ...GEMINI_FALLBACK_MODELS])]) {
+      selectedModel = model;
+      res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: AbortSignal.timeout(GEMINI_TIMEOUT_MS),
+          body: JSON.stringify({
+            systemInstruction: { parts: [{ text: PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS }] },
+            contents: [{ parts: [{ text: portfolioPrompt }] }],
+            generationConfig: {
+              temperature: GEMINI_TEMPERATURE,
+              maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS,
+              responseMimeType: "application/json",
+              responseSchema: PORTFOLIO_SUMMARY_RESPONSE_SCHEMA,
+            },
+          }),
+        },
+      );
+      if (res.ok) break;
+      lastErrorBody = await res.text();
+      if (res.status !== 429 && res.status !== 503) break;
+      console.warn(`[Smart Advisor] ${model} portfolio summary returned ${res.status}; trying the next configured model.`);
+    }
+  }
+
+  if (!res || !res.ok) {
+    throw new Error(`[generatePortfolioSummary] AI API error ${res?.status ?? "unknown"}: ${lastErrorBody}`);
+  }
+
+  const data = (await res.json()) as GeminiResponse & {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+    ?? data?.choices?.[0]?.message?.content;
 
   if (!text) {
     const blockReason: string | undefined = data?.promptFeedback?.blockReason;
@@ -426,6 +528,6 @@ export async function generatePortfolioSummary(
     evidence: parsed.evidence,
     risks: parsed.risks,
     next_review_days: parsed.next_review_days,
-    model_used: GEMINI_MODEL,
+    model_used: selectedModel,
   };
 }

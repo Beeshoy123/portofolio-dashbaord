@@ -13,6 +13,16 @@ export type TechnicalReason =
   | "no_chart_data"
   | "insufficient_trend_history";
 
+export type CautionReason =
+  | "weak_performance"
+  | "insufficient_financial_health"
+  | "weak_technical"
+  | "mixed_signals";
+
+export interface JudgeRunDiagnostics {
+  verdict_history_write_failures: string[];
+}
+
 export type AssetRole =
   | "money_market_reserve"
   | "income_fund"
@@ -80,6 +90,7 @@ export interface HoldingVerdict {
   technical_grade: "Red Flag" | "Weak" | "Strong" | "Neutral" | "Insufficient Data";
   technical_reason?: TechnicalReason;
   final_label: "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data";
+  caution_reason?: CautionReason;
   coverage_percent: number | null;
   flags: string[];
   data_completeness_warning: boolean;

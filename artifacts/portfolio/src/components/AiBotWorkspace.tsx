@@ -106,6 +106,7 @@ type Verdict = {
   technical_grade?: 'Red Flag' | 'Weak' | 'Strong' | 'Neutral' | 'Insufficient Data';
   technical_reason?: 'no_chart_data' | 'insufficient_trend_history';
   final_label?: 'Excellent' | 'Solid' | 'Caution' | 'Avoid' | 'Insufficient Data';
+  caution_reason?: 'weak_performance' | 'insufficient_financial_health' | 'weak_technical' | 'mixed_signals';
   coverage_percent: number | null;
   comparables_beaten?: number;
   comparables_total?: number;
@@ -208,7 +209,7 @@ export type AlertsSummary = {
     drawdown?: DrawdownAlert | null;
   };
 };
-type DataLoadErrors = Partial<Record<'signals' | 'verdicts' | 'recommendations' | 'summary' | 'opportunities' | 'alerts', string>>;
+type DataLoadErrors = Partial<Record<'signals' | 'verdicts' | 'recommendations' | 'summary' | 'opportunities' | 'alerts' | 'verdictHistory', string>>;
 
 type PortfolioSummary = {
   id?: number;
@@ -330,6 +331,12 @@ const VERDICT_FLAG_MAP: Record<string, { en: string; ar: string; category: 'info
 };
 
 const GRID_GLOSSARY = {
+  cautionReasons: {
+    weak_performance: { en: 'Underperforming most peers on returns', ar: 'يحقق أداءً أقل من معظم النظراء' },
+    insufficient_financial_health: { en: 'Fundamentals data not available for this holding type', ar: 'بيانات الأساسيات غير متاحة لهذا النوع من الحيازات' },
+    weak_technical: { en: 'Weak technical/chart signal', ar: 'إشارة فنية/بيانية ضعيفة' },
+    mixed_signals: { en: 'No single dominant issue — review the grid below', ar: 'لا توجد مشكلة مهيمنة واحدة — راجع شبكة التقييم أدناه' },
+  },
   labels: {
     Excellent: {
       en: 'Performance is strong and the financial-health and technical checks do not show a material weakness.',
@@ -997,7 +1004,13 @@ export function AiBotWorkspace() {
       try {
         if (!hasEntityDataRef.current) setLoading(true);
         const loadErrors: DataLoadErrors = {};
-        const status = await json<{ runId: number | null }>('/api/ai-bot/status');
+        const status = await json<{ runId: number | null; verdict_history_write_failures?: string[]; chart_reader_failures?: string[] }>('/api/ai-bot/status');
+        if (status.verdict_history_write_failures?.length) {
+          loadErrors.verdictHistory = status.verdict_history_write_failures.join(', ');
+        }
+        if (status.chart_reader_failures?.length) {
+          loadErrors.signals = `Failed for: ${status.chart_reader_failures.join(', ')}`;
+        }
         setRunId(status.runId);
         const suffix = status.runId === null ? '' : `?runId=${encodeURIComponent(status.runId)}`;
         const [snapshotData, signalData, verdictData, recommendationData, summaryData, oppData, alertSummary] = await Promise.all([
@@ -1076,6 +1089,13 @@ export function AiBotWorkspace() {
     : undefined;
   const portfolioDrawdown = alertsData?.portfolio?.drawdown ?? alertsData?.drawdown;
   const trendDown = signal?.trend === 'downtrend';
+  const chartReaderMessage = dataLoadErrors.signals
+    ? (lang === 'ar' ? 'تعذر تحميل بيانات قارئ الرسم البياني لهذا التشغيل.' : 'Chart Reader data failed to load for this run.')
+    : signal?.raw_fetch_ok === false
+      ? (lang === 'ar' ? 'فشل جلب بيانات الرسم البياني لهذا الأصل.' : 'Chart data fetch failed for this entity.')
+      : !signal
+        ? (lang === 'ar' ? 'لم يُرجع قارئ الرسم البياني إشارة لهذا الأصل.' : 'Chart Reader returned no signal for this entity.')
+        : null;
   // Analyze strong unheld entities as opportunities
   const opportunities = useMemo(() => {
     const tierWeight: Record<'high' | 'moderate' | 'low', number> = {
@@ -1377,8 +1397,10 @@ export function AiBotWorkspace() {
         <div className="ai-bot-data-load-warning" data-pipeline-section="entity" role="status">
           <strong>{lang === 'ar' ? 'بيانات جزئية' : 'Partial data'}</strong>
           <span>{Object.keys(dataLoadErrors).map((key) => {
-            const labels: Record<string, string> = { signals: lang === 'ar' ? 'الرسم البياني' : 'Chart Reader', verdicts: lang === 'ar' ? 'حكم المقارنة' : 'Comparison Judge', recommendations: lang === 'ar' ? 'المستشار' : 'Smart Advisor', summary: lang === 'ar' ? 'ملخص المحفظة' : 'Portfolio summary', opportunities: lang === 'ar' ? 'الفرص' : 'Opportunities', alerts: lang === 'ar' ? 'التنبيهات' : 'Alerts' };
-            return labels[key] || key;
+            const labels: Record<string, string> = { signals: lang === 'ar' ? 'الرسم البياني' : 'Chart Reader', verdicts: lang === 'ar' ? 'حكم المقارنة' : 'Comparison Judge', recommendations: lang === 'ar' ? 'المستشار' : 'Smart Advisor', summary: lang === 'ar' ? 'ملخص المحفظة' : 'Portfolio summary', opportunities: lang === 'ar' ? 'الفرص' : 'Opportunities', alerts: lang === 'ar' ? 'التنبيهات' : 'Alerts', verdictHistory: lang === 'ar' ? 'كتابة سجل الأحكام' : 'Verdict history writes' };
+            return key === 'verdictHistory'
+              ? `${labels[key]} (${dataLoadErrors[key]})`
+              : labels[key] || key;
           }).join(lang === 'ar' ? '، ' : ', ')} {lang === 'ar' ? 'تعذر تحميلها.' : 'could not be loaded.'}</span>
         </div>
       )}
@@ -1460,7 +1482,11 @@ export function AiBotWorkspace() {
               </div>
               {trendDown ? <TrendingDown /> : <TrendingUp />}
             </div>
-            <MiniCandleChart candles={signal?.candles ?? []} lang={lang} />
+            {chartReaderMessage ? (
+              <div className="ai-bot-chart-empty" role="status">{chartReaderMessage}</div>
+            ) : (
+              <MiniCandleChart candles={signal.candles} lang={lang} />
+            )}
             <div className="ai-bot-chart-footer">
               <span
                 className={trendDown ? 'ai-negative' : 'ai-positive'}
@@ -1522,7 +1548,13 @@ export function AiBotWorkspace() {
 
               <div className="ai-bot-verdict-section ai-bot-verdict-breakdown-section">
                 <div className="ai-bot-breakdown-grid">
-                  <div><span>{lang === 'ar' ? 'التصنيف النهائي' : 'Final label'}</span><strong className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.final_label || verdict.signal)}`}>{formatSignal(verdict.final_label || verdict.signal, lang)}</strong></div>
+                  <div>
+                    <span>{lang === 'ar' ? 'التصنيف النهائي' : 'Final label'}</span>
+                    <strong className={`ai-bot-verdict-pill ai-bot-verdict-${slugify(verdict.final_label || verdict.signal)}`}>{formatSignal(verdict.final_label || verdict.signal, lang)}</strong>
+                    {verdict.final_label === 'Caution' && verdict.caution_reason && (
+                      <small>{GRID_GLOSSARY.cautionReasons[verdict.caution_reason][lang]}</small>
+                    )}
+                  </div>
                   <div><span>{lang === 'ar' ? 'دور الأصل' : 'Holding asset role'}</span><b>{verdict.holding_asset_role || unavailableValue(lang)}</b></div>
                   <div><span>{lang === 'ar' ? 'قيمة المحفظة' : 'Portfolio value'}</span><b>{verdict.holding_current_value_egp === null || verdict.holding_current_value_egp === undefined ? unavailableValue(lang) : `${Number(verdict.holding_current_value_egp).toLocaleString()} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}</b></div>
                   <div><span>{lang === 'ar' ? 'وزن المحفظة' : 'Portfolio weight'}</span><b>{verdict.holding_portfolio_weight_percent === null || verdict.holding_portfolio_weight_percent === undefined ? unavailableValue(lang) : `${Number(verdict.holding_portfolio_weight_percent).toFixed(1)}%`}</b></div>

@@ -5,6 +5,7 @@ import { pool } from "../lib/dbPool";
 // pattern evidence for the Deciders; it does not produce investment labels.
 
 const YAHOO_CHART_URL = "https://query1.finance.yahoo.com/v8/finance/chart/";
+const CHART_READER_CONCURRENCY = 6;
 
 type Candle = { date: string; open: number; high: number; low: number; close: number; volume: number | null };
 type TechnicalSignal = {
@@ -100,25 +101,62 @@ async function analyzeEntity(row: { id: number; yahoo_ticker: string }, runId: n
   }
 }
 
-export async function runTechnicalAnalysis(runId: number): Promise<{ succeeded: number; failed: number; total: number }> {
+async function runWithConcurrency<T>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<void>,
+): Promise<void> {
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const item = items[nextIndex++];
+        await worker(item);
+      }
+    },
+  );
+  await Promise.all(workers);
+}
+
+export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]): Promise<{ succeeded: number; failed: number; total: number; failed_tickers: string[]; failure_messages: string[] }> {
   const result = await pool.query<{ id: number; ticker: string; yahoo_ticker: string | null; entity_type: string; is_held: boolean; funds_table_key: string | null }>(
     `SELECT id, ticker, yahoo_ticker, entity_type, is_held, funds_table_key
      FROM comparison_watchlist
-     WHERE entity_type IN ('stock', 'fund')
+    WHERE entity_type IN ('stock', 'fund', 'index')
        AND yahoo_ticker IS NOT NULL
        AND COALESCE(funds_table_key, '') <> 'abr'
        AND ticker <> 'ABR'`,
   );
+  const requestedTickers = onlyTickers?.length
+    ? new Set(onlyTickers.map((ticker) => ticker.trim().toUpperCase()))
+    : null;
+  const rows = requestedTickers
+    ? result.rows.filter((row) => requestedTickers.has(row.ticker.toUpperCase()))
+    : result.rows;
   let succeeded = 0;
-  for (const row of result.rows) {
-    const signal = await analyzeEntity({ id: row.id, yahoo_ticker: row.yahoo_ticker! }, runId);
-    await pool.query(
-      `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, candles)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       ON CONFLICT (watchlist_id, run_id) DO UPDATE SET candle_date = EXCLUDED.candle_date, trend = EXCLUDED.trend, patterns = EXCLUDED.patterns, confidence = EXCLUDED.confidence, raw_fetch_ok = EXCLUDED.raw_fetch_ok, reversal_risk = EXCLUDED.reversal_risk, candles = EXCLUDED.candles`,
-      [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, JSON.stringify(signal.candles)],
-    );
-    if (signal.raw_fetch_ok) succeeded++;
-  }
-  return { succeeded, failed: result.rows.length - succeeded, total: result.rows.length };
+  const failedTickers: string[] = [];
+  const failureMessages: string[] = [];
+  await runWithConcurrency(rows, CHART_READER_CONCURRENCY, async (row) => {
+    try {
+      const signal = await analyzeEntity({ id: row.id, yahoo_ticker: row.yahoo_ticker! }, runId);
+      await pool.query(
+        `DELETE FROM technical_signals WHERE watchlist_id = $1 AND run_id = $2`,
+        [signal.watchlist_id, signal.run_id],
+      );
+      await pool.query(
+        `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, candles)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, JSON.stringify(signal.candles)],
+      );
+      if (signal.raw_fetch_ok) succeeded++;
+      else failedTickers.push(row.ticker);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      failedTickers.push(row.ticker);
+      failureMessages.push(`${row.ticker}: ${message}`);
+      console.error(`[technical] ${row.ticker}: could not persist signal`, error);
+    }
+  });
+  return { succeeded, failed: rows.length - succeeded, total: rows.length, failed_tickers: failedTickers, failure_messages: failureMessages };
 }

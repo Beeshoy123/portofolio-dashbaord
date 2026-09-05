@@ -227,14 +227,17 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
     }
   });
 
-  // --- Stocks: bounded concurrency; fundamentals and price use same sequence per stock ---
+  // --- Stocks: bounded concurrency; independent sources are fetched together ---
   await runWithConcurrency(stocks, 2, async (stock) => {
     try {
-      const fundamentals = await parseStockAnalysis(stock.ticker, stock.id);
+      const [fundamentals, parsedSnapshot] = await Promise.all([
+        parseStockAnalysis(stock.ticker, stock.id),
+        parseStockPage(stock.ticker, stock.id),
+      ]);
       stockAnalysisByTicker.set(stock.ticker, fundamentals);
       await saveFundamentals(fundamentals, runId);
       const snapshot = {
-        ...(await parseStockPage(stock.ticker, stock.id)),
+        ...parsedSnapshot,
         nav_or_price: fundamentals.price,
         return_30d_percent: fundamentals.return_30d_percent,
         return_ytd_percent: fundamentals.return_ytd_percent,
@@ -299,7 +302,6 @@ export async function main(existingRunId?: number): Promise<{ runId: number; suc
         `[fundamentals] ${stock.ticker}: ${fundamentals.raw_fetch_ok ? "OK" : "FAILED"} — ` +
           `P/E ${fundamentals.pe_ratio}, price ${fundamentals.price}`
       );
-      await sleep(1500); // polite delay between stocks (2 requests each, already spaced internally)
     }
     console.log(
       `Fundamentals done. ${fundamentalsOk} succeeded, ${fundamentalsFailed} failed out of ${stocks.length}.`

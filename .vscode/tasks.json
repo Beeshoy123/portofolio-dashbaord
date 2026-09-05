@@ -18,6 +18,16 @@
 			"isBackground": false,
 			"problemMatcher": [],
 			"group": "test"
+		},
+		{
+			"label": "Build API Smart Advisor",
+			"type": "shell",
+			"command": "node",
+			"args": [
+				"artifacts/api-server/build.mjs"
+			],
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }

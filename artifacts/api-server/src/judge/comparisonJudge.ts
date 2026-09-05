@@ -14,7 +14,7 @@
 
 import { pool } from "../lib/dbPool";
 import { analyzePortfolioOpportunities, type PortfolioOpportunityAnalysis } from "../advisor/opportunityAnalysis";
-import type { AssetRole, HoldingVerdict, ComparisonGroup, ComparisonEntry, TechnicalSignal } from "./types";
+import type { AssetRole, CautionReason, HoldingVerdict, ComparisonGroup, ComparisonEntry, JudgeRunDiagnostics, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
 import { computeFinancialHealthGrade } from "./financialHealth";
 
@@ -24,6 +24,18 @@ export type TechnicalGrade =
   | "Strong"
   | "Neutral"
   | "Insufficient Data";
+
+const VALID_PERFORMANCE_GRADES = ["Strong", "Mixed", "Weak", "Insufficient Data"] as const;
+const VALID_TECHNICAL_GRADES = ["Red Flag", "Weak", "Strong", "Neutral", "Insufficient Data"] as const;
+const VALID_FINAL_LABELS = ["Excellent", "Solid", "Caution", "Avoid", "Insufficient Data"] as const;
+const MAX_VERDICT_CACHE_ENTRIES = 20;
+const verdictCache = new Map<string, Promise<HoldingVerdict[]>>();
+
+export function invalidateJudgeCache(runId: number): void {
+  for (const key of verdictCache.keys()) {
+    if (key.startsWith(`${runId}:`)) verdictCache.delete(key);
+  }
+}
 
 export function computeTechnicalGrade(
   technicalSignal: TechnicalSignal | null,
@@ -95,6 +107,8 @@ export function combineIntoFinalLabel(
     return "Caution";
   }
 
+  // Policy question: keep Weak performance as Caution unless we decide it should escalate to Avoid.
+  // Current design: only Financial Health or Technical Red Flag can produce Avoid.
   return "Caution";
 }
 
@@ -349,6 +363,7 @@ async function judgeHolding(
   technicalSignals: Map<number, TechnicalSignal>,
   portfolioValueBreakdown: { totalValueEgp: number; byTicker: Map<string, number> },
   runId?: number,
+  diagnostics?: JudgeRunDiagnostics,
 ): Promise<HoldingVerdict> {
   const holdingSnapshot = snapshots.get(holding.id);
   const holdingReturn = returnFor(holdingSnapshot, period);
@@ -460,6 +475,30 @@ async function judgeHolding(
     financialHealthGrade,
     technicalGrade,
   );
+  if (!VALID_PERFORMANCE_GRADES.includes(performanceGrade)) {
+    console.error(
+      `[INVARIANT VIOLATION] performanceGrade returned an unexpected value "${performanceGrade}" for ${holding.ticker} (run ${runId}).`,
+    );
+  }
+  if (!VALID_TECHNICAL_GRADES.includes(technicalGrade)) {
+    console.error(
+      `[INVARIANT VIOLATION] technicalGrade returned an unexpected value "${technicalGrade}" for ${holding.ticker} (run ${runId}).`,
+    );
+  }
+  if (!VALID_FINAL_LABELS.includes(finalLabel)) {
+    console.error(
+      `[INVARIANT VIOLATION] combineIntoFinalLabel returned an unexpected value "${finalLabel}" for ${holding.ticker} (run ${runId}). Inputs: performanceGrade=${performanceGrade}, financialHealthGrade=${financialHealthGrade}, technicalGrade=${technicalGrade}`,
+    );
+  }
+  const cautionReason: CautionReason | undefined = finalLabel === "Caution"
+    ? performanceGrade === "Weak"
+      ? "weak_performance"
+      : financialHealthGrade === "Insufficient Data"
+        ? "insufficient_financial_health"
+        : technicalGrade === "Weak"
+          ? "weak_technical"
+          : "mixed_signals"
+    : undefined;
   // Final combined signal now reflects the multi-factor grid, while the
   // performance_grade field continues to preserve the original return-only
   // breakdown for debugging and comparison.
@@ -491,6 +530,7 @@ async function judgeHolding(
     technical_grade: technicalGrade,
     ...(technicalReason ? { technical_reason: technicalReason } : {}),
     final_label: finalLabel,
+    ...(cautionReason ? { caution_reason: cautionReason } : {}),
     coverage_percent: coveragePercent,
     flags,
     data_completeness_warning: holdingReturn === null || groups.some((group) => group.incomplete_count > 0),
@@ -511,9 +551,11 @@ async function judgeHolding(
           [holding.id, signal, flags, verdict.holding_return_percent, JSON.stringify(verdict), runId]
     );
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    diagnostics?.verdict_history_write_failures.push(`${holding.ticker}: ${errorMessage}`);
     console.error(
-      `[verdict_history] failed to log verdict for ${holding.ticker}:`,
-      err
+      `[verdict_history] failed to log verdict for ${holding.ticker}: ${errorMessage}`,
+      err,
     );
   }
 
@@ -534,6 +576,36 @@ export async function judgeAllHoldings(
   period: ReturnPeriod,
   runId?: number,
   includeAllEntities = false,
+  diagnostics?: JudgeRunDiagnostics,
+): Promise<HoldingVerdict[]> {
+  const cacheKey = runId === undefined
+    ? null
+    : `${runId}:${period}:${includeAllEntities ? "all" : "held"}`;
+  if (cacheKey) {
+    const cached = verdictCache.get(cacheKey);
+    if (cached) return cached;
+  }
+
+  const computation = judgeAllHoldingsUncached(period, runId, includeAllEntities, diagnostics);
+  if (cacheKey) {
+    verdictCache.set(cacheKey, computation);
+    while (verdictCache.size > MAX_VERDICT_CACHE_ENTRIES) {
+      const oldestKey = verdictCache.keys().next().value;
+      if (oldestKey === undefined) break;
+      verdictCache.delete(oldestKey);
+    }
+    computation.catch(() => {
+      if (verdictCache.get(cacheKey) === computation) verdictCache.delete(cacheKey);
+    });
+  }
+  return computation;
+}
+
+async function judgeAllHoldingsUncached(
+  period: ReturnPeriod,
+  runId?: number,
+  includeAllEntities = false,
+  diagnostics?: JudgeRunDiagnostics,
 ): Promise<HoldingVerdict[]> {
   try {
     const [watchlist, snapshots, fundamentals, technicalSignals] = await Promise.all([
@@ -549,7 +621,7 @@ export async function judgeAllHoldings(
       ? watchlist.filter((row) => !isEmergencyReserveFund(row))
       : watchlist.filter((row) => row.is_held && !isEmergencyReserveFund(row));
     for (const holding of entities) {
-      const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, portfolioValueBreakdown, runId);
+      const verdict = await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, portfolioValueBreakdown, runId, diagnostics);
       verdicts.push(verdict);
     }
     return verdicts;

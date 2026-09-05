@@ -2,7 +2,7 @@ import { Router } from "express";
 import { type PoolClient } from "pg";
 import { pool } from "../lib/dbPool";
 import { runScraper } from "../scraper/runScraper";
-import { judgeAllHoldings, findOpportunities, type OpportunitiesAnalysis } from "../judge/comparisonJudge";
+import { judgeAllHoldings, findOpportunities, invalidateJudgeCache, type OpportunitiesAnalysis } from "../judge/comparisonJudge";
 import { checkAllTimeStops } from "../judge/timeStop";
 import { checkAllTheses } from "../judge/thesisCheck";
 import { getRecentSignalTrend } from "../judge/signalTrend";
@@ -11,6 +11,7 @@ import { generatePortfolioSummary, generateRecommendation } from "../advisor/gen
 import { runBotPipeline } from "../aiBot/pipeline";
 import { runTechnicalAnalysis } from "../technical/technicalAnalysis";
 import { releaseAdvisoryLock, tryAcquireAdvisoryLock } from "../lib/advisoryLock";
+import type { JudgeRunDiagnostics } from "../judge/types";
 
 const router = Router();
 const BOT_LOCK_ID = 1844674410;
@@ -21,6 +22,9 @@ type BotStatus = {
   runId: number | null;
   startedAt: string | null;
   error: string | null;
+  verdict_history_write_failures: string[];
+  chart_reader_failures: string[];
+  chart_reader_errors: string[];
   stages: {
     priceChecker: StageState;
     chartReader: StageState;
@@ -35,6 +39,9 @@ let status: BotStatus = {
   runId: null,
   startedAt: null,
   error: null,
+  verdict_history_write_failures: [],
+  chart_reader_failures: [],
+  chart_reader_errors: [],
   stages: {
     priceChecker: "waiting",
     chartReader: "waiting",
@@ -68,6 +75,9 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
     runId,
     startedAt: new Date().toISOString(),
     error: null,
+    verdict_history_write_failures: [],
+    chart_reader_failures: [],
+    chart_reader_errors: [],
     stages: {
       priceChecker: "running",
       chartReader: "waiting",
@@ -88,7 +98,14 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
         status.stages.chartReader = "running";
         try {
           const result = await runTechnicalAnalysis(runId);
-          status.stages.chartReader = "completed";
+          status.chart_reader_failures = result.failed_tickers;
+          status.chart_reader_errors = result.failure_messages;
+          status.stages.chartReader = result.total > 0 && result.failed === result.total
+            ? "failed"
+            : "completed";
+          if (result.failed > 0 && result.succeeded > 0) {
+            console.warn(`[ai-bot] Chart Reader completed with partial results: ${result.succeeded}/${result.total} signals fetched`);
+          }
           return result;
         } catch (error) {
           status.stages.chartReader = "failed";
@@ -98,8 +115,10 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
       },
       runComparisonJudge: async (runId) => {
         status.stages.comparisonJudge = "running";
+        const diagnostics: JudgeRunDiagnostics = { verdict_history_write_failures: [] };
         try {
-          const result = await judgeAllHoldings("return_1y", runId);
+          const result = await judgeAllHoldings("return_1y", runId, false, diagnostics);
+          status.verdict_history_write_failures = diagnostics.verdict_history_write_failures;
           status.stages.comparisonJudge = "completed";
           return result;
         } catch (error) {
@@ -568,6 +587,32 @@ router.post("/ai-bot/run", async (_req, res) => {
   }
 });
 
+router.post("/ai-bot/retry-chart-reader", async (req, res) => {
+  const rawRunId = req.query.runId;
+  const runId = typeof rawRunId === "string" && /^\d+$/.test(rawRunId) ? Number(rawRunId) : null;
+  const tickers = Array.isArray(req.body?.tickers)
+    ? req.body.tickers.filter((ticker: unknown): ticker is string => typeof ticker === "string" && ticker.trim().length > 0)
+    : [];
+
+  if (runId === null || !Number.isSafeInteger(runId) || runId <= 0) {
+    res.status(400).json({ error: "runId is required" });
+    return;
+  }
+  if (tickers.length === 0) {
+    res.status(400).json({ error: "tickers must contain at least one ticker" });
+    return;
+  }
+
+  try {
+    const result = await runTechnicalAnalysis(runId, tickers);
+    invalidateJudgeCache(runId);
+    res.json({ runId, tickers, result });
+  } catch (error) {
+    console.error(`[ai-bot] Chart Reader retry failed for run ${runId}`, error);
+    res.status(500).json({ error: "Chart Reader retry failed" });
+  }
+});
+
 router.get("/ai-bot/status", async (_req, res) => {
   if (status.running) {
     res.json(status);
@@ -596,11 +641,17 @@ router.get("/ai-bot/status", async (_req, res) => {
       return;
     }
 
+    if (status.runId === Number(latest.id)) {
+      res.json(status);
+      return;
+    }
+
     res.json({
       running: latest.status === "running",
       runId: Number(latest.id),
       startedAt: latest.started_at,
       error: latest.error_message,
+      chart_reader_failures: [],
       stages: {
         priceChecker: latest.status === "failed" ? "failed" : latest.status === "running" ? "running" : "completed",
         chartReader: latest.status === "failed" ? "failed" : latest.status === "running" ? "running" : "completed",
