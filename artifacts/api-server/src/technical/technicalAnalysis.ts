@@ -1,4 +1,5 @@
 import { allPatterns, patternChain } from "candlestick";
+import * as cheerio from "cheerio";
 import { pool } from "../lib/dbPool";
 
 // Role note: Chart Reader is a Gatherer. It collects candles, trend, and
@@ -24,8 +25,19 @@ type TechnicalSignal = {
 };
 
 type YahooChartResponse = {
-  chart?: { result?: Array<{ timestamp?: number[]; indicators?: { quote?: Array<Record<string, Array<number | null>>> } }> };
+  chart?: { result?: Array<{ timestamp?: number[]; meta?: { instrumentType?: string; currency?: string; longName?: string; shortName?: string }; indicators?: { quote?: Array<Record<string, Array<number | null>>> } }> };
 };
+
+function normalizedWords(value: string): Set<string> {
+  return new Set(value.toLowerCase().replace(/[^a-z0-9]+/g, " ").split(/\s+/).filter((word) => word.length >= 3));
+}
+
+function namesPlausiblyMatch(expected: string, actual: string): boolean {
+  const expectedWords = normalizedWords(expected);
+  const actualWords = normalizedWords(actual);
+  const overlap = [...expectedWords].filter((word) => actualWords.has(word)).length;
+  return overlap >= 1 || expectedWords.size === 0;
+}
 
 function trendOf(candles: Candle[]): TechnicalSignal["trend"] {
   if (candles.length < 20) return "unknown";
@@ -71,7 +83,7 @@ function rangeMetrics(candles: Candle[]): Pick<TechnicalSignal, "recent_high" | 
   };
 }
 
-async function fetchCandles(yahooTicker: string): Promise<Candle[]> {
+async function fetchYahooCandles(yahooTicker: string, expectedName: string): Promise<Candle[]> {
   const response = await fetch(`${YAHOO_CHART_URL}${encodeURIComponent(yahooTicker)}?range=1y&interval=1d`, {
     headers: { "User-Agent": "Mozilla/5.0" },
     signal: AbortSignal.timeout(30_000),
@@ -79,6 +91,11 @@ async function fetchCandles(yahooTicker: string): Promise<Candle[]> {
   if (!response.ok) throw new Error(`Yahoo chart HTTP ${response.status}`);
   const payload = (await response.json()) as YahooChartResponse;
   const result = payload.chart?.result?.[0];
+  const meta = result?.meta;
+  if (meta?.instrumentType !== "EQUITY") throw new Error(`Yahoo instrument type is ${meta?.instrumentType ?? "unknown"}`);
+  if (meta.currency !== "EGP") throw new Error(`Yahoo currency is ${meta.currency ?? "unknown"}`);
+  const yahooName = meta.longName ?? meta.shortName ?? "";
+  if (!namesPlausiblyMatch(expectedName, yahooName)) throw new Error(`Yahoo name mismatch: ${yahooName || "missing"}`);
   const timestamps = result?.timestamp ?? [];
   const quote = result?.indicators?.quote?.[0];
   if (!quote) return [];
@@ -92,9 +109,68 @@ async function fetchCandles(yahooTicker: string): Promise<Candle[]> {
   })).filter((candle) => candle.open > 0 && candle.high > 0 && candle.low > 0 && candle.close > 0);
 }
 
-async function analyzeEntity(row: { id: number; yahoo_ticker: string }, runId: number): Promise<TechnicalSignal> {
+function parseHistoryNumber(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Number(value.replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+const KNOWN_NAME_EXCEPTIONS: Record<string, string> = {
+  QNBE: "QNB Egypt is the Egyptian subsidiary of Qatar National Bank Group; StockAnalysis lists it under the parent group's name.",
+  CCAP: "QALAA Holdings is also listed as QALA For Financial Investments; FoudaLens independently identifies that name with EGX:CCAP.",
+};
+
+async function fetchStockAnalysisCandles(ticker: string, expectedName: string): Promise<Candle[]> {
+  const headers = { "User-Agent": "Mozilla/5.0" };
+  const candlesByDate = new Map<string, Candle>();
+  let identityVerified = false;
+
+  for (let page = 1; page <= 12; page++) {
+    const url = `https://stockanalysis.com/quote/egx/${encodeURIComponent(ticker)}/history/${page > 1 ? `?p=${page}` : ""}`;
+    const response = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
+    if (!response.ok) throw new Error(`StockAnalysis history HTTP ${response.status}`);
+    const $ = cheerio.load(await response.text());
+    if (!identityVerified) {
+      const identity = $("h1").first().text().trim();
+      const nameException = KNOWN_NAME_EXCEPTIONS[ticker];
+      if (!identity.includes(`EGX:${ticker}`) || (!nameException && !namesPlausiblyMatch(expectedName, identity))) {
+        throw new Error(`StockAnalysis identity mismatch: ${identity || "missing"}`);
+      }
+      if (nameException) console.warn(`[technical] ${ticker}: using documented StockAnalysis name exception: ${nameException}`);
+      identityVerified = true;
+    }
+
+    let pageRows = 0;
+    $("table tbody tr").each((_index, row) => {
+      const cells = $(row).find("td").map((_cellIndex, cell) => $(cell).text().trim()).get();
+      const date = new Date(cells[0] ?? "");
+      const open = parseHistoryNumber(cells[1]);
+      const high = parseHistoryNumber(cells[2]);
+      const low = parseHistoryNumber(cells[3]);
+      const close = parseHistoryNumber(cells[4]);
+      const volume = parseHistoryNumber(cells[7]);
+      if (!Number.isNaN(date.getTime()) && open !== null && high !== null && low !== null && close !== null && open > 0 && high > 0 && low > 0 && close > 0) {
+        const dateKey = date.toISOString().slice(0, 10);
+        candlesByDate.set(dateKey, { date: dateKey, open, high, low, close, volume });
+        pageRows++;
+      }
+    });
+    if (pageRows === 0 || candlesByDate.size >= 260) break;
+  }
+
+  return [...candlesByDate.values()].sort((left, right) => left.date.localeCompare(right.date));
+}
+
+async function analyzeEntity(row: { id: number; ticker: string; name: string; yahoo_ticker: string }, runId: number): Promise<TechnicalSignal> {
   try {
-    const candles = await fetchCandles(row.yahoo_ticker);
+    let candles: Candle[];
+    try {
+      candles = await fetchYahooCandles(row.yahoo_ticker, row.name);
+      if (candles.length < 20) throw new Error("not enough OHLC history");
+    } catch (yahooError) {
+      console.warn(`[technical] ${row.ticker}: Yahoo unavailable, using StockAnalysis`, yahooError);
+      candles = await fetchStockAnalysisCandles(row.ticker, row.name);
+    }
     if (candles.length < 20) throw new Error("not enough OHLC history");
     const matches = patternChain(candles, allPatterns, {
       strict: true,
@@ -115,7 +191,7 @@ async function analyzeEntity(row: { id: number; yahoo_ticker: string }, runId: n
       raw_fetch_ok: true,
       reversal_risk: reversalRisk,
       ...range,
-      candles: candles.slice(-60),
+      candles: candles.slice(-250),
     };
   } catch (error) {
     console.warn(`[technical] ${row.yahoo_ticker}: unavailable`, error);
@@ -142,11 +218,12 @@ async function runWithConcurrency<T>(
 }
 
 export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]): Promise<{ succeeded: number; failed: number; total: number; failed_tickers: string[]; failure_messages: string[] }> {
-  const result = await pool.query<{ id: number; ticker: string; yahoo_ticker: string | null; entity_type: string; is_held: boolean; funds_table_key: string | null }>(
-    `SELECT id, ticker, yahoo_ticker, entity_type, is_held, funds_table_key
+  const result = await pool.query<{ id: number; ticker: string; name: string; yahoo_ticker: string | null; entity_type: string; is_held: boolean; funds_table_key: string | null }>(
+    `SELECT id, ticker, name, yahoo_ticker, entity_type, is_held, funds_table_key
      FROM comparison_watchlist
     WHERE entity_type IN ('stock', 'fund', 'index')
        AND yahoo_ticker IS NOT NULL
+       -- ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
        AND COALESCE(funds_table_key, '') <> 'abr'
        AND ticker <> 'ABR'`,
   );
@@ -161,7 +238,7 @@ export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]
   const failureMessages: string[] = [];
   await runWithConcurrency(rows, CHART_READER_CONCURRENCY, async (row) => {
     try {
-      const signal = await analyzeEntity({ id: row.id, yahoo_ticker: row.yahoo_ticker! }, runId);
+      const signal = await analyzeEntity({ id: row.id, ticker: row.ticker, name: row.name, yahoo_ticker: row.yahoo_ticker! }, runId);
       await pool.query(
         `DELETE FROM technical_signals WHERE watchlist_id = $1 AND run_id = $2`,
         [signal.watchlist_id, signal.run_id],

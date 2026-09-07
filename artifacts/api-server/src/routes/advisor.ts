@@ -117,6 +117,7 @@ router.get("/recommendations", async (req: Request, res: Response) => {
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
        WHERE cw.is_held = true
+           -- ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
          AND cw.ticker <> 'ABR'
          AND COALESCE(cw.funds_table_key, '') <> 'abr'
          AND lower(cw.name) NOT LIKE '%bareeq%'
@@ -485,6 +486,7 @@ router.get("/opportunities", async (req: Request, res: Response) => {
          FROM advisor_opportunities ao
          JOIN comparison_watchlist cw ON ao.watchlist_id = cw.id
          WHERE ao.run_id = $1
+           -- ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
            AND cw.ticker <> 'ABR'
            AND COALESCE(cw.funds_table_key, '') <> 'abr'
            AND lower(cw.name) NOT LIKE '%bareeq%'

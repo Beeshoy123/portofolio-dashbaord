@@ -177,8 +177,10 @@ function riskTier(riskLevel: string | null): "Low" | "Medium" | "High" | null {
   return null;
 }
 
-// Bareeq (ABR) is the portfolio's money-market emergency reserve. It is
-// measured against the emergency-fund target, not against investment peers.
+// Bareeq (ABR) is a money-market emergency reserve: its NAV accrues yield
+// rather than tracking market price movement. Comparison Judge's Performance,
+// Financial Health, and Technical categories do not meaningfully apply, so
+// ABR is intentionally excluded instead of being force-graded on those metrics.
 function isEmergencyReserveFund(row: WatchlistRow): boolean {
   if (row.entity_type !== "fund") return false;
   const identity = `${row.ticker} ${row.name}`.toLowerCase();
@@ -260,6 +262,7 @@ async function loadPersistedVerdicts(
     ]);
     const eligibleTickers = new Set(
       watchlist
+        // ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
         .filter((row) => !isEmergencyReserveFund(row) && (includeAllEntities || row.is_held))
         .map((row) => row.ticker.toUpperCase()),
     );
@@ -431,6 +434,7 @@ async function judgeHolding(
     ? (currentValueEgp / portfolioValueBreakdown.totalValueEgp) * 100
     : null;
   const candidates = watchlist.filter(
+    // ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
     (candidate) => candidate.id !== holding.id && !isEmergencyReserveFund(candidate),
   );
   const groups = ([
@@ -678,6 +682,7 @@ async function judgeAllHoldingsUncached(
 
     const verdicts: HoldingVerdict[] = [];
     const entities = includeAllEntities
+      // ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
       ? watchlist.filter((row) => !isEmergencyReserveFund(row))
       : watchlist.filter((row) => row.is_held && !isEmergencyReserveFund(row));
     for (const holding of entities) {
@@ -895,6 +900,7 @@ export async function judgeOneHolding(
     ]);
     const holding = watchlist.find((row) => row.ticker === ticker.toUpperCase());
     if (!holding) return null;
+    // ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
     if (isEmergencyReserveFund(holding)) return null;
     const portfolioValueBreakdown = await getPortfolioValueBreakdown();
     return await judgeHolding(holding, period, watchlist, snapshots, fundamentals, technicalSignals, portfolioValueBreakdown, runId);

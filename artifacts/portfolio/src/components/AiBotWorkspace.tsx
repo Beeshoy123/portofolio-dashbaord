@@ -709,21 +709,33 @@ function MiniCandleChart({ candles, lang, limit = 24, full = false }: { candles:
   const visible = candles.slice(-limit);
   if (!visible.length) return <div className="ai-bot-chart-empty">{lang === 'ar' ? 'لا توجد بيانات أسعار تاريخية متاحة.' : 'No OHLC history available.'}</div>;
   const values = visible.flatMap((candle) => [candle.high, candle.low]);
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = Math.max(max - min, 1);
-  const y = (value: number) => 10 + ((max - value) / range) * 130;
+  const rawMax = Math.max(...values);
+  const rawMin = Math.min(...values);
+  const rawRange = rawMax - rawMin;
+  const padding = Math.max(rawRange * 0.04, rawMax * 0.0025, 0.01);
+  const max = rawMax + padding;
+  const min = Math.max(0, rawMin - padding);
+  const range = Math.max(max - min, 0.01);
+  const plotTop = 10;
+  const plotHeight = full ? 190 : 130;
+  const y = (value: number) => plotTop + ((max - value) / range) * plotHeight;
+  const ticks = Array.from({ length: 5 }, (_, index) => max - (range * index) / 4);
+  const priceLabel = (value: number) => value >= 100 ? value.toFixed(0) : value >= 10 ? value.toFixed(2) : value.toFixed(3);
+  const candleWidth = visible.length <= 45 ? 8 : visible.length <= 100 ? 5 : 3;
+  const candleGap = visible.length <= 45 ? 3 : visible.length <= 100 ? 2 : 1;
   return (
     <div className={`ai-bot-chart ${full ? 'ai-bot-chart-full' : ''}`}>
-      <div className="ai-bot-chart-grid"><span /><span /><span /><span /></div>
-      <div className="ai-bot-candles">
+      <div className="ai-bot-chart-grid" aria-hidden="true">
+        {ticks.map((tick) => <span key={tick} style={{ top: `${y(tick)}px` }}><b>{priceLabel(tick)}</b></span>)}
+      </div>
+      <div className="ai-bot-candles" style={{ gap: `${candleGap}px` }}>
         {visible.map((candle) => {
           const up = candle.close >= candle.open;
           const bodyTop = y(Math.max(candle.open, candle.close));
           const bodyHeight = Math.max(3, Math.abs(y(candle.open) - y(candle.close)));
           return <div className="ai-bot-candle" key={candle.date} title={`${candle.date}: ${candle.close.toFixed(2)}`}>
-            <i style={{ top: y(candle.high), height: Math.max(1, y(candle.low) - y(candle.high)) }} />
-            <b className={up ? 'is-up' : 'is-down'} style={{ top: bodyTop, height: bodyHeight }} />
+            <i style={{ top: y(candle.high), height: Math.max(1, y(candle.low) - y(candle.high)), width: `${visible.length > 100 ? 1 : 2}px` }} />
+            <b className={up ? 'is-up' : 'is-down'} style={{ top: bodyTop, height: bodyHeight, width: `${candleWidth}px` }} />
           </div>;
         })}
       </div>

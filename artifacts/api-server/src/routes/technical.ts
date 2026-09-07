@@ -15,6 +15,7 @@ router.get("/technical-signals", async (req, res) => {
        JOIN comparison_watchlist cw ON cw.id = ts.watchlist_id
        WHERE ($1::bigint IS NULL OR ts.run_id = $1::bigint)
          AND cw.entity_type IN ('stock', 'fund', 'index')
+         -- ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
          AND COALESCE(cw.funds_table_key, '') <> 'abr'
          AND cw.ticker <> 'ABR'
        ORDER BY ts.watchlist_id, ts.created_at DESC`,
