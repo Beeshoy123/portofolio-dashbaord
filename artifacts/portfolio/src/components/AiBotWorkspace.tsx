@@ -104,6 +104,7 @@ type Verdict = {
   financial_health_grade?: 'Red Flag' | 'Weak' | 'Strong' | 'Neutral' | 'Insufficient Data';
   financial_health_reason?: 'not_applicable_fund' | 'insufficient_peers' | 'missing_own_fundamentals';
   technical_grade?: 'Red Flag' | 'Weak' | 'Strong' | 'Neutral' | 'Insufficient Data';
+  confidence_tier?: 'high' | 'moderate' | 'low';
   technical_reason?: 'no_chart_data' | 'insufficient_trend_history';
   final_label?: 'Excellent' | 'Solid' | 'Caution' | 'Avoid' | 'Insufficient Data';
   caution_reason?: 'weak_performance' | 'insufficient_financial_health' | 'weak_technical' | 'mixed_signals';
@@ -116,6 +117,9 @@ type Verdict = {
     trend: string;
     confidence: number | null;
     reversal_risk?: 'none' | 'watch' | 'elevated';
+    recent_high?: number | null;
+    recent_low?: number | null;
+    range_position_percent?: number | null;
     patterns: Array<{ name: string; direction: string }>;
   } | null;
   data_quality?: {
@@ -258,6 +262,14 @@ type OpportunitiesAnalysis = {
     comparables_total?: number;
     absolute_return_positive?: boolean;
     fundamentals_flags?: string[];
+    confidence_tier?: "high" | "moderate" | "low";
+  }>;
+  held_opportunities?: Array<{
+    holding_ticker: string;
+    holding_name: string;
+    holding_return_percent: number | null;
+    holding_portfolio_weight_percent?: number | null;
+    signal: string;
     confidence_tier?: "high" | "moderate" | "low";
   }>;
   persisted_opportunities?: Array<{
@@ -2136,6 +2148,23 @@ export function AiBotWorkspace() {
                         </div>
                         )) : <p className="comparison-pending-label">{lang === 'ar' ? 'لم يتم العثور على مرشحين ممتازين أو متينين غير محتفظ بهم في هذا التشغيل.' : 'No Excellent/Solid unheld candidates were detected for this run.'}</p>}
                       </div>
+                      <section className="ai-bot-opportunity-block">
+                        <h5>{lang === 'ar' ? 'النظر في زيادة المركز' : 'Consider increasing'}</h5>
+                        {opportunitiesData.held_opportunities?.length ? (
+                          <div className="ai-bot-opportunities-list">
+                            {opportunitiesData.held_opportunities.map((opp) => (
+                              <div className="ai-bot-opportunity-item" key={opp.holding_ticker}>
+                                <span className="ai-bot-opp-ticker">{opp.holding_ticker}</span>
+                                <span className="ai-bot-opp-name">{translateEntityName(opp.holding_name, lang)}</span>
+                                <span className={`ai-bot-opp-badge ai-bot-opp-badge--${opp.confidence_tier ?? 'moderate'}`}>
+                                  {lang === 'ar' ? `الحجم الحالي ${opp.holding_portfolio_weight_percent?.toFixed(1) ?? unavailableValue(lang)}% · ${opp.confidence_tier ?? 'moderate'}` : `Current weight ${opp.holding_portfolio_weight_percent?.toFixed(1) ?? unavailableValue(lang)}% · ${opp.confidence_tier ?? 'moderate'} confidence`}
+                                </span>
+                                <span className="ai-bot-opp-subnote">{opp.signal}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="comparison-pending-label">{lang === 'ar' ? 'لا توجد مراكز محتفظ بها مؤهلة ضمن حد الحجم الحالي.' : 'No held positions meet the current sizing threshold.'}</p>}
+                      </section>
                       <div className="ai-bot-opportunity-workspace">
                           <section className="ai-bot-opportunity-block">
                             <h5>{lang === 'ar' ? 'تفاصيل المرشحين غير المحتفظ بهم' : 'Unheld Candidate Details'}</h5>

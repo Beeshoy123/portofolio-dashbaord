@@ -77,7 +77,7 @@ function isOpportunitySignal(signal: HoldingVerdict["signal"]): boolean {
   return signal === "Excellent" || signal === "Solid";
 }
 
-function confidenceTierFor(verdict: HoldingVerdict): "high" | "moderate" | "low" {
+export function confidenceTierFor(verdict: HoldingVerdict): "high" | "moderate" | "low" {
   const coverage = verdict.coverage_percent ?? 0;
   const winRate = verdict.comparables_total > 0
     ? verdict.comparables_beaten / verdict.comparables_total
@@ -93,6 +93,33 @@ function confidenceTierFor(verdict: HoldingVerdict): "high" | "moderate" | "low"
   if (verdict.signal === "Solid" && confidenceTier === "high") return "moderate";
   if (verdict.signal === "Excellent" && confidenceTier === "low") return "moderate";
   return confidenceTier;
+}
+
+const tierWeight: Record<"high" | "moderate" | "low", number> = {
+  high: 3,
+  moderate: 2,
+  low: 1,
+};
+
+function technicalSortWeight(verdict: HoldingVerdict): number {
+  if (verdict.technical_grade === "Weak" || verdict.technical_grade === "Red Flag" || verdict.technical_signal?.reversal_risk === "elevated") {
+    return 0;
+  }
+  if (verdict.technical_grade === "Insufficient Data") return 1;
+  return 2;
+}
+
+export function compareOpportunityVerdicts(a: HoldingVerdict, b: HoldingVerdict): number {
+  const confidenceDifference = tierWeight[confidenceTierFor(b)] - tierWeight[confidenceTierFor(a)];
+  if (confidenceDifference !== 0) return confidenceDifference;
+
+  const technicalDifference = technicalSortWeight(b) - technicalSortWeight(a);
+  if (technicalDifference !== 0) return technicalDifference;
+
+  const aPositive = a.holding_return_percent !== null && a.holding_return_percent > 0;
+  const bPositive = b.holding_return_percent !== null && b.holding_return_percent > 0;
+  if (aPositive !== bPositive) return aPositive ? -1 : 1;
+  return 0;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -286,13 +313,8 @@ export function analyzePortfolioOpportunities(
       getRiskScore(v.holding_risk_tier) > getRiskScore(heldAvgRisk as any),
   ).length;
 
-  const tierWeight: Record<"high" | "moderate" | "low", number> = {
-    high: 3,
-    moderate: 2,
-    low: 1,
-  };
-
-  const strongUnheldEntities = strongUnheld
+  const rankedStrongUnheld = [...strongUnheld].sort(compareOpportunityVerdicts);
+  const strongUnheldEntities = rankedStrongUnheld
     .map((v) => {
       const confidenceTier = confidenceTierFor(v);
 
@@ -307,20 +329,11 @@ export function analyzePortfolioOpportunities(
           v.holding_fundamentals?.flags?.map((f) => f.flag) ?? [],
         confidence_tier: confidenceTier,
       };
-    })
-    .sort((a, b) => {
-      if (tierWeight[b.confidence_tier] !== tierWeight[a.confidence_tier]) {
-        return tierWeight[b.confidence_tier] - tierWeight[a.confidence_tier];
-      }
-      if (a.absolute_return_positive !== b.absolute_return_positive) {
-        return a.absolute_return_positive ? -1 : 1;
-      }
-      return 0;
     });
 
   console.log(
     "[opportunityAnalysis] strong_unheld_entities diagnostic",
-    strongUnheld.map((v) => {
+    rankedStrongUnheld.map((v) => {
       const coverage = v.coverage_percent ?? 0;
       const comparablesTotal = v.comparables_total ?? 0;
       const comparablesBeaten = v.comparables_beaten ?? 0;

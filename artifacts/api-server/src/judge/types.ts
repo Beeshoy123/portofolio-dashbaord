@@ -39,6 +39,9 @@ export interface TechnicalSignal {
   confidence: number | null;
   raw_fetch_ok: boolean;
   reversal_risk: "none" | "watch" | "elevated";
+  recent_high: number | null;
+  recent_low: number | null;
+  range_position_percent: number | null;
 }
 
 export interface ComparisonEntry {
@@ -84,6 +87,7 @@ export interface HoldingVerdict {
   return_period: "return_1y" | "return_6m" | "return_3m";
   groups: ComparisonGroup[];
   signal: "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data";
+  confidence_tier?: "high" | "moderate" | "low";
   performance_grade: "Strong" | "Mixed" | "Weak" | "Insufficient Data";
   financial_health_grade: FinancialHealthGrade;
   financial_health_reason?: FinancialHealthReason;

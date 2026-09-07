@@ -11,7 +11,7 @@ A personal finance dashboard that tracks gold holdings, money-market/property fu
 > ### The 4-Step Mandatory Startup Protocol:
 > 1. **ALWAYS UNSET INHERITED ENVIRONMENT VARIABLES** before starting the backend:
 >    ```bash
->    cd '/g/tp/ai/portofolio-dashbaord/artifacts/api-server'
+>    cd '/g/AI/portofolio-dashbaord/artifacts/api-server'
 >    unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY PORTFOLIO_OWNER_USER_ID USE_POOLER
 >    PORT=8080 node --enable-source-maps ./dist/index.mjs
 >    ```
@@ -20,7 +20,7 @@ A personal finance dashboard that tracks gold holdings, money-market/property fu
 > 2. **ALWAYS VERIFY THE STARTUP LOG OUTPUT**:
 >    You **MUST** confirm the backend console explicitly prints:
 >    ```
->    Loaded environment from G:\tp\ai\portofolio-dashbaord\.secrets\api-server.env
+>    Loaded environment from G:\AI\portofolio-dashbaord\.secrets\api-server.env
 >    { chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' } Using database host
 >    Server listening port: 8080
 >    ```
@@ -28,7 +28,7 @@ A personal finance dashboard that tracks gold holdings, money-market/property fu
 > 
 > 3. **START FRONTEND**:
 >    ```bash
->    cd '/g/tp/ai/portofolio-dashbaord/artifacts/portfolio'
+>    cd '/g/AI/portofolio-dashbaord/artifacts/portfolio'
 >    PORT=3001 pnpm run dev
 >    ```
 >    *(Or execute `start-frontend.bat`)*
@@ -178,12 +178,14 @@ results without recording secrets or real portfolio values.
 - 2026-08-22: Gemini returned `404` because `gemini-2.0-flash` was retired. Updated `generateRecommendation.ts` to `gemini-3.6-flash` and rebuilt the API successfully.
 - 2026-08-29: **CRITICAL: Backend port mismatch on Windows local startup.** The backend's `.env` file or default in `artifacts/api-server/src/index.ts` defaults to port 3000 if `PORT` env var is not set. However, the frontend proxy is hardcoded to reach the API on `http://localhost:8080`. Starting the backend with `pnpm run dev` or `pnpm run start` WITHOUT `PORT=8080` causes HTTP 500 errors ("Failed to load portfolio data") on the frontend. **FIX: Always start the backend with `PORT=8080 pnpm run start` or use `start-backend.bat` (which includes the PORT=8080 flag).** Do not use `pnpm run dev` without the PORT prefix on local Windows setups. The `start-local.bat` script correctly includes this flag for both servers.
 - 2026-08-29: **Smart Advisor Data Pipeline Fixed (Improvement Item 1/7).** Applied migration `015_portfolio_summary.sql` to create the `portfolio_summaries` table. Removed hardcoded "Insufficient Data" text — Gemini now handles all verdicts including thin-data cases. Removed null-return-percent skipping so holdings with missing data still receive advisor recommendations (Gemini explains the data gap). Made Portfolio Summary generation fatal (throw, not continue) if it fails. Added per-holding advisor success/failure tracking; if no recommendations are generated, the run is marked "partial" not "completed". These changes ensure every run produces correct data pipelines with proper error handling before Gemini processes anything.
-- 2026-09-05: Local startup verified after clearing inherited database variables: API loaded `G:\tp\ai\portofolio-dashbaord\.secrets\api-server.env`, selected `aws-1-eu-west-1.pooler.supabase.com`, and listened on port `8080`; the existing frontend served on port `3001`.
+- 2026-09-05: Local startup verified after clearing inherited database variables: API loaded `G:\AI\portofolio-dashbaord\.secrets\api-server.env`, selected `aws-1-eu-west-1.pooler.supabase.com`, and listened on port `8080`; the existing frontend served on port `3001`.
 - 2026-09-05: Applied migration `024_bot_run_stage_diagnostics.sql` to Supabase, then applied previously missing AI schema migrations/columns required by the current API (`advisor_recommendations`, `technical_signals`, `advisor_opportunities`, and final portfolio summary labels). Rebuilt the API bundle and verified authenticated portfolio data plus AI endpoints returned successfully in the browser.
 - 2026-09-05: Added persisted verdict reuse in `comparisonJudge.ts`; run-scoped `verdict_history.raw_verdict` rows are validated and reused after API restarts, with recomputation preserved as the fallback when rows are missing or invalid. Live run `44` reused 61 persisted verdicts successfully.
 - 2026-09-05: Added explicit quality gates: Smart Advisor skips verdicts without usable return data and persists each skipped ticker in stage diagnostics; the AI workspace now displays incomplete Price Checker, zero/partial Chart Reader, and skipped/failed Smart Advisor states from persisted run counts.
 - 2026-09-05: Completed Qwen/Gemini failover attribution: successful recommendations retain the exact selected model, the UI labels the provider explicitly, and exhausted provider errors persist the attempted path (`Qwen -> Gemini` or `Gemini`).
 - 2026-09-05: Opportunity analysis summaries now generate automatically once per loaded bot run; the manual Generate button was removed. Runtime verification confirmed `POST /api/advisor/generate-opportunities` returned `200` after the dashboard loaded.
+- 2026-09-07: Documented the complete authoritative root migration inventory (`001`, `002`, `004`-`025`) and the intentional `003` gap. Applied and verified migrations `024` and `025` against the active database; no holding or fund data was changed.
+- 2026-09-07: Found that the inherited Windows shell `DATABASE_URL` pointed to `localhost:5432`, while the live API process used the Supabase pooler configured by the repository secrets. Applied `025_technical_range_levels.sql` to the live Supabase database and verified all three nullable numeric columns there; the API process was not restarted.
 
 ## Stack
 
@@ -443,22 +445,55 @@ Smart Advisor now automatically generates recommendations when:
 
 ## Database Migrations
 
-Before using the dashboard, apply these migrations in Supabase SQL editor:
+The root `migrations/` directory is the authoritative schema history for the
+Supabase database. Apply the files in numeric order. Migration `003` is not
+present and is intentionally skipped; do not invent or apply a replacement
+for it. Do not use the overlapping legacy SQL under
+`artifacts/api-server/src/lib/migrations/` for this deployment.
 
-### 1. Smart Advisor Table (Required for recommendations)
-```sql
--- Copy the SQL from migrations/006_advisor_recommendations.sql
--- Paste into Supabase SQL editor and execute
-```
+### Complete migration inventory
 
-### 2. Stock Yahoo Ticker Mapping (Required for stock prices)
-```sql
--- Add yahoo_ticker column if missing
-ALTER TABLE comparison_watchlist
-ADD COLUMN IF NOT EXISTS yahoo_ticker VARCHAR(20);
+| Order | File | Purpose |
+| --- | --- | --- |
+| 001 | `migrations/001_create_comparison_snapshots.sql` | Comparison snapshots |
+| 002 | `migrations/002_seed_watchlist.sql` | Initial comparison watchlist |
+| 004 | `migrations/004_add_egx30_expansion.sql` | EGX30 watchlist expansion |
+| 005 | `migrations/005_yahoo_ticker_mapping.sql` | Yahoo ticker mappings |
+| 006 | `migrations/006_advisor_recommendations.sql` | Advisor recommendations |
+| 007 | `migrations/007_stockanalysis_fundamentals.sql` | Stock fundamentals |
+| 008 | `migrations/008_alert_history.sql` | Alert history |
+| 009 | `migrations/009_bot_runs.sql` | Shared bot runs |
+| 010 | `migrations/010_engine_run_links.sql` | Engine-to-run links |
+| 011 | `migrations/011_advisor_run_idempotency.sql` | Advisor run idempotency |
+| 012 | `migrations/012_technical_signals.sql` | Chart Reader technical signals |
+| 013 | `migrations/013_index_60_session_return.sql` | Index 60-session returns |
+| 014 | `migrations/014_advisor_structured_output.sql` | Structured advisor output |
+| 015 | `migrations/015_portfolio_summary.sql` | Portfolio summaries |
+| 016 | `migrations/016_advisor_recommendation_type.sql` | Recommendation type |
+| 017 | `migrations/017_advisor_opportunities.sql` | Advisor opportunities |
+| 018 | `migrations/018_technical_reversal_risk.sql` | Technical reversal risk |
+| 019 | `migrations/019_advisor_watch_triggers.sql` | Advisor watch triggers |
+| 020 | `migrations/020_portfolio_summary_aggregates.sql` | Summary aggregates |
+| 021 | `migrations/021_portfolio_summary_value_weights.sql` | Summary value weights |
+| 022 | `migrations/022_portfolio_summary_decision.sql` | Summary decision output |
+| 023 | `migrations/023_portfolio_summary_final_labels.sql` | Summary final-label buckets |
+| 024 | `migrations/024_bot_run_stage_diagnostics.sql` | Bot stage diagnostics |
+| 025 | `migrations/025_technical_range_levels.sql` | Chart Reader range levels |
 
--- Then populate with Egyptian stock mappings (see to do list.md)
-```
+For a fresh database, execute `001`, `002`, `004`, then `005` through `025`
+in that order. Existing databases should be checked with
+`information_schema` after applying any missing file. All migration statements
+are intended to be additive and use `IF NOT EXISTS` where appropriate.
+
+### Live verification notes
+
+- Migration `024` was applied to the active database and its stage-diagnostic
+  columns were confirmed in `information_schema`.
+- Migration `025` was applied to the active database and
+  `recent_high`, `recent_low`, and `range_position_percent` were confirmed as
+  nullable `numeric` columns in `technical_signals`.
+- Never put database credentials, financial values, or temporary SQL exports in
+  this file or in tracked source files.
 
 ---
 
@@ -468,7 +503,7 @@ ADD COLUMN IF NOT EXISTS yahoo_ticker VARCHAR(20);
 **Cause:** Windows + pnpm native module issue
 **Fix:**
 ```bash
-cd g:\tp\ai\portofolio-dashbaord
+cd g:\AI\portofolio-dashbaord
 rm -r node_modules pnpm-lock.yaml
 pnpm install --no-frozen-lockfile
 ```

@@ -17,6 +17,9 @@ type TechnicalSignal = {
   confidence: number | null;
   raw_fetch_ok: boolean;
   reversal_risk: "none" | "watch" | "elevated";
+  recent_high: number | null;
+  recent_low: number | null;
+  range_position_percent: number | null;
   candles: Candle[];
 };
 
@@ -49,6 +52,23 @@ function reversalRiskOf(
   if (hasBearish) return "elevated";
   if (hasNeutral) return "watch";
   return "none";
+}
+
+function rangeMetrics(candles: Candle[]): Pick<TechnicalSignal, "recent_high" | "recent_low" | "range_position_percent"> {
+  if (candles.length < 20) {
+    return { recent_high: null, recent_low: null, range_position_percent: null };
+  }
+  const recentCandles = candles.slice(-60);
+  const recentHigh = Math.max(...recentCandles.map((candle) => candle.high));
+  const recentLow = Math.min(...recentCandles.map((candle) => candle.low));
+  const range = recentHigh - recentLow;
+  return {
+    recent_high: recentHigh,
+    recent_low: recentLow,
+    range_position_percent: range === 0
+      ? 0
+      : ((recentCandles[recentCandles.length - 1].close - recentLow) / range) * 100,
+  };
 }
 
 async function fetchCandles(yahooTicker: string): Promise<Candle[]> {
@@ -84,6 +104,7 @@ async function analyzeEntity(row: { id: number; yahoo_ticker: string }, runId: n
     const patterns = recentMatches.map((match) => ({ name: match.pattern, date: candles[match.index].date, direction: patternDirection(match.pattern) }));
     const trend = trendOf(candles);
     const reversalRisk = reversalRiskOf(trend, patterns);
+    const range = rangeMetrics(candles);
     return {
       watchlist_id: row.id,
       run_id: runId,
@@ -93,11 +114,12 @@ async function analyzeEntity(row: { id: number; yahoo_ticker: string }, runId: n
       confidence: patterns.length > 0 ? Math.min(1, 0.5 + patterns.length * 0.1) : null,
       raw_fetch_ok: true,
       reversal_risk: reversalRisk,
+      ...range,
       candles: candles.slice(-60),
     };
   } catch (error) {
     console.warn(`[technical] ${row.yahoo_ticker}: unavailable`, error);
-    return { watchlist_id: row.id, run_id: runId, candle_date: null, trend: "unknown", patterns: [], confidence: null, raw_fetch_ok: false, reversal_risk: "none", candles: [] };
+    return { watchlist_id: row.id, run_id: runId, candle_date: null, trend: "unknown", patterns: [], confidence: null, raw_fetch_ok: false, reversal_risk: "none", recent_high: null, recent_low: null, range_position_percent: null, candles: [] };
   }
 }
 
@@ -145,9 +167,9 @@ export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]
         [signal.watchlist_id, signal.run_id],
       );
       await pool.query(
-        `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, candles)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, JSON.stringify(signal.candles)],
+        `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, recent_high, recent_low, range_position_percent, candles)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+        [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, signal.recent_high, signal.recent_low, signal.range_position_percent, JSON.stringify(signal.candles)],
       );
       if (signal.raw_fetch_ok) succeeded++;
       else failedTickers.push(row.ticker);

@@ -13,7 +13,7 @@
 // └── Main Entry Points (judgeHolding, judgeAllHoldings, findOpportunities)
 
 import { pool } from "../lib/dbPool";
-import { analyzePortfolioOpportunities, type PortfolioOpportunityAnalysis } from "../advisor/opportunityAnalysis";
+import { analyzePortfolioOpportunities, compareOpportunityVerdicts, confidenceTierFor, type PortfolioOpportunityAnalysis } from "../advisor/opportunityAnalysis";
 import type { AssetRole, CautionReason, HoldingVerdict, ComparisonGroup, ComparisonEntry, JudgeRunDiagnostics, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
 import { computeFinancialHealthGrade } from "./financialHealth";
@@ -55,6 +55,9 @@ export function computeTechnicalGrade(
   if (
     technicalSignal.trend === "downtrend"
     || technicalSignal.reversal_risk === "elevated"
+    || (technicalSignal.range_position_percent !== null
+      && technicalSignal.range_position_percent > 90
+      && technicalSignal.reversal_risk === "watch")
   ) {
     return "Weak";
   }
@@ -89,6 +92,7 @@ export function combineIntoFinalLabel(
     && financialHealthGrade !== "Weak"
     && financialHealthGrade !== "Insufficient Data"
     && technicalGrade !== "Weak"
+    && technicalGrade !== "Insufficient Data"
   ) {
     return "Excellent";
   }
@@ -295,8 +299,8 @@ async function getLatestSnapshots(runId?: number): Promise<Map<number, SnapshotR
 async function getTechnicalSignals(runId?: number): Promise<Map<number, TechnicalSignal>> {
   if (runId === undefined) return new Map();
   try {
-    const result = await pool.query<{ watchlist_id: number; candle_date: string | null; trend: TechnicalSignal["trend"]; patterns: unknown; confidence: string | number | null; reversal_risk: TechnicalSignal["reversal_risk"] | null; raw_fetch_ok: boolean }>(
-      `SELECT DISTINCT ON (watchlist_id) watchlist_id, candle_date, trend, patterns, confidence, reversal_risk, raw_fetch_ok
+    const result = await pool.query<{ watchlist_id: number; candle_date: string | null; trend: TechnicalSignal["trend"]; patterns: unknown; confidence: string | number | null; reversal_risk: TechnicalSignal["reversal_risk"] | null; raw_fetch_ok: boolean; recent_high: string | number | null; recent_low: string | number | null; range_position_percent: string | number | null }>(
+      `SELECT DISTINCT ON (watchlist_id) watchlist_id, candle_date, trend, patterns, confidence, reversal_risk, raw_fetch_ok, recent_high, recent_low, range_position_percent
        FROM technical_signals WHERE run_id = $1 ORDER BY watchlist_id, created_at DESC`,
       [runId],
     );
@@ -307,6 +311,9 @@ async function getTechnicalSignals(runId?: number): Promise<Map<number, Technica
       confidence: row.confidence === null ? null : Number(row.confidence),
       raw_fetch_ok: row.raw_fetch_ok,
       reversal_risk: row.reversal_risk ?? "none",
+      recent_high: row.recent_high === null ? null : Number(row.recent_high),
+      recent_low: row.recent_low === null ? null : Number(row.recent_low),
+      range_position_percent: row.range_position_percent === null ? null : Number(row.range_position_percent),
     }]));
   } catch (error) {
     console.warn("[judge] technical_signals unavailable; continuing without chart evidence", error);
@@ -689,6 +696,7 @@ async function judgeAllHoldingsUncached(
  */
 export interface OpportunitiesAnalysis {
   strong_unheld: HoldingVerdict[];
+  held_opportunities: HoldingVerdict[];
   underrepresented_sectors: Array<{
     sector: string;
     portfolio_allocation_percent: number;
@@ -702,8 +710,9 @@ export interface OpportunitiesAnalysis {
   sectors_no_strong_exposure: Array<{
     sector: string;
     held_strong_count: number;
-    held_mixed_count: number;
-    held_weak_count: number;
+    held_caution_count: number;
+    held_avoid_count: number;
+    held_insufficient_data_count: number;
     unheld_strong_entities: Array<{
       ticker: string;
       name: string;
@@ -726,6 +735,29 @@ export interface OpportunitiesAnalysis {
     opportunities_avg_risk: string;
     higher_risk_opportunities: number;
   };
+}
+
+// Portfolio-sizing threshold for the separate "consider increasing" category.
+// This is a reviewable policy choice, not a valuation rule.
+export const HELD_OPPORTUNITY_MAX_WEIGHT_PERCENT = 10;
+
+export function findHeldOpportunities(
+  allVerdicts: HoldingVerdict[],
+  watchlistMap: Map<string, WatchlistRow>,
+): HoldingVerdict[] {
+  return allVerdicts
+    .filter((verdict) => {
+      const row = watchlistMap.get(verdict.holding_ticker.toUpperCase());
+      return Boolean(row?.is_held)
+        && (verdict.signal === "Excellent" || verdict.signal === "Solid")
+        && verdict.holding_portfolio_weight_percent !== null
+        && verdict.holding_portfolio_weight_percent < HELD_OPPORTUNITY_MAX_WEIGHT_PERCENT;
+    })
+    .map((verdict) => {
+      verdict.confidence_tier = confidenceTierFor(verdict);
+      return verdict;
+    })
+    .sort(compareOpportunityVerdicts);
 }
 
 /**
@@ -762,18 +794,23 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
 
   // Phase 3: Analyze verdicts and organize by held/unheld and sector
   try {
-    const watchlistMap = new Map(watchlist.map((row) => [row.id, row]));
+    const watchlistMap = new Map(watchlist.map((row) => [row.ticker.toUpperCase(), row]));
 
     // Filter to unheld entities with Strong signal
     const strong_unheld = allVerdicts.filter(
       (verdict) =>
-        !watchlistMap.get(verdict.holding_ticker.toUpperCase() as any)?.is_held &&
+        !watchlistMap.get(verdict.holding_ticker.toUpperCase())?.is_held &&
         (verdict.signal === "Excellent" || verdict.signal === "Solid")
     );
+    strong_unheld.forEach((verdict) => {
+      verdict.confidence_tier = confidenceTierFor(verdict);
+    });
+    strong_unheld.sort(compareOpportunityVerdicts);
+    const held_opportunities = findHeldOpportunities(allVerdicts, watchlistMap);
 
     // Compute sector allocation for held holdings
     const heldVerdicts = allVerdicts.filter(
-      (verdict) => watchlistMap.get(verdict.holding_ticker.toUpperCase() as any)?.is_held
+      (verdict) => watchlistMap.get(verdict.holding_ticker.toUpperCase())?.is_held
     );
     const totalHeldValue = heldVerdicts.reduce(
       (sum, v) => sum + (v.holding_current_value_egp ?? 0),
@@ -827,6 +864,7 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
 
     return {
       strong_unheld,
+      held_opportunities,
       underrepresented_sectors,
       sector_concentration_in_opportunities: detailedAnalysis.sector_concentration_in_opportunities,
       sectors_no_strong_exposure: detailedAnalysis.sectors_no_strong_exposure,
