@@ -44,6 +44,13 @@ export interface TechnicalSignal {
   range_position_percent: number | null;
 }
 
+export interface HeldLaggardEvidence {
+  consecutive_runs_in_state: number;
+  sustained_runs_threshold: number;
+  current_technical_trend: TechnicalSignal["trend"];
+  current_reason: string | null;
+}
+
 export interface ComparisonEntry {
   name: string;
   ticker: string;

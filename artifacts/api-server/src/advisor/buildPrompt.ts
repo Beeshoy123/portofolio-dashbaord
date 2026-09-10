@@ -75,6 +75,12 @@ DO_NOT_ACT_REASONS: when decision is watch_and_wait or hold, list 1-3 short reas
 
 export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are not a licensed financial advisor.
 
+FIXED USER PROFILE CONTEXT:
+- This user is not an investing hobbyist. They want practical insight, not a research project.
+- They are loss-averse and favor steadiness over gain-chasing. A holding that is not up yet can still be acceptable if the trend points the right way, so the priority is protecting downside rather than maximizing gains.
+- They deploy roughly 10,000-20,000 EGP each month and want a repeatable monthly check: where should this month's deposit go, or should an existing position be reconsidered first.
+- They explicitly want reasoning shown, not a bare instruction, so the response should explain what the real data is saying in plain language.
+
 Your job is to produce a single structured JSON object — NOT narrative prose — that captures an overall portfolio-level read based on the DATA block provided. Use only the numbers and counts given to you; do not invent, estimate, or assume any figure not in the data.
 
 DECISION (exactly one of: "hold", "watch", "rebalance"):
@@ -87,7 +93,15 @@ CONFIDENCE (0–100): Reflect the completeness and quality of the data.
 - If the data is complete and the signal distribution is clear, confidence can be higher.
 - Never assign confidence above 75 when the portfolio summary is based on a partial evaluation.
 
-SUMMARY: One concise paragraph (4–6 sentences). State the counts and value percentages of Excellent, Solid, Caution, Avoid, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a count read of "mostly Excellent" but a large value percentage sits in Avoid), call this out explicitly — this is the single most decision-relevant signal. Name holdings that clearly carry or drag the portfolio when their final label is notably different from the rest. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If the prompt notes a partial evaluation, mention that the summary is based on partial data. Mention risk where it is present. For every opportunity candidate you mention by name, you MUST also state the single strongest reason this recommendation could be wrong — grounded in the DATA block (e.g. thin coverage, a fundamentals flag, a negative absolute return despite beating peers, or sector concentration with other listed opportunities). Do not invent a generic risk disclaimer — cite the specific data point. If genuinely no concerning data point exists for a candidate, state that explicitly (e.g. 'no significant concerns found in available data') rather than fabricating one. Never use hype, promise returns, or say buy or sell now.
+SUMMARY: One concise paragraph (4–6 sentences). State the counts and value percentages of Excellent, Solid, Caution, Avoid, and Insufficient Data holdings. When the count-based and value-based pictures diverge meaningfully (e.g. a count read of "mostly Excellent" but a large value percentage sits in Avoid), call this out explicitly — this is the single most decision-relevant signal. Name holdings that clearly carry or drag the portfolio when their final label is notably different from the rest. Explicitly say when too many holdings have Insufficient Data to support a confident overall conclusion. If the prompt notes a partial evaluation, mention that the summary is based on partial data. Mention risk where it is present.
+
+Portfolio-level reasoning must explicitly address these four questions in plain language:
+1) Given the bucket allocation, is anything meaningfully underweight or still unassigned?
+2) Are there held_winners worth highlighting for this month's deposit, and why?
+3) Are there held_laggards worth surfacing, with their evidence, and how should the user think about them? Always frame laggards as "worth a look" or "worth reconsidering" rather than as sell instructions.
+4) If held winners, held laggards, or bucket allocation data are missing or sparse, say so plainly rather than forcing an answer.
+
+For every opportunity candidate you mention by name, you MUST also state the single strongest reason this recommendation could be wrong — grounded in the DATA block (e.g. thin coverage, a fundamentals flag, a negative absolute return despite beating peers, or sector concentration with other listed opportunities). Do not invent a generic risk disclaimer — cite the specific data point. If genuinely no concerning data point exists for a candidate, state that explicitly (e.g. 'no significant concerns found in available data') rather than fabricating one. Never use hype, promise returns, or say buy or sell now.
 
 EVIDENCE (2–4 bullet points): Cite specific counts, tickers, or percentages drawn directly from the DATA block. Examples: "3 of 7 holdings are Weak", "62% of portfolio value is in Mixed holdings", "2 holdings have reversal_risk_elevated". Do not invent figures.
 
@@ -121,8 +135,20 @@ OPPORTUNITY ANALYSIS RULES:
 
 export function buildPortfolioSummaryPrompt(
   verdicts: HoldingVerdict[],
-  opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> },
-  evaluationScope?: { totalExpected: number; evaluated: number }
+  opportunities?: {
+    strong_unheld: HoldingVerdict[];
+    held_winners?: HoldingVerdict[];
+    held_laggards?: Array<HoldingVerdict & { evidence?: { consecutive_runs_in_state?: number | null; sustained_runs_threshold?: number | null; current_technical_trend?: string | null; current_reason?: string | null } }>;
+    underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }>;
+  },
+  evaluationScope?: { totalExpected: number; evaluated: number },
+  portfolioBucketSummary?: {
+    total_held_value_egp: number | null;
+    buckets: Array<{ bucket: string; count: number; total_value_egp: number | null; percent_of_held_value: number | null; holdings: string[] }>;
+    unassigned_count: number;
+    unassigned_total_value_egp: number | null;
+    unassigned_holdings: string[];
+  }
 ): string {
   const lines = verdicts.length > 0
     ? verdicts.map((verdict) =>
@@ -195,22 +221,45 @@ export function buildPortfolioSummaryPrompt(
   const distributionLine = `- Signal distribution: By holding count: ${countStr}. By portfolio value: ${valueStr}.`;
   const aggregateLine = `- Aggregate metrics: Flags raised: ${flaggedCount} of ${totalCount} holdings | Avg coverage: ${avgCoverageStr} | Reversal risk: ${reversalRiskCount} holdings | Diverging from trend: ${divergenceCount} holdings`;
 
-  // Use passed opportunities data if available, otherwise fall back to filtering verdicts
   let opportunityLines: string[];
-  if (opportunities?.strong_unheld) {
-    opportunityLines = opportunities.strong_unheld.length > 0
-      ? opportunities.strong_unheld.slice(0, 3).map((verdict) => 
-          `- Excellent/Solid unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}`
-        )
-      : ["- No Excellent/Solid unheld opportunities were detected in the current run."];
+  if (opportunities?.strong_unheld && opportunities.strong_unheld.length > 0) {
+    opportunityLines = opportunities.strong_unheld.slice(0, 3).map((verdict) =>
+      `- Excellent/Solid unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}`,
+    );
   } else {
-    const strongUnheld = verdicts.filter((verdict) => verdict.signal === "Excellent" || verdict.signal === "Solid");
-    opportunityLines = strongUnheld.length > 0
-      ? strongUnheld.map((verdict) => `- Excellent/Solid unheld opportunity: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.holding_return_percent !== null ? `${verdict.holding_return_percent.toFixed(1)}%` : "return unavailable"}`)
-      : ["- No Excellent/Solid unheld opportunities were detected in the current run."];
+    opportunityLines = ["- No Excellent/Solid unheld opportunities were detected in the current run."];
   }
 
-  // Build underrepresented sectors context
+  const heldWinnerLines = opportunities?.held_winners && opportunities.held_winners.length > 0
+    ? opportunities.held_winners.slice(0, 5).map((verdict) =>
+        `- Held winner: ${verdict.holding_ticker} (${verdict.holding_name}) — ${verdict.signal}; weight ${verdict.holding_portfolio_weight_percent !== null ? `${verdict.holding_portfolio_weight_percent.toFixed(1)}%` : "unavailable"}; reason to highlight: already strong signal with room for a monthly deposit to build on the position.`,
+      )
+    : ["- No held winners were detected in this run. If this section is empty, say that the current held positions do not yet show clear low-weight winners to highlight."];
+
+  const heldLaggardLines = opportunities?.held_laggards && opportunities.held_laggards.length > 0
+    ? opportunities.held_laggards.slice(0, 5).map((verdict) => {
+        const evidence = verdict.evidence ?? {};
+        const currentTechnicalTrend = evidence.current_technical_trend ?? "unavailable";
+        const consecutiveRuns = evidence.consecutive_runs_in_state ?? "unavailable";
+        const threshold = evidence.sustained_runs_threshold ?? "unavailable";
+        const currentReason = evidence.current_reason ?? "no specific reason provided";
+        return `- Held laggard worth a look: ${verdict.holding_ticker} (${verdict.holding_name}) — current technical trend: ${currentTechnicalTrend}; sustained runs: ${consecutiveRuns}/${threshold}; reason: ${currentReason}. Frame this as a review candidate, not a sell instruction.`;
+      })
+    : ["- No held laggards were detected in the current run. If this section is empty, say that there is no sustained laggard evidence to surface right now."];
+
+  let bucketAllocationLine = "- Portfolio bucket allocation: no bucket assignments were provided for held positions in this run.";
+  if (portfolioBucketSummary) {
+    const bucketParts = portfolioBucketSummary.buckets
+      .filter((bucket) => bucket.count > 0 || bucket.total_value_egp !== null)
+      .map((bucket) => `${bucket.bucket}: ${bucket.count} holdings, ${(bucket.percent_of_held_value ?? 0).toFixed(1)}% of held value, holdings ${bucket.holdings.join(", ") || "none"}`);
+
+    const unassignedParts = portfolioBucketSummary.unassigned_count > 0
+      ? [`Unassigned: ${portfolioBucketSummary.unassigned_count} holdings, ${portfolioBucketSummary.unassigned_total_value_egp !== null ? `${((portfolioBucketSummary.unassigned_total_value_egp / Math.max(portfolioBucketSummary.total_held_value_egp ?? 1, 1)) * 100).toFixed(1)}%` : "value unavailable"} of held value, holdings ${portfolioBucketSummary.unassigned_holdings.join(", ") || "none"}`]
+      : ["Unassigned: none"];
+
+    bucketAllocationLine = `- Portfolio bucket allocation: ${bucketParts.length > 0 ? bucketParts.join("; ") : "no bucket assignments yet"}; ${unassignedParts.join("; ")}.`;
+  }
+
   const sectorsContext = opportunities?.underrepresented_sectors && opportunities.underrepresented_sectors.length > 0
     ? opportunities.underrepresented_sectors
         .map((s) => `- ${s.sector} sector: currently ${s.portfolio_allocation_percent.toFixed(1)}% of portfolio; candidates: ${s.strong_candidates.map((c) => c.holding_ticker).join(", ")}`)
@@ -224,7 +273,7 @@ export function buildPortfolioSummaryPrompt(
     "- Include only actual watchlist evidence; do not invent sectors or holdings.",
   ].join("\n");
 
-  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}${partialEvaluationLine}\n${distributionLine}\n${aggregateLine}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nReturn ONLY valid JSON matching this exact shape. Do not use Markdown fences:\n{"decision":"hold|watch|rebalance","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30}`;
+  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}${partialEvaluationLine}\n${distributionLine}\n${aggregateLine}\n${bucketAllocationLine}\n\nHELD WINNERS:\n${heldWinnerLines.join("\n")}\n\nHELD LAGGARDS:\n${heldLaggardLines.join("\n")}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nReturn ONLY valid JSON matching this exact shape. Do not use Markdown fences:\n{"decision":"hold|watch|rebalance","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30}`;
 }
 
 function formatGroupForPrompt(group: ComparisonGroup): string {

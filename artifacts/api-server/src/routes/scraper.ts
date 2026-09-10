@@ -12,6 +12,41 @@ router.post("/scraper/run", async (req, res) => {
   });
 });
 
+router.patch("/watchlist/:ticker/portfolio-bucket", async (req, res) => {
+  const allowedBuckets = new Set(["safety", "steady_growth", "broad_market", "individual_stocks"]);
+  const rawBucket = req.body?.portfolio_bucket;
+
+  if (rawBucket !== null && rawBucket !== undefined && (typeof rawBucket !== "string" || !allowedBuckets.has(rawBucket))) {
+    return res.status(400).json({ error: "portfolio_bucket must be one of safety, steady_growth, broad_market, individual_stocks, or null" });
+  }
+
+  const normalizedBucket = rawBucket === null || rawBucket === undefined || rawBucket === "" ? null : rawBucket;
+  const ticker = String(req.params.ticker ?? "").trim();
+
+  if (!ticker) {
+    return res.status(400).json({ error: "ticker is required" });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE comparison_watchlist
+         SET portfolio_bucket = $1
+       WHERE ticker = $2
+       RETURNING id, ticker, portfolio_bucket`,
+      [normalizedBucket, ticker],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: `Ticker not found: ${ticker}` });
+    }
+
+    return res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error("[/watchlist/:ticker/portfolio-bucket] failed", error);
+    return res.status(500).json({ error: error?.message ?? "Failed to update portfolio bucket" });
+  }
+});
+
 // GET /api/scraper/snapshots — returns the latest snapshot per watchlist entity
 router.get("/scraper/snapshots", async (req, res) => {
   try {
@@ -28,6 +63,7 @@ router.get("/scraper/snapshots", async (req, res) => {
         w.sector,
         w.manager,
         w.is_held,
+        w.portfolio_bucket,
         s.scraped_at,
         s.nav_or_price,
         s.return_30d_percent,

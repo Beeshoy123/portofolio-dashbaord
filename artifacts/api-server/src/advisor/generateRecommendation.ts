@@ -404,15 +404,27 @@ function isStructuredPortfolioResult(value: unknown): value is PortfolioSummaryR
 
 export async function generatePortfolioSummary(
   verdicts: HoldingVerdict[],
-  opportunities?: { strong_unheld: HoldingVerdict[]; underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }> },
-  evaluationScope?: { totalExpected: number; evaluated: number }
+  opportunities?: {
+    strong_unheld: HoldingVerdict[];
+    held_winners?: HoldingVerdict[];
+    held_laggards?: Array<HoldingVerdict & { evidence?: { consecutive_runs_in_state?: number | null; sustained_runs_threshold?: number | null; current_technical_trend?: string | null; current_reason?: string | null } }>;
+    underrepresented_sectors: Array<{ sector: string; portfolio_allocation_percent: number; strong_candidates: HoldingVerdict[] }>;
+  },
+  evaluationScope?: { totalExpected: number; evaluated: number },
+  portfolioBucketSummary?: {
+    total_held_value_egp: number | null;
+    buckets: Array<{ bucket: string; count: number; total_value_egp: number | null; percent_of_held_value: number | null; holdings: string[] }>;
+    unassigned_count: number;
+    unassigned_total_value_egp: number | null;
+    unassigned_holdings: string[];
+  }
 ): Promise<PortfolioSummaryResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error("[generatePortfolioSummary] GEMINI_API_KEY not found in environment");
   }
 
-  const portfolioPrompt = buildPortfolioSummaryPrompt(verdicts, opportunities, evaluationScope);
+  const portfolioPrompt = buildPortfolioSummaryPrompt(verdicts, opportunities, evaluationScope, portfolioBucketSummary);
   const qwenApiKey = process.env.QWEN_API_KEY;
   let res: Response | undefined;
   let selectedModel = GEMINI_MODEL;

@@ -23,4 +23,5 @@ export interface WatchlistEntity {
   sector: string;
   manager: string | null;
   is_held: boolean;
+  portfolio_bucket: string | null;
 }

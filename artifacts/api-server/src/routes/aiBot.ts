@@ -400,6 +400,44 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
                 evaluated: succeededCount,
               };
 
+              const portfolioBucketRows = await pool.query<{ ticker: string; portfolio_bucket: string | null }>(
+                `SELECT ticker, portfolio_bucket
+                   FROM comparison_watchlist
+                  WHERE is_held = true
+                    AND ticker <> 'ABR'
+                    AND COALESCE(funds_table_key, '') <> 'abr'
+                    AND lower(name) NOT LIKE '%bareeq%'`
+              );
+              const bucketOrder = ["safety", "steady_growth", "broad_market", "individual_stocks"] as const;
+              const valueByTicker = new Map(
+                verdicts.map((verdict) => [verdict.holding_ticker.toUpperCase(), verdict.holding_current_value_egp ?? 0]),
+              );
+              const totalHeldValueEgp = Array.from(valueByTicker.values()).reduce((sum, value) => sum + (typeof value === "number" && Number.isFinite(value) ? value : 0), 0);
+              const portfolioBucketSummary = {
+                total_held_value_egp: totalHeldValueEgp > 0 ? totalHeldValueEgp : null,
+                buckets: bucketOrder.map((bucket) => {
+                  const rows = portfolioBucketRows.rows.filter((row) => row.portfolio_bucket === bucket);
+                  const holdings = rows.map((row) => row.ticker);
+                  const totalValueEgp = holdings.reduce((sum, ticker) => {
+                    const value = valueByTicker.get(ticker.toUpperCase()) ?? 0;
+                    return sum + (typeof value === "number" && Number.isFinite(value) ? value : 0);
+                  }, 0);
+
+                  return {
+                    bucket,
+                    count: rows.length,
+                    total_value_egp: totalValueEgp > 0 ? totalValueEgp : null,
+                    percent_of_held_value: totalHeldValueEgp > 0 ? (totalValueEgp / totalHeldValueEgp) * 100 : null,
+                    holdings,
+                  };
+                }),
+                unassigned_count: portfolioBucketRows.rows.filter((row) => !row.portfolio_bucket).length,
+                unassigned_total_value_egp: portfolioBucketRows.rows
+                  .filter((row) => !row.portfolio_bucket)
+                  .reduce((sum, row) => sum + (valueByTicker.get(row.ticker.toUpperCase()) ?? 0), 0) || null,
+                unassigned_holdings: portfolioBucketRows.rows.filter((row) => !row.portfolio_bucket).map((row) => row.ticker),
+              };
+
               let summaryText = "";
               let modelUsed = "deterministic-fallback";
               let portfolioDecision: string | null = null;
@@ -409,7 +447,7 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               let portfolioNextReviewDays: number | null = null;
 
               try {
-                const portfolioSummary = await generatePortfolioSummary(verdicts, opportunities, evaluationScope);
+                const portfolioSummary = await generatePortfolioSummary(verdicts, opportunities, evaluationScope, portfolioBucketSummary);
                 summaryText = portfolioSummary.summary;
                 modelUsed = portfolioSummary.model_used;
                 portfolioDecision = portfolioSummary.decision;

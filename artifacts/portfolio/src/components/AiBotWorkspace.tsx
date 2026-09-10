@@ -9,6 +9,7 @@ type Snapshot = {
   name: string;
   entity_type: string;
   is_held: boolean;
+  portfolio_bucket?: string | null;
   sector: string | null;
   manager?: string | null;
   nav_or_price: number | string | null;
@@ -496,6 +497,27 @@ async function postJson<T>(url: string): Promise<T> {
     if (sessionToken) {
       headers.set('Authorization', `Bearer ${sessionToken}`);
       response = await fetch(url, { method: 'POST', headers, cache: 'no-store' });
+    }
+  }
+  if (!response.ok) throw new Error(`AI Bot request failed: ${url} (${response.status})`);
+  return response.json() as Promise<T>;
+}
+
+async function patchJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
+  let sessionToken: string | undefined;
+  if (supabase) {
+    const { data } = await supabase.auth.getSession();
+    sessionToken = data.session?.access_token;
+  }
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  if (sessionToken) headers.set('Authorization', `Bearer ${sessionToken}`);
+  let response = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(body), cache: 'no-store' });
+  if (response.status === 401 && supabase) {
+    const { data } = await supabase.auth.refreshSession();
+    sessionToken = data.session?.access_token;
+    if (sessionToken) {
+      headers.set('Authorization', `Bearer ${sessionToken}`);
+      response = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(body), cache: 'no-store' });
     }
   }
   if (!response.ok) throw new Error(`AI Bot request failed: ${url} (${response.status})`);
@@ -1123,6 +1145,67 @@ export function AiBotWorkspace() {
   const heldEntities = useMemo(() => allEntities.filter((snapshot) => snapshot.is_held), [allEntities]);
   const displayedEntities = filterMode === 'held' ? heldEntities : allEntities;
   const entity = displayedEntities[selectedIndex] ?? null;
+  const portfolioBucketSummary = useMemo(() => {
+    const bucketOrder = ['safety', 'steady_growth', 'broad_market', 'individual_stocks'] as const;
+    const totalHeldValue = heldEntities.reduce((sum, heldEntity) => {
+      const verdict = verdicts.find((item) => item.holding_ticker === heldEntity.ticker);
+      const value = verdict?.holding_current_value_egp !== null && verdict?.holding_current_value_egp !== undefined
+        ? Number(verdict.holding_current_value_egp)
+        : 0;
+      return sum + value;
+    }, 0);
+
+    const buckets = bucketOrder.map((bucketKey) => {
+      const bucketEntities = heldEntities.filter((heldEntity) => heldEntity.portfolio_bucket === bucketKey);
+      const value = bucketEntities.reduce((sum, heldEntity) => {
+        const verdict = verdicts.find((item) => item.holding_ticker === heldEntity.ticker);
+        const parsed = verdict?.holding_current_value_egp !== null && verdict?.holding_current_value_egp !== undefined
+          ? Number(verdict.holding_current_value_egp)
+          : 0;
+        return sum + parsed;
+      }, 0);
+
+      return {
+        key: bucketKey,
+        label: lang === 'ar'
+          ? bucketKey === 'safety'
+            ? 'أمان'
+            : bucketKey === 'steady_growth'
+              ? 'نمو مستقر'
+              : bucketKey === 'broad_market'
+                ? 'سوق واسع'
+                : 'أسهم فردية'
+          : bucketKey === 'safety'
+            ? 'Safety'
+            : bucketKey === 'steady_growth'
+              ? 'Steady Growth'
+              : bucketKey === 'broad_market'
+                ? 'Broad Market'
+                : 'Individual Stocks',
+        count: bucketEntities.length,
+        value,
+        percent: totalHeldValue > 0 ? (value / totalHeldValue) * 100 : 0,
+      };
+    });
+
+    const unassignedCount = heldEntities.filter((heldEntity) => !heldEntity.portfolio_bucket).length;
+    const unassignedValue = heldEntities.reduce((sum, heldEntity) => {
+      if (heldEntity.portfolio_bucket) return sum;
+      const verdict = verdicts.find((item) => item.holding_ticker === heldEntity.ticker);
+      const value = verdict?.holding_current_value_egp !== null && verdict?.holding_current_value_egp !== undefined
+        ? Number(verdict.holding_current_value_egp)
+        : 0;
+      return sum + value;
+    }, 0);
+
+    return {
+      totalHeldValue,
+      buckets,
+      unassignedCount,
+      unassignedValue,
+      unassignedPercent: totalHeldValue > 0 ? (unassignedValue / totalHeldValue) * 100 : 0,
+    };
+  }, [heldEntities, lang, verdicts]);
   const hasFailedGathererSnapshot = snapshots.some((snapshot) => !snapshot.raw_fetch_ok);
   const signal = entity ? signals.find((item) => item.ticker === entity.ticker) : undefined;
   const verdict = entity ? verdicts.find((item) => item.holding_ticker === entity.ticker) : undefined;
@@ -1304,6 +1387,20 @@ export function AiBotWorkspace() {
   ] : [];
   const portfolioHeldVerdicts = verdicts.filter((item) => item.is_held);
 
+  const updatePortfolioBucket = async (ticker: string, portfolioBucket: string | null) => {
+    try {
+      await patchJson<{ ticker: string; portfolio_bucket: string | null }>(`/api/watchlist/${encodeURIComponent(ticker)}/portfolio-bucket`, { portfolio_bucket: portfolioBucket });
+      setSnapshots((current) => current.map((snapshot) => snapshot.ticker.toUpperCase() === ticker.toUpperCase()
+        ? { ...snapshot, portfolio_bucket: portfolioBucket }
+        : snapshot));
+    } catch (bucketError) {
+      setDataLoadErrors((current) => ({
+        ...current,
+        portfolioBucket: bucketError instanceof Error ? bucketError.message : 'Portfolio bucket update failed',
+      }));
+    }
+  };
+
   const move = (direction: number) => setSelectedIndex((index) => Math.min(Math.max(index + direction, 0), Math.max(displayedEntities.length - 1, 0)));
   const priceGate = pipelineDiagnostics.stage_counts?.priceChecker;
   const chartGate = pipelineDiagnostics.stage_counts?.chartReader;
@@ -1451,6 +1548,25 @@ export function AiBotWorkspace() {
       </nav>
 
       <div className="ai-bot-entity-summary" data-pipeline-section="entity">
+        {entity.is_held && (
+          <div className="ai-bot-portfolio-bucket-field">
+            <label htmlFor="portfolio-bucket-select">{lang === 'ar' ? 'دلو المحفظة' : 'Portfolio bucket'}</label>
+            <select
+              id="portfolio-bucket-select"
+              value={entity.portfolio_bucket ?? ''}
+              onChange={(event) => {
+                const nextValue = event.target.value || null;
+                void updatePortfolioBucket(entity.ticker, nextValue);
+              }}
+            >
+              <option value="">{lang === 'ar' ? 'غير مصنف' : 'Unassigned'}</option>
+              <option value="safety">{lang === 'ar' ? 'أمان' : 'Safety'}</option>
+              <option value="steady_growth">{lang === 'ar' ? 'نمو مستقر' : 'Steady Growth'}</option>
+              <option value="broad_market">{lang === 'ar' ? 'سوق واسع' : 'Broad Market'}</option>
+              <option value="individual_stocks">{lang === 'ar' ? 'أسهم فردية' : 'Individual Stocks'}</option>
+            </select>
+          </div>
+        )}
         <div>
           <span>{lang === 'ar' ? 'سعر السوق / NAV' : 'Market price / NAV'}</span>
           <strong>{entity.nav_or_price === null ? '—' : Number(entity.nav_or_price).toLocaleString()}</strong>
@@ -2024,6 +2140,21 @@ export function AiBotWorkspace() {
                       <span className="ai-bot-label-caution">{portfolioSummary.caution_count} {lang === 'ar' ? 'حذر' : 'Caution'}</span>,{' '}
                       <span className="ai-bot-label-avoid">{portfolioSummary.avoid_count} {lang === 'ar' ? 'تجنب' : 'Avoid'}</span>,{' '}
                       {portfolioSummary.insufficient_data_count > 0 && <span className="ai-bot-label-insufficient">, {portfolioSummary.insufficient_data_count} {lang === 'ar' ? 'بيانات غير كافية' : 'Insufficient Data'}</span>}
+                    </span>
+                  </div>
+                  <div className="ai-bot-summary-row">
+                    <span className="text-xs font-semibold text-muted-foreground mr-1.5">{lang === 'ar' ? 'حسب دلو المحفظة:' : 'By portfolio bucket:'}</span>
+                    <span className="ai-bot-summary-holdings">
+                      {portfolioBucketSummary.buckets.map((bucket) => (
+                        <span key={bucket.key} className="ai-bot-aggregate-pill" title={`${bucket.label}: ${bucket.count} holdings`}>
+                          {bucket.label}: {bucket.count} ({bucket.value > 0 ? `${Number(bucket.value).toLocaleString()} EGP` : '—'})
+                        </span>
+                      ))}
+                      {portfolioBucketSummary.unassignedCount > 0 && (
+                        <span className="ai-bot-aggregate-pill" title={`${lang === 'ar' ? 'غير مصنف' : 'Unassigned'}: ${portfolioBucketSummary.unassignedCount} holdings`}>
+                          {lang === 'ar' ? 'غير مصنف' : 'Unassigned'}: {portfolioBucketSummary.unassignedCount} ({portfolioBucketSummary.unassignedValue > 0 ? `${Number(portfolioBucketSummary.unassignedValue).toLocaleString()} EGP` : '—'})
+                        </span>
+                      )}
                     </span>
                   </div>
                   {portfolioSummary.excellent_value_percent !== null && portfolioSummary.excellent_value_percent !== undefined ? (

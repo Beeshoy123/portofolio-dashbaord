@@ -14,7 +14,7 @@
 
 import { pool } from "../lib/dbPool";
 import { analyzePortfolioOpportunities, compareOpportunityVerdicts, confidenceTierFor, type PortfolioOpportunityAnalysis } from "../advisor/opportunityAnalysis";
-import type { AssetRole, CautionReason, HoldingVerdict, ComparisonGroup, ComparisonEntry, JudgeRunDiagnostics, TechnicalSignal } from "./types";
+import type { AssetRole, CautionReason, HeldLaggardEvidence, HoldingVerdict, ComparisonGroup, ComparisonEntry, JudgeRunDiagnostics, TechnicalSignal } from "./types";
 import { getLatestFundamentals, buildFundamentalsSnapshot } from "./fundamentalsCheck";
 import { computeFinancialHealthGrade } from "./financialHealth";
 
@@ -133,6 +133,7 @@ interface WatchlistRow {
   manager: string | null;
   funds_table_key: string | null;
   is_held: boolean;
+  portfolio_bucket: string | null;
   units_held: string | number | null;
   fund_nav: string | number | null;
 }
@@ -224,7 +225,7 @@ function groupFor(
 async function getWatchlistRows(): Promise<WatchlistRow[]> {
   const result = await pool.query<WatchlistRow>(
         `SELECT cw.id, cw.ticker, cw.name, cw.entity_type, cw.sector, cw.manager,
-          cw.funds_table_key, cw.is_held, f.units_held, f.nav AS fund_nav
+          cw.funds_table_key, cw.is_held, cw.portfolio_bucket, f.units_held, f.nav AS fund_nav
      FROM comparison_watchlist cw
      LEFT JOIN funds f ON f.key = cw.funds_table_key
      ORDER BY cw.entity_type, cw.ticker`,
@@ -701,6 +702,8 @@ async function judgeAllHoldingsUncached(
  */
 export interface OpportunitiesAnalysis {
   strong_unheld: HoldingVerdict[];
+  held_winners: HoldingVerdict[];
+  held_laggards: Array<HoldingVerdict & { evidence: HeldLaggardEvidence }>;
   held_opportunities: HoldingVerdict[];
   underrepresented_sectors: Array<{
     sector: string;
@@ -742,11 +745,12 @@ export interface OpportunitiesAnalysis {
   };
 }
 
-// Portfolio-sizing threshold for the separate "consider increasing" category.
+// Portfolio-sizing threshold for the held-winner category.
 // This is a reviewable policy choice, not a valuation rule.
-export const HELD_OPPORTUNITY_MAX_WEIGHT_PERCENT = 10;
+export const HELD_WINNER_MAX_WEIGHT_PERCENT = 10;
+export const HELD_OPPORTUNITY_MAX_WEIGHT_PERCENT = HELD_WINNER_MAX_WEIGHT_PERCENT;
 
-export function findHeldOpportunities(
+export function findHeldWinners(
   allVerdicts: HoldingVerdict[],
   watchlistMap: Map<string, WatchlistRow>,
 ): HoldingVerdict[] {
@@ -756,13 +760,73 @@ export function findHeldOpportunities(
       return Boolean(row?.is_held)
         && (verdict.signal === "Excellent" || verdict.signal === "Solid")
         && verdict.holding_portfolio_weight_percent !== null
-        && verdict.holding_portfolio_weight_percent < HELD_OPPORTUNITY_MAX_WEIGHT_PERCENT;
+        && verdict.holding_portfolio_weight_percent < HELD_WINNER_MAX_WEIGHT_PERCENT;
     })
     .map((verdict) => {
       verdict.confidence_tier = confidenceTierFor(verdict);
       return verdict;
     })
     .sort(compareOpportunityVerdicts);
+}
+
+export function findHeldOpportunities(
+  allVerdicts: HoldingVerdict[],
+  watchlistMap: Map<string, WatchlistRow>,
+): HoldingVerdict[] {
+  return findHeldWinners(allVerdicts, watchlistMap);
+}
+
+interface VerdictHistorySummaryRow {
+  watchlist_id: number;
+  signal: HoldingVerdict["signal"];
+  recorded_at: string;
+}
+
+// Reviewable policy choice: a held asset counts as a laggard only after it
+// has remained in the same Caution/Avoid state for the last 3 available runs.
+export const HELD_LAGGARD_SUSTAINED_RUNS_THRESHOLD = 3;
+
+export function findHeldLaggards(
+  allVerdicts: HoldingVerdict[],
+  watchlistMap: Map<string, WatchlistRow>,
+  runHistory: Map<number, VerdictHistorySummaryRow[]>,
+): Array<HoldingVerdict & { evidence: HeldLaggardEvidence }> {
+  return allVerdicts
+    .filter((verdict) => {
+      const row = watchlistMap.get(verdict.holding_ticker.toUpperCase());
+      if (!row?.is_held) return false;
+      if (verdict.signal !== "Caution" && verdict.signal !== "Avoid") return false;
+
+      const history = runHistory.get(row.id) ?? [];
+      const recentStateCount = history
+        .findIndex((entry) => entry.signal !== verdict.signal);
+      const consecutiveRuns = recentStateCount === -1
+        ? history.length
+        : recentStateCount;
+
+      return consecutiveRuns >= HELD_LAGGARD_SUSTAINED_RUNS_THRESHOLD;
+    })
+    .map((verdict) => {
+      const row = watchlistMap.get(verdict.holding_ticker.toUpperCase());
+      const history = row ? (runHistory.get(row.id) ?? []) : [];
+      const recentStateCount = history
+        .findIndex((entry) => entry.signal !== verdict.signal);
+      const consecutiveRuns = recentStateCount === -1
+        ? history.length
+        : recentStateCount;
+
+      const evidence: HeldLaggardEvidence = {
+        consecutive_runs_in_state: consecutiveRuns,
+        sustained_runs_threshold: HELD_LAGGARD_SUSTAINED_RUNS_THRESHOLD,
+        current_technical_trend: verdict.technical_signal?.trend ?? "unknown",
+        current_reason: verdict.caution_reason ?? verdict.technical_reason ?? verdict.financial_health_reason ?? null,
+      };
+
+      return {
+        ...verdict,
+        evidence,
+      };
+    });
 }
 
 /**
@@ -801,6 +865,20 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
   try {
     const watchlistMap = new Map(watchlist.map((row) => [row.ticker.toUpperCase(), row]));
 
+    // Load held verdict history so the Opportunity Scanner can surface
+    // evidence-backed laggard holdings without inventing a separate scoring rule.
+    const verdictHistoryResult = await pool.query<VerdictHistorySummaryRow>(
+      `SELECT watchlist_id, signal, recorded_at
+       FROM verdict_history
+       ORDER BY recorded_at DESC`
+    );
+    const runHistory = new Map<number, VerdictHistorySummaryRow[]>();
+    for (const row of verdictHistoryResult.rows) {
+      const bucket = runHistory.get(row.watchlist_id) ?? [];
+      bucket.push(row);
+      runHistory.set(row.watchlist_id, bucket);
+    }
+
     // Filter to unheld entities with Strong signal
     const strong_unheld = allVerdicts.filter(
       (verdict) =>
@@ -811,7 +889,9 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
       verdict.confidence_tier = confidenceTierFor(verdict);
     });
     strong_unheld.sort(compareOpportunityVerdicts);
-    const held_opportunities = findHeldOpportunities(allVerdicts, watchlistMap);
+    const held_winners = findHeldWinners(allVerdicts, watchlistMap);
+    const held_laggards = findHeldLaggards(allVerdicts, watchlistMap, runHistory);
+    const held_opportunities = held_winners;
 
     // Compute sector allocation for held holdings
     const heldVerdicts = allVerdicts.filter(
@@ -854,7 +934,9 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
       }
     }
 
-    console.log(`[findOpportunities] Phase 3: Found ${strong_unheld.length} strong unheld, ${underrepresented_sectors.length} underrepresented sectors`);
+    console.log(
+      `[findOpportunities] Phase 3: Found ${strong_unheld.length} strong unheld, ${held_winners.length} held winners, ${held_laggards.length} held laggards, ${underrepresented_sectors.length} underrepresented sectors`,
+    );
 
     // Phase 4: Run detailed deterministic analysis
     let detailedAnalysis: PortfolioOpportunityAnalysis;
@@ -869,6 +951,8 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
 
     return {
       strong_unheld,
+      held_winners,
+      held_laggards,
       held_opportunities,
       underrepresented_sectors,
       sector_concentration_in_opportunities: detailedAnalysis.sector_concentration_in_opportunities,
