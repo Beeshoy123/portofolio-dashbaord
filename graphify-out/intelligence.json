@@ -1,0 +1,36 @@
+{
+  "hotspots": [
+    {
+      "label": "initDashboardBehavior()",
+      "risk": 0.609,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "runMigration()",
+      "risk": 0.212,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "run-migration.mjs",
+      "risk": 0.209,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "run-migration.mjs",
+      "risk": 0.207,
+      "type": "FUNCTION"
+    },
+    {
+      "label": "pool",
+      "risk": 0.205,
+      "type": "FUNCTION"
+    }
+  ],
+  "blast_radius": {
+    "match": 51,
+    "judgeHolding()": 22,
+    "customFetch()": 16,
+    "buildDashboardHtml()": 14,
+    "query": 13
+  }
+}

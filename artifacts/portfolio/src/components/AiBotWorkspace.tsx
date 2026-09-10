@@ -334,24 +334,40 @@ type OpportunitiesAnalysis = {
   analysis_summary?: string;
 };
 
-const VERDICT_FLAG_MAP: Record<string, { en: string; ar: string; category: 'info' | 'warning' }> = {
-  thin_comparable_sample: { en: 'Thin sample', ar: 'عينة محدودة', category: 'info' },
-  underperforming_comparables: { en: 'Underperforming peers', ar: 'أداء دون النظراء', category: 'warning' },
-  incomplete_comparison_data: { en: 'Incomplete data', ar: 'بيانات غير مكتملة', category: 'info' },
-  risk_mismatch: { en: 'Risk mismatch', ar: 'عدم تطابق المخاطر', category: 'warning' },
-  technical_divergence: { en: 'Diverging from trend', ar: 'تباعد عن الاتجاه', category: 'warning' },
-  reversal_risk_elevated: { en: 'Reversal risk', ar: 'مخاطر انعكاس', category: 'warning' },
-  no_comparable_return_data: { en: 'No peer returns', ar: 'لا توجد عوائد للنظراء', category: 'warning' },
-  missing_return_1y_return: { en: 'Missing 1Y return', ar: 'عائد سنة مفقود', category: 'info' },
-  missing_return_6m_return: { en: 'Missing 6M return', ar: 'عائد 6 أشهر مفقود', category: 'info' },
-  missing_return_3m_return: { en: 'Missing 3M return', ar: 'عائد 3 أشهر مفقود', category: 'info' },
-  high_debt_load: { en: 'High debt', ar: 'ديون مرتفعة', category: 'warning' },
-  weak_short_term_liquidity: { en: 'Weak liquidity', ar: 'سيولة ضعيفة', category: 'warning' },
-  negative_free_cash_flow: { en: 'Negative FCF', ar: 'تدفق نقدي حر سالب', category: 'warning' },
-  high_pe_priced_for_growth: { en: 'High P/E', ar: 'مكرر ربحية مرتفع', category: 'warning' },
-  shareholder_dilution: { en: 'Dilution', ar: 'تخفيف الأسهم', category: 'warning' },
-  low_return_on_equity: { en: 'Low ROE', ar: 'عائد منخفض على الملكية', category: 'warning' },
-  shrinking_revenue: { en: 'Shrinking revenue', ar: 'انكماش الإيرادات', category: 'warning' },
+const VERDICT_FLAG_MAP: Record<string, { en: string; ar: string; explanation: { en: string; ar: string }; category: 'info' | 'warning' }> = {
+  thin_comparable_sample: { en: 'Thin sample', ar: 'عينة محدودة', explanation: { en: 'The holding is being compared with only a small number of usable peers, so its relative result is less dependable.', ar: 'تتم مقارنة الحيازة بعدد صغير فقط من النظراء الصالحين، لذلك تكون النتيجة النسبية أقل موثوقية.' }, category: 'info' },
+  underperforming_comparables: { en: 'Underperforming peers', ar: 'أداء دون النظراء', explanation: { en: 'The holding has earned less than most of its comparable peers over the period shown.', ar: 'حققت الحيازة عائداً أقل من معظم النظراء المماثلين خلال الفترة المعروضة.' }, category: 'warning' },
+  incomplete_comparison_data: { en: 'Incomplete data', ar: 'بيانات غير مكتملة', explanation: { en: 'Some information needed for a full peer comparison is missing, so the result should be treated cautiously.', ar: 'تنقص بعض المعلومات اللازمة للمقارنة الكاملة، لذلك ينبغي التعامل مع النتيجة بحذر.' }, category: 'info' },
+  risk_mismatch: { en: 'Risk mismatch', ar: 'عدم تطابق المخاطر', explanation: { en: 'The holding and the compared asset have different risk tiers, so their returns are not a like-for-like risk comparison.', ar: 'للحيازة والأصل المقارن مستويان مختلفان من المخاطر، لذلك لا تمثل عوائدهما مقارنة متكافئة من حيث المخاطر.' }, category: 'warning' },
+  technical_divergence: { en: 'Diverging from trend', ar: 'تباعد عن الاتجاه', explanation: { en: 'The recent chart signal is moving differently from the broader comparison result, which adds uncertainty.', ar: 'تتحرك الإشارة الحديثة للرسم البياني بشكل مختلف عن نتيجة المقارنة العامة، مما يزيد عدم اليقين.' }, category: 'warning' },
+  reversal_risk_elevated: { en: 'Reversal risk', ar: 'مخاطر انعكاس', explanation: { en: 'Recent chart patterns suggest the current direction may weaken or reverse; this is a warning, not a prediction.', ar: 'تشير أنماط الرسم البياني الحديثة إلى احتمال ضعف الاتجاه الحالي أو انعكاسه؛ هذا تحذير وليس توقعاً.' }, category: 'warning' },
+  no_comparable_return_data: { en: 'No peer returns', ar: 'لا توجد عوائد للنظراء', explanation: { en: 'There are no usable peer returns for this period, so relative performance cannot be judged.', ar: 'لا توجد عوائد صالحة للنظراء لهذه الفترة، لذلك لا يمكن تقييم الأداء النسبي.' }, category: 'warning' },
+  missing_return_1y_return: { en: 'Missing 1Y return', ar: 'عائد سنة مفقود', explanation: { en: 'The one-year return is unavailable, so the main long-term comparison cannot be completed.', ar: 'عائد السنة غير متاح، لذلك لا يمكن إكمال المقارنة الرئيسية طويلة الأجل.' }, category: 'info' },
+  missing_return_6m_return: { en: 'Missing 6M return', ar: 'عائد 6 أشهر مفقود', explanation: { en: 'The six-month return is unavailable, so that period cannot be used in the comparison.', ar: 'عائد الستة أشهر غير متاح، لذلك لا يمكن استخدام هذه الفترة في المقارنة.' }, category: 'info' },
+  missing_return_3m_return: { en: 'Missing 3M return', ar: 'عائد 3 أشهر مفقود', explanation: { en: 'The three-month return is unavailable, so that shorter period cannot be used in the comparison.', ar: 'عائد الثلاثة أشهر غير متاح، لذلك لا يمكن استخدام هذه الفترة القصيرة في المقارنة.' }, category: 'info' },
+  high_debt_load: { en: 'High debt', ar: 'ديون مرتفعة', explanation: { en: 'The business relies heavily on borrowed money, which can make results more vulnerable when conditions worsen.', ar: 'تعتمد الشركة بدرجة كبيرة على الأموال المقترضة، مما قد يجعل نتائجها أكثر تأثراً عند تدهور الظروف.' }, category: 'warning' },
+  weak_short_term_liquidity: { en: 'Weak liquidity', ar: 'سيولة ضعيفة', explanation: { en: 'The business may have less short-term financial room to cover bills and obligations as they come due.', ar: 'قد يكون لدى الشركة هامش مالي قصير الأجل أقل لتغطية الفواتير والالتزامات عند استحقاقها.' }, category: 'warning' },
+  negative_free_cash_flow: { en: 'Negative FCF', ar: 'تدفق نقدي حر سالب', explanation: { en: 'After normal business spending, more cash went out than came in, leaving less cash available for flexibility or investment.', ar: 'بعد الإنفاق التشغيلي المعتاد، خرج نقد أكثر مما دخل، مما يترك نقداً أقل للمرونة أو الاستثمار.' }, category: 'warning' },
+  high_pe_priced_for_growth: { en: 'High P/E', ar: 'مكرر ربحية مرتفع', explanation: { en: 'P/E compares price with earnings. A high number means the market is pricing in a lot of future growth, so disappointment can hurt more.', ar: 'يقارن مكرر الربحية السعر بالأرباح. الرقم المرتفع يعني أن السوق يتوقع نمواً كبيراً مستقبلاً، ولذلك قد يكون أثر خيبة الأمل أكبر.' }, category: 'warning' },
+  shareholder_dilution: { en: 'Dilution', ar: 'تخفيف الأسهم', explanation: { en: 'The number of shares has increased, so each existing share may represent a smaller portion of the business and its earnings.', ar: 'زاد عدد الأسهم، لذلك قد يمثل كل سهم قائم حصة أصغر من الشركة وأرباحها.' }, category: 'warning' },
+  low_return_on_equity: { en: 'Low ROE', ar: 'عائد منخفض على الملكية', explanation: { en: 'The business is generating relatively little profit from the money shareholders have invested in it.', ar: 'تحقق الشركة ربحاً قليلاً نسبياً من الأموال التي استثمرها المساهمون فيها.' }, category: 'warning' },
+  shrinking_revenue: { en: 'Shrinking revenue', ar: 'انكماش الإيرادات', explanation: { en: 'Sales are lower than before, which can make future profit growth harder unless the decline is reversed.', ar: 'المبيعات أقل من السابق، مما قد يجعل نمو الأرباح مستقبلاً أصعب ما لم يتوقف التراجع.' }, category: 'warning' },
+};
+
+const RISK_TIER_GLOSSARY: Record<'Low' | 'Medium' | 'High', { en: string; ar: string }> = {
+  Low: { en: 'The source risk label contains low. This tier is a normalized display of that snapshot label, not a new calculation.', ar: 'يحتوي تصنيف المخاطر المصدر على كلمة منخفض. هذا المستوى هو عرض موحد لذلك التصنيف، وليس حساباً جديداً.' },
+  Medium: { en: 'The source risk label contains medium or moderate. This tier is a normalized display of that snapshot label, not a new calculation.', ar: 'يحتوي تصنيف المخاطر المصدر على متوسط أو معتدل. هذا المستوى هو عرض موحد لذلك التصنيف، وليس حساباً جديداً.' },
+  High: { en: 'The source risk label contains high. This tier is a normalized display of that snapshot label, not a new calculation.', ar: 'يحتوي تصنيف المخاطر المصدر على مرتفع. هذا المستوى هو عرض موحد لذلك التصنيف، وليس حساباً جديداً.' },
+};
+
+const ASSET_ROLE_GLOSSARY: Record<string, { en: string; ar: string; labelEn: string; labelAr: string }> = {
+  money_market_reserve: { labelEn: 'Money Market Reserve', labelAr: 'احتياطي سوق النقد', en: 'A cash-like reserve role. These holdings are excluded from normal peer verdict comparisons rather than judged like growth assets.', ar: 'دور احتياطي قريب من النقد. تُستبعد هذه الحيازات من مقارنات النظراء العادية بدلاً من تقييمها مثل أصول النمو.' },
+  income_fund: { labelEn: 'Income Fund', labelAr: 'صندوق دخل', en: 'This role identifies an income-focused fund so it can be compared with more relevant income peers and grouped as Income.', ar: 'يحدد هذا الدور صندوقاً يركز على الدخل حتى تتم مقارنته بنظراء دخل مناسبين وتجميعه ضمن فئة الدخل.' },
+  growth_fund: { labelEn: 'Growth Fund', labelAr: 'صندوق نمو', en: 'This role identifies a growth-focused fund so its peer comparison and opportunity grouping use the growth context.', ar: 'يحدد هذا الدور صندوقاً يركز على النمو حتى تستخدم مقارنة النظراء وتجميع الفرص سياق النمو.' },
+  commodity_fund: { labelEn: 'Commodity Fund', labelAr: 'صندوق سلع', en: 'This role identifies a fund linked to commodities so it is compared and grouped in that context.', ar: 'يحدد هذا الدور صندوقاً مرتبطاً بالسلع حتى تتم مقارنته وتجميعه ضمن هذا السياق.' },
+  real_estate_fund: { labelEn: 'Real Estate Fund', labelAr: 'صندوق عقاري', en: 'This role identifies a real-estate-focused fund so it is compared and grouped with relevant real-estate assets.', ar: 'يحدد هذا الدور صندوقاً يركز على العقارات حتى تتم مقارنته وتجميعه مع الأصول العقارية المناسبة.' },
+  stock: { labelEn: 'Direct Stock', labelAr: 'سهم مباشر', en: 'This role identifies an individual stock so it can be compared with direct-stock peers rather than funds.', ar: 'يحدد هذا الدور سهماً فردياً حتى تتم مقارنته بنظراء الأسهم المباشرة بدلاً من الصناديق.' },
+  benchmark: { labelEn: 'Benchmark', labelAr: 'مؤشر قياسي', en: 'This role identifies a market index used as a reference point for comparison, not as a typical fund or stock holding.', ar: 'يحدد هذا الدور مؤشراً سوقياً يستخدم كنقطة مرجعية للمقارنة، وليس كصندوق أو سهم عادي.' },
 };
 
 const GRID_GLOSSARY = {
@@ -434,7 +450,10 @@ function GlossaryHint({ text, lang }: { text: string; lang: Lang }) {
         className="ai-bot-glossary-button info-icon"
         aria-label={lang === 'ar' ? 'شرح التصنيف' : 'Explain this grade'}
         aria-expanded={open}
-        onClick={() => setOpen((current) => !current)}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
         title={lang === 'ar' ? 'شرح التصنيف' : 'Explain this grade'}
       >
         ℹ
@@ -444,19 +463,38 @@ function GlossaryHint({ text, lang }: { text: string; lang: Lang }) {
   );
 }
 
-function getVerdictFlagMeta(flag: string, lang: Lang): { label: string; category: 'info' | 'warning' } {
+function getVerdictFlagMeta(flag: string, lang: Lang): { label: string; explanation: string; category: 'info' | 'warning' } {
   if (VERDICT_FLAG_MAP[flag]) {
     const item = VERDICT_FLAG_MAP[flag];
     return {
       label: lang === 'ar' ? item.ar : item.en,
+      explanation: lang === 'ar' ? item.explanation.ar : item.explanation.en,
       category: item.category,
     };
   }
   const label = flag.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
   return {
     label,
+    explanation: lang === 'ar' ? 'تنبيه تشخيصي يحتاج إلى مراجعة البيانات المرتبطة به.' : 'A diagnostic alert that should be reviewed alongside the related data.',
     category: flag.includes('warning') || flag.includes('risk') || flag.includes('underperforming') || flag.includes('divergence') ? 'warning' : 'info',
   };
+}
+
+function VerdictFlagHint({ flag, lang }: { flag: string; lang: Lang }) {
+  const meta = getVerdictFlagMeta(flag, lang);
+  return <GlossaryHint text={meta.explanation} lang={lang} />;
+}
+
+function RiskTierHint({ tier, lang }: { tier: string | null | undefined; lang: Lang }) {
+  if (!tier || !(tier in RISK_TIER_GLOSSARY)) return tier ? formatRiskTier(tier, lang) : null;
+  return <>{formatRiskTier(tier, lang)} <GlossaryHint text={RISK_TIER_GLOSSARY[tier as 'Low' | 'Medium' | 'High'][lang]} lang={lang} /></>;
+}
+
+function AssetRoleHint({ role, lang }: { role: string | null | undefined; lang: Lang }) {
+  if (!role) return <>{unavailableValue(lang)}</>;
+  const meta = ASSET_ROLE_GLOSSARY[role];
+  if (!meta) return <>{role} <GlossaryHint text={lang === 'ar' ? 'دور الأصل يحدد السياق المستخدم في المقارنة والتجميع.' : 'The asset role identifies the context used for comparison and grouping.'} lang={lang} /></>;
+  return <>{lang === 'ar' ? meta.labelAr : meta.labelEn} <GlossaryHint text={lang === 'ar' ? meta.ar : meta.en} lang={lang} /></>;
 }
 
 async function json<T>(url: string): Promise<T> {
@@ -1582,7 +1620,7 @@ export function AiBotWorkspace() {
         <div>
           <span>{lang === 'ar' ? 'المخاطر / الإشارة' : 'Risk / signal'}</span>
           <strong>
-            {formatRiskTier(entity.risk_level, lang)}{' '}
+            <RiskTierHint tier={entity.risk_level} lang={lang} />{' '}
             <em>{formatSignal(entity.signal, lang)}</em>
           </strong>
         </div>
@@ -1717,7 +1755,7 @@ export function AiBotWorkspace() {
                     <div className="comparison-holding-meta">
                       <span><b>{formatPeriodLabel(verdict.return_period, lang)}:</b> <strong>{pct(verdict.holding_return_percent)}</strong></span>
                       {verdict.holding_risk_tier && (
-                        <span><b>{lang === 'ar' ? 'مستوى المخاطر:' : 'Risk Tier:'}</b> {formatRiskTier(verdict.holding_risk_tier, lang)}</span>
+                        <span><b>{lang === 'ar' ? 'مستوى المخاطر:' : 'Risk Tier:'}</b> <RiskTierHint tier={verdict.holding_risk_tier} lang={lang} /></span>
                       )}
                       {verdict.holding_current_value_egp !== null && verdict.holding_current_value_egp !== undefined && (
                         <span><b>{lang === 'ar' ? 'المركز:' : 'Position:'}</b> {Number(verdict.holding_current_value_egp).toLocaleString()} {lang === 'ar' ? 'ج.م' : 'EGP'}</span>
@@ -1748,7 +1786,7 @@ export function AiBotWorkspace() {
                       <small>{GRID_GLOSSARY.cautionReasons[verdict.caution_reason][lang]}</small>
                     )}
                   </div>
-                  <div><span>{lang === 'ar' ? 'دور الأصل' : 'Holding asset role'}</span><b>{verdict.holding_asset_role || unavailableValue(lang)}</b></div>
+                  <div><span>{lang === 'ar' ? 'دور الأصل' : 'Holding asset role'}</span><b><AssetRoleHint role={verdict.holding_asset_role} lang={lang} /></b></div>
                   <div><span>{lang === 'ar' ? 'قيمة المحفظة' : 'Portfolio value'}</span><b>{verdict.holding_current_value_egp === null || verdict.holding_current_value_egp === undefined ? unavailableValue(lang) : `${Number(verdict.holding_current_value_egp).toLocaleString()} ${lang === 'ar' ? 'ج.م' : 'EGP'}`}</b></div>
                   <div><span>{lang === 'ar' ? 'وزن المحفظة' : 'Portfolio weight'}</span><b>{verdict.holding_portfolio_weight_percent === null || verdict.holding_portfolio_weight_percent === undefined ? unavailableValue(lang) : `${Number(verdict.holding_portfolio_weight_percent).toFixed(1)}%`}</b></div>
                 </div>
@@ -1756,7 +1794,7 @@ export function AiBotWorkspace() {
                   <strong>{lang === 'ar' ? 'أساسيات الحيازة' : 'Holding fundamentals'}</strong>
                   {verdict.holding_fundamentals ? (
                     <div className="ai-bot-fundamental-concerns">
-                      {verdict.holding_fundamentals.flags?.length ? verdict.holding_fundamentals.flags.map((flag) => <span key={flag.flag}>{getVerdictFlagMeta(flag.flag, lang).label}</span>) : <span>{lang === 'ar' ? 'لا توجد مخاوف مسجلة' : 'No concerns recorded'}</span>}
+                      {verdict.holding_fundamentals.flags?.length ? verdict.holding_fundamentals.flags.map((flag) => <span key={flag.flag}>{getVerdictFlagMeta(flag.flag, lang).label} <VerdictFlagHint flag={flag.flag} lang={lang} /></span>) : <span>{lang === 'ar' ? 'لا توجد مخاوف مسجلة' : 'No concerns recorded'}</span>}
                     </div>
                   ) : <span className="comparison-pending-label">{unavailableValue(lang)}</span>}
                 </div>
@@ -1893,7 +1931,7 @@ export function AiBotWorkspace() {
                       const meta = getVerdictFlagMeta(flag, lang);
                       return (
                         <span key={flag} className={`ai-bot-flag-chip ai-bot-flag-${meta.category}`}>
-                          {meta.label}
+                          {meta.label} <VerdictFlagHint flag={flag} lang={lang} />
                         </span>
                       );
                     })}
@@ -2012,13 +2050,13 @@ export function AiBotWorkspace() {
                                       <span className="comparison-peer-name">{peer.name ? translateEntityName(peer.name, lang) : unavailableValue(lang)}</span>
                                     </div>
                                     <div className="comparison-peer-metadata">
-                                      <span><label>{lang === 'ar' ? 'الدور' : 'Asset role'}</label><b>{peer.asset_role || unavailableValue(lang)}</b></span>
+                                      <span><label>{lang === 'ar' ? 'الدور' : 'Asset role'}</label><b><AssetRoleHint role={peer.asset_role} lang={lang} /></b></span>
                                       <span><label>{lang === 'ar' ? 'العائد' : 'Return'}</label><b className={hasReturn ? (Number(peer.return_percent) >= 0 ? 'ai-positive' : 'ai-negative') : ''}>{hasReturn ? pct(peer.return_percent) : unavailableValue(lang)}</b></span>
                                       <span><label>{lang === 'ar' ? 'الفجوة' : 'Gap'}</label><b className={gapMeta.className}>{gapMeta.text === '—' ? unavailableValue(lang) : gapMeta.text}</b></span>
-                                      <span><label>{lang === 'ar' ? 'مستوى المخاطر' : 'Risk tier'}</label><b>{peer.computed_risk_tier ? formatRiskTier(peer.computed_risk_tier, lang) : unavailableValue(lang)}</b></span>
+                                      <span><label>{lang === 'ar' ? 'مستوى المخاطر' : 'Risk tier'}</label><b><RiskTierHint tier={peer.computed_risk_tier} lang={lang} /></b></span>
                                       <span><label>{lang === 'ar' ? 'ترتيب القطاع' : 'Sector rank'}</label><b>{peer.sector_rank === null || peer.sector_rank === undefined ? unavailableValue(lang) : peer.sector_rank}</b></span>
                                       <span><label>{lang === 'ar' ? 'إشارة السهم' : 'Stock signal'}</label><b>{peer.stock_signal || unavailableValue(lang)}</b></span>
-                                      <span><label>{lang === 'ar' ? 'مخاوف الأساسيات' : 'Fundamentals concerns'}</label><b>{peer.fundamentals?.flags?.length ? peer.fundamentals.flags.map((flag) => getVerdictFlagMeta(flag.flag, lang).label).join(', ') : unavailableValue(lang)}</b></span>
+                                      <span><label>{lang === 'ar' ? 'مخاوف الأساسيات' : 'Fundamentals concerns'}</label><b>{peer.fundamentals?.flags?.length ? peer.fundamentals.flags.map((flag) => <span key={flag.flag}>{getVerdictFlagMeta(flag.flag, lang).label} <VerdictFlagHint flag={flag.flag} lang={lang} /></span>) : unavailableValue(lang)}</b></span>
                                     </div>
                                     {hasReturn ? (
                                       <>
@@ -2032,7 +2070,7 @@ export function AiBotWorkspace() {
                                         <div className="comparison-risk">
                                           {peer.computed_risk_tier && (
                                             <span className="ai-bot-flag-chip ai-bot-flag-info">
-                                              {formatRiskTier(peer.computed_risk_tier, lang)} {lang === 'ar' ? 'مخاطر' : 'Risk'}
+                                              <RiskTierHint tier={peer.computed_risk_tier} lang={lang} /> {lang === 'ar' ? 'مخاطر' : 'Risk'}
                                             </span>
                                           )}
                                           {peer.risk_mismatch && (
@@ -2206,7 +2244,7 @@ export function AiBotWorkspace() {
                       <td>{item.coverage_percent === null || item.coverage_percent === undefined ? unavailableValue(lang) : `${Number(item.coverage_percent).toFixed(1)}%`}</td>
                       <td>{item.comparables_beaten ?? 0}/{item.comparables_total ?? 0}</td>
                       <td>{item.data_quality?.holding_snapshot_status || unavailableValue(lang)}{item.data_quality?.holding_snapshot_age_hours !== null && item.data_quality?.holding_snapshot_age_hours !== undefined ? ` · ${Number(item.data_quality.holding_snapshot_age_hours).toFixed(0)}h` : ''}{item.data_completeness_warning ? ' · incomplete' : ''}</td>
-                      <td>{item.flags?.length ? item.flags.map((flag) => getVerdictFlagMeta(flag, lang).label).join(', ') : unavailableValue(lang)}</td>
+                      <td>{item.flags?.length ? item.flags.map((flag) => <span key={flag}>{getVerdictFlagMeta(flag, lang).label} <VerdictFlagHint flag={flag} lang={lang} /></span>) : unavailableValue(lang)}</td>
                     </tr>) : <tr><td colSpan={9}>{lang === 'ar' ? 'لا توجد نتائج حيازة متاحة لهذا التشغيل.' : 'No holding verdicts are available for this run.'}</td></tr>}</tbody>
                   </table>
                 </div>
@@ -2286,6 +2324,7 @@ export function AiBotWorkspace() {
                               ⚠ {lang === 'ar'
                                 ? `${opp.fundamentals_flags.length} ${opp.fundamentals_flags.length === 1 ? 'ملاحظة مالية' : 'ملاحظات مالية'}`
                                 : `${opp.fundamentals_flags.length} fundamentals concern${opp.fundamentals_flags.length === 1 ? '' : 's'}`}
+                              {opp.fundamentals_flags.map((flag) => <VerdictFlagHint key={flag} flag={flag} lang={lang} />)}
                             </span>
                           )}
                         </div>
@@ -2323,11 +2362,11 @@ export function AiBotWorkspace() {
                                   <td>{matchedVerdict ? `${matchedVerdict.comparables_beaten ?? 0}/${matchedVerdict.comparables_total ?? 0}` : unavailableValue(lang)}</td>
                                   <td>{matchedVerdict?.technical_grade || unavailableValue(lang)}{technical ? ` · ${technical.trend}` : ''}{technical?.confidence !== null && technical?.confidence !== undefined ? ` · ${Math.round(Number(technical.confidence) * 100)}%` : ''}{technical?.reversal_risk ? ` · ${technical.reversal_risk}` : ''}{technical?.patterns?.length ? ` · ${technical.patterns.map((pattern) => pattern.name).join(', ')}` : ''}</td>
                                   <td>{matchedVerdict?.financial_health_grade || unavailableValue(lang)}</td>
-                                  <td>{matchedVerdict?.holding_risk_tier || candidate.risk_tier || unavailableValue(lang)}</td>
+                                  <td><RiskTierHint tier={matchedVerdict?.holding_risk_tier || candidate.risk_tier} lang={lang} /></td>
                                   <td>{matchedVerdict?.holding_current_value_egp === null || matchedVerdict?.holding_current_value_egp === undefined ? unavailableValue(lang) : `${Number(matchedVerdict.holding_current_value_egp).toLocaleString()} EGP`}</td>
                                   <td>{matchedVerdict?.holding_portfolio_weight_percent === null || matchedVerdict?.holding_portfolio_weight_percent === undefined ? unavailableValue(lang) : `${Number(matchedVerdict.holding_portfolio_weight_percent).toFixed(1)}%`}</td>
                                   <td>{matchedVerdict?.data_quality?.holding_snapshot_status || unavailableValue(lang)}{matchedVerdict?.data_quality?.holding_snapshot_age_hours !== null && matchedVerdict?.data_quality?.holding_snapshot_age_hours !== undefined ? ` · ${Number(matchedVerdict.data_quality.holding_snapshot_age_hours).toFixed(0)}h` : ''}{matchedVerdict?.data_completeness_warning ? ' · incomplete' : ''}{matchedVerdict?.flags?.length ? ` · ${matchedVerdict.flags.join(', ')}` : ''}</td>
-                                  <td>{flags.length ? flags.map((flag) => getVerdictFlagMeta(flag.flag, lang).label + (flag.detail ? `: ${flag.detail}` : '')).join(' · ') : candidate.fundamentals_flags?.length ? candidate.fundamentals_flags.map((flag) => getVerdictFlagMeta(flag, lang).label).join(', ') : unavailableValue(lang)}</td>
+                                  <td>{flags.length ? flags.map((flag) => <span key={flag.flag}>{getVerdictFlagMeta(flag.flag, lang).label}{flag.detail ? `: ${flag.detail}` : ''} <VerdictFlagHint flag={flag.flag} lang={lang} /></span>) : candidate.fundamentals_flags?.length ? candidate.fundamentals_flags.map((flag) => <span key={flag}>{getVerdictFlagMeta(flag, lang).label} <VerdictFlagHint flag={flag} lang={lang} /></span>) : unavailableValue(lang)}</td>
                                 </tr>; })}</tbody>
                               </table>
                             </div>

@@ -186,6 +186,8 @@ results without recording secrets or real portfolio values.
 - 2026-09-05: Opportunity analysis summaries now generate automatically once per loaded bot run; the manual Generate button was removed. Runtime verification confirmed `POST /api/advisor/generate-opportunities` returned `200` after the dashboard loaded.
 - 2026-09-07: Documented the complete authoritative root migration inventory (`001`, `002`, `004`-`025`) and the intentional `003` gap. Applied and verified migrations `024` and `025` against the active database; no holding or fund data was changed.
 - 2026-09-07: Found that the inherited Windows shell `DATABASE_URL` pointed to `localhost:5432`, while the live API process used the Supabase pooler configured by the repository secrets. Applied `025_technical_range_levels.sql` to the live Supabase database and verified all three nullable numeric columns there; the API process was not restarted.
+- 2026-09-10: Cleared inherited database variables and verified the API loaded the Supabase pooler on port `8080`; the frontend loaded live AI run data on port `3001`.
+- 2026-09-10: Live UI check verified readable glossary popovers for Risk Tier, an incomplete-data fundamentals flag, and the translated Growth Fund asset role on a real entity.
 
 ## Stack
 
