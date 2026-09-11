@@ -101,7 +101,7 @@ export function initDashboardBehavior(
     liquid: {
       label: "EG Stock assets · Bareeq & funds",
       labelAr: "أسهم مصرية · بريقة والصناديق",
-      cards: ["hero", "cohort", "perf", "progress"],
+      cards: ["hero", "cohort", "annualized-return", "perf", "progress"],
       assetGroup: "liquid",
     },
     certs: {

@@ -55,6 +55,14 @@ export interface UpdateGoldSettings {
   cashbackPerGram?: number;
 }
 
+export type FundHoldingType = typeof FundHoldingType[keyof typeof FundHoldingType];
+
+
+export const FundHoldingType = {
+  stock: 'stock',
+  fund: 'fund',
+} as const;
+
 export interface Fund {
   id: number;
   key: string;
@@ -65,6 +73,7 @@ export interface Fund {
   costBasisTotal: number;
   nav: number;
   apyPercent?: number | null;
+  holdingType: FundHoldingType;
 }
 
 export interface UpdateFund {
@@ -88,6 +97,14 @@ export const TransactionTxType = {
   sell: 'sell',
 } as const;
 
+export type TransactionHoldingType = typeof TransactionHoldingType[keyof typeof TransactionHoldingType];
+
+
+export const TransactionHoldingType = {
+  stock: 'stock',
+  fund: 'fund',
+} as const;
+
 export interface Transaction {
   id: number;
   assetType: string;
@@ -96,6 +113,8 @@ export interface Transaction {
   occurredAt: string;
   amount: number;
   txType: TransactionTxType;
+  holdingType: TransactionHoldingType;
+  internalTransferId?: string | null;
 }
 
 export interface GrowthSnapshot {

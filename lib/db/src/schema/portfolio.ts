@@ -79,6 +79,7 @@ export const fundsTable = pgTable("funds", {
   }).notNull(),
   nav: numeric("nav", { precision: 14, scale: 4 }).notNull(),
   apyPercent: numeric("apy_percent", { precision: 6, scale: 2 }),
+  holdingType: text("holding_type", { enum: ["stock", "fund"] }).notNull().default("fund"),
 });
 
 export const insertFundSchema = createInsertSchema(fundsTable).omit({
@@ -111,6 +112,8 @@ export const transactionsTable = pgTable("transactions", {
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
   amount: numeric("amount", { precision: 14, scale: 2 }).notNull(),
   txType: text("tx_type", { enum: ["buy", "sell"] }).notNull(),
+  holdingType: text("holding_type", { enum: ["stock", "fund"] }).notNull().default("fund"),
+  internalTransferId: text("internal_transfer_id"),
 });
 
 export const insertTransactionSchema = createInsertSchema(

@@ -97,6 +97,13 @@ export interface HoldingVerdict {
   confidence_tier?: "high" | "moderate" | "low";
   performance_grade: "Strong" | "Mixed" | "Weak" | "Insufficient Data";
   financial_health_grade: FinancialHealthGrade;
+  fund_quality_source: "risk_adjusted" | "consistency_only" | "insufficient_data";
+  fund_quality_metrics?: {
+    consistency_score: number;
+    peer_z_score: number;
+    available_points: number;
+    peer_count: number;
+  };
   financial_health_reason?: FinancialHealthReason;
   technical_grade: "Red Flag" | "Weak" | "Strong" | "Neutral" | "Insufficient Data";
   technical_reason?: TechnicalReason;

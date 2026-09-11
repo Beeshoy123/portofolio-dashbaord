@@ -103,6 +103,8 @@ type Verdict = {
   signal: string;
   performance_grade?: 'Strong' | 'Mixed' | 'Weak' | 'Insufficient Data';
   financial_health_grade?: 'Red Flag' | 'Weak' | 'Strong' | 'Neutral' | 'Insufficient Data';
+  fund_quality_source?: 'risk_adjusted' | 'consistency_only' | 'insufficient_data';
+  fund_quality_metrics?: { consistency_score: number; peer_z_score: number; available_points: number; peer_count: number };
   financial_health_reason?: 'not_applicable_fund' | 'insufficient_peers' | 'missing_own_fundamentals';
   technical_grade?: 'Red Flag' | 'Weak' | 'Strong' | 'Neutral' | 'Insufficient Data';
   confidence_tier?: 'high' | 'moderate' | 'low';
@@ -440,6 +442,11 @@ const GRID_GLOSSARY = {
     ar: 'إذا أظهرت الصحة المالية أو المؤشرات الفنية علامة حمراء خطيرة، يتم تحديد التصنيف النهائي عند تجنب؛ لا يكفي عائد سعري جيد وحده للحصول على تصنيف مرتفع.',
   },
 } as const;
+
+const FUND_QUALITY_GLOSSARY = {
+  en: 'Fund-specific quality measure based only on consistency among the available 30-day, YTD, and 1-year return summaries. It is not the stock fundamentals check and is not a true volatility or Sharpe ratio.',
+  ar: 'مقياس جودة خاص بالصناديق يعتمد فقط على اتساق ملخصات عوائد 30 يوماً ومنذ بداية العام وسنة واحدة المتاحة. لا يمثل فحص أساسيات الأسهم وليس تقلباً حقيقياً أو نسبة شارب.',
+};
 
 function GlossaryHint({ text, lang }: { text: string; lang: Lang }) {
   const [open, setOpen] = useState(false);
@@ -1860,6 +1867,10 @@ export function AiBotWorkspace() {
                     ['Financial Health', verdict.financial_health_grade],
                     ['Technical', verdict.technical_grade],
                   ] as const).map(([category, grade]) => {
+                    const isFundQuality = category === 'Financial Health' && verdict.fund_quality_source === 'consistency_only';
+                    const categoryLabel = isFundQuality
+                      ? (lang === 'ar' ? 'جودة الصندوق (اتساق العوائد)' : 'Fund Quality (return consistency)')
+                      : lang === 'ar' ? (category === 'Performance' ? 'الأداء' : category === 'Financial Health' ? 'الصحة المالية' : 'فني') : category;
                     const reason = category === 'Financial Health'
                       ? verdict.financial_health_reason
                       : category === 'Technical'
@@ -1871,11 +1882,16 @@ export function AiBotWorkspace() {
                     return (
                     <div className="ai-bot-grid-grade" key={category}>
                       <div className="ai-bot-grid-grade-label">
-                        <span>{lang === 'ar' ? (category === 'Performance' ? 'الأداء' : category === 'Financial Health' ? 'الصحة المالية' : 'فني') : category}</span>
-                        <GlossaryHint text={GRID_GLOSSARY.categories[category][lang]} lang={lang} />
+                        <span>{categoryLabel}</span>
+                        <GlossaryHint text={isFundQuality ? FUND_QUALITY_GLOSSARY[lang] : GRID_GLOSSARY.categories[category][lang]} lang={lang} />
                       </div>
                       <strong>{reasonText ?? formatSignal(grade, lang)}</strong>
-                      {reasonText && <GlossaryHint text={GRID_GLOSSARY.categories[category][lang]} lang={lang} />}
+                      {isFundQuality && verdict.fund_quality_metrics && (
+                        <small>{lang === 'ar'
+                          ? `درجة الاتساق ${verdict.fund_quality_metrics.consistency_score.toFixed(1)} · درجة معيارية مقابل ${verdict.fund_quality_metrics.peer_count} صناديق ${verdict.fund_quality_metrics.peer_z_score.toFixed(2)}`
+                          : `Consistency ${verdict.fund_quality_metrics.consistency_score.toFixed(1)} · peer z-score ${verdict.fund_quality_metrics.peer_z_score.toFixed(2)} vs ${verdict.fund_quality_metrics.peer_count} funds`}</small>
+                      )}
+                      {reasonText && <GlossaryHint text={isFundQuality ? FUND_QUALITY_GLOSSARY[lang] : GRID_GLOSSARY.categories[category][lang]} lang={lang} />}
                     </div>
                     );
                   })}

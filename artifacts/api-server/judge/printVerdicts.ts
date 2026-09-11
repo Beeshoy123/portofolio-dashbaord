@@ -1,11 +1,13 @@
 // Comparison Judge — Print Verdicts (test/debug script)
 //
 // Run with: npx tsx judge/printVerdicts.ts
-// Requires comparison_snapshots to have at least one successful scrape —
-// run scraper/runScraper.ts first.
+// Uses the production judge and its current verdict shape.
 
-import { judgeAllHoldings } from "./comparisonJudge";
-import type { HoldingVerdict, ComparisonGroup } from "./types";
+import path from "node:path";
+import { config } from "dotenv";
+import type { ComparisonGroup, HoldingVerdict } from "../src/judge/types";
+
+config({ path: path.resolve(process.cwd(), "../../.secrets/api-server.env"), override: false });
 
 function formatGroup(group: ComparisonGroup): string {
   const labelMap: Record<string, string> = {
@@ -32,7 +34,7 @@ function formatGroup(group: ComparisonGroup): string {
           ? `you're ahead by +${entry.gap_percent.toFixed(1)}pp`
           : `you're behind by ${Math.abs(entry.gap_percent).toFixed(1)}pp` // FIX: was printing the raw negative number, showing "behind by -5.2pp"
         : "";
-    const contextParts: string[] = [];
+    const contextParts: string[] = [`Role: ${entry.asset_role}`];
     if (entry.sector_rank !== null) contextParts.push(`Rank #${entry.sector_rank}`);
     if (entry.stock_signal !== null) contextParts.push(`Signal: ${entry.stock_signal}`);
     if (entry.computed_risk_tier !== null) contextParts.push(`Risk: ${entry.computed_risk_tier}`);
@@ -42,16 +44,8 @@ function formatGroup(group: ComparisonGroup): string {
       `    ${entry.ticker.padEnd(8)} ${entry.return_percent.toFixed(1).padStart(7)}%${contextStr}   ${gapStr}`
     );
 
-    // Second-opinion summary: only print disagreements, not every check —
-    // agreements are the expected/quiet case, disagreements are the
-    // signal worth surfacing.
-    const disagreements = Object.entries(entry.second_opinions).filter(
-      ([, check]) => check.agrees === false
-    );
-    if (disagreements.length > 0) {
-      for (const [category, check] of disagreements) {
-        lines.push(`        ⚠️ [${category}] ${check.note}`);
-      }
+    if (entry.fundamentals?.flags.length) {
+      lines.push(`        Fundamentals: ${entry.fundamentals.flags.map(({ flag, detail }) => `${flag}${detail ? ` (${detail})` : ""}`).join(", ")}`);
     }
   }
   return lines.join("\n");
@@ -62,15 +56,26 @@ function printVerdict(v: HoldingVerdict): void {
   console.log(
     `${v.holding_name} (${v.holding_ticker}) — ${v.return_period.replace("return_", "").toUpperCase()}`
   );
+  console.log(`Asset role: ${v.holding_asset_role}`);
   console.log(
     `Your return: ${v.holding_return_percent !== null ? v.holding_return_percent.toFixed(1) + "%" : "no data"}`
   );
   console.log(
-    `Current position value: ${v.holding_current_value_egp !== null ? v.holding_current_value_egp.toLocaleString() + " EGP" : "unknown — check funds_table_key mapping"}`
+    `Current position value: ${v.holding_current_value_egp !== null ? v.holding_current_value_egp.toLocaleString() + " EGP" : "unavailable"}`
   );
-  console.log(
-    `Your computed risk tier: ${v.holding_risk_tier ?? "unknown — need all 3 return periods (30d/YTD/1Y) to compute"}`
-  );
+  console.log(`Portfolio weight: ${v.holding_portfolio_weight_percent === null ? "unavailable" : `${v.holding_portfolio_weight_percent.toFixed(1)}%`}`);
+  console.log(`Risk tier: ${v.holding_risk_tier ?? "unavailable"}`);
+  console.log(`Final label: ${v.final_label}`);
+  console.log(`Performance: ${v.performance_grade}`);
+  console.log(`Financial health: ${v.financial_health_grade}${v.financial_health_reason ? ` (${v.financial_health_reason})` : ""}`);
+  console.log(`Technical: ${v.technical_grade}${v.technical_reason ? ` (${v.technical_reason})` : ""}`);
+  console.log(`Confidence tier: ${v.confidence_tier ?? "unavailable"}`);
+  console.log(`Coverage: ${v.coverage_percent === null ? "unavailable" : `${v.coverage_percent.toFixed(1)}%`} (${v.data_quality.comparable_with_return_count}/${v.comparables_total} peers with returns)`);
+  console.log(`Data quality: ${v.data_quality.holding_snapshot_status}, ${v.data_quality.comparable_count} comparable peers`);
+  if (v.caution_reason) console.log(`Caution reason: ${v.caution_reason}`);
+  if (v.technical_signal) {
+    console.log(`Technical signal: ${v.technical_signal.trend}, reversal risk ${v.technical_signal.reversal_risk}`);
+  }
   console.log("");
 
   for (const group of v.groups) {
@@ -84,17 +89,18 @@ function printVerdict(v: HoldingVerdict): void {
   }
   if (v.data_completeness_warning) {
     console.log(
-      `⚠️  Over 30% of comparison entries have no data yet — verdict may be unreliable until Price Checker has run more successfully.`
+      `⚠️  Comparison coverage is incomplete — verdict reliability may improve after more successful Price Checker data.`
     );
   }
   console.log("");
 }
 
 async function main() {
+  const { judgeAllHoldings } = await import("../src/judge/comparisonJudge");
   const verdicts = await judgeAllHoldings("return_1y");
   if (verdicts.length === 0) {
     console.log(
-      "No holdings found with is_held=true in comparison_watchlist. Nothing to compare."
+      "No held holdings were returned by the production Comparison Judge. Nothing to print."
     );
     return;
   }

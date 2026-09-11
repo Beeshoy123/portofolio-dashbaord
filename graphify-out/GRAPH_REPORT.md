@@ -1,7 +1,7 @@
 # Graph Report - G:\AI\portofolio-dashbaord  (2026-09-10)
 
 ## Corpus Check
-- 237 files · ~691,301 words
+- 237 files · ~552,860 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary

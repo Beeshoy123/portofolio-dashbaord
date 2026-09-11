@@ -25,6 +25,90 @@ export type TechnicalGrade =
   | "Neutral"
   | "Insufficient Data";
 
+export type FundQualityGrade = "Red Flag" | "Weak" | "Strong" | "Neutral" | "Insufficient Data";
+
+export interface FundQualityMetrics {
+  consistency_score: number;
+  peer_z_score: number;
+  available_points: number;
+  peer_count: number;
+}
+
+function percentile(values: number[], p: number): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  const index = (sorted.length - 1) * p;
+  const lower = Math.floor(index);
+  const upper = Math.ceil(index);
+  if (lower === upper) return sorted[lower];
+  const weight = index - lower;
+  return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+}
+
+function winsorize(values: number[]): number[] {
+  if (values.length < 4) return values;
+  const lower = percentile(values, 0.05);
+  const upper = percentile(values, 0.95);
+  return values.map((value) => Math.min(upper, Math.max(lower, value)));
+}
+
+function mean(values: number[]): number {
+  return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function standardDeviation(values: number[], average: number): number {
+  if (values.length < 2) return 0;
+  return Math.sqrt(mean(values.map((value) => (value - average) ** 2)));
+}
+
+function fundConsistencyScore(snapshot: Pick<SnapshotRow, "return_30d_percent" | "return_ytd_percent" | "return_1y_percent" | "cagr_percent">): { score: number; points: number } | null {
+  const values = [snapshot.return_30d_percent, snapshot.return_ytd_percent, snapshot.return_1y_percent ?? snapshot.cagr_percent]
+    .map((value) => numeric(value))
+    .filter((value): value is number => value !== null && Number.isFinite(value));
+  if (values.length < 3) return null;
+
+  const positive = values.filter((value) => value > 0).length;
+  const negative = values.filter((value) => value < 0).length;
+  const directionalAgreement = Math.max(positive, negative) / values.length;
+  const spread = Math.max(...values) - Math.min(...values);
+  return { score: directionalAgreement * 100 - spread, points: values.length };
+}
+
+export function computeFundQualityGrade(
+  holdingSnapshot: SnapshotRow | null,
+  peerSnapshots: SnapshotRow[],
+): { grade: FundQualityGrade; source: "consistency_only" | "insufficient_data"; metrics?: FundQualityMetrics } {
+  const holdingScore = holdingSnapshot ? fundConsistencyScore(holdingSnapshot) : null;
+  const peerScores = peerSnapshots
+    .map((snapshot) => fundConsistencyScore(snapshot)?.score)
+    .filter((score): score is number => score !== undefined);
+  if (!holdingScore || peerScores.length < 6) {
+    return { grade: "Insufficient Data", source: "insufficient_data" };
+  }
+
+  const adjustedPeers = winsorize(peerScores);
+  const peerMean = mean(adjustedPeers);
+  const peerStdDev = standardDeviation(adjustedPeers, peerMean);
+  const peerZScore = peerStdDev === 0 ? 0 : (holdingScore.score - peerMean) / peerStdDev;
+  const grade = peerZScore < -2
+    ? "Red Flag"
+    : peerZScore < -1
+      ? "Weak"
+      : peerZScore > 0.5
+        ? "Strong"
+        : "Neutral";
+  return {
+    grade,
+    source: "consistency_only",
+    metrics: {
+      consistency_score: holdingScore.score,
+      peer_z_score: peerZScore,
+      available_points: holdingScore.points,
+      peer_count: peerScores.length,
+    },
+  };
+}
+
 const VALID_PERFORMANCE_GRADES = ["Strong", "Mixed", "Weak", "Insufficient Data"] as const;
 const VALID_TECHNICAL_GRADES = ["Red Flag", "Weak", "Strong", "Neutral", "Insufficient Data"] as const;
 const VALID_FINAL_LABELS = ["Excellent", "Solid", "Caution", "Avoid", "Insufficient Data"] as const;
@@ -241,7 +325,8 @@ function isPersistedVerdict(value: unknown, period: ReturnPeriod): value is Hold
     && verdict.return_period === period
     && typeof verdict.signal === "string"
     && Array.isArray(verdict.groups)
-    && verdict.data_quality !== undefined;
+    && verdict.data_quality !== undefined
+    && typeof verdict.fund_quality_source === "string";
 }
 
 async function loadPersistedVerdicts(
@@ -511,11 +596,20 @@ async function judgeHolding(
     fundamentals: entry.fundamentals,
   }));
 
-  const financialHealthGrade = computeFinancialHealthGrade(
-    { fundamentals: holdingFundamentals },
-    financialHealthPeerGroup,
-    holding.sector,
-  );
+  const fundPeerSnapshots = watchlist
+    .filter((candidate) => candidate.entity_type === "fund" && candidate.id !== holding.id && !isEmergencyReserveFund(candidate))
+    .map((candidate) => snapshots.get(candidate.id))
+    .filter((snapshot): snapshot is SnapshotRow => Boolean(snapshot));
+  const fundQuality = holding.entity_type === "fund"
+    ? computeFundQualityGrade(holdingSnapshot ?? null, fundPeerSnapshots)
+    : null;
+  const financialHealthGrade = holding.entity_type === "fund"
+    ? fundQuality!.grade
+    : computeFinancialHealthGrade(
+      { fundamentals: holdingFundamentals },
+      financialHealthPeerGroup,
+      holding.sector,
+    );
 
   const financialHealthReason = financialHealthGrade === "Insufficient Data"
     ? holding.entity_type !== "stock"
@@ -588,6 +682,8 @@ async function judgeHolding(
     signal,
     performance_grade: performanceGrade,
     financial_health_grade: financialHealthGrade,
+    fund_quality_source: holding.entity_type === "fund" ? fundQuality!.source : "insufficient_data",
+    ...(fundQuality?.metrics ? { fund_quality_metrics: fundQuality.metrics } : {}),
     ...(financialHealthReason ? { financial_health_reason: financialHealthReason } : {}),
     technical_grade: technicalGrade,
     ...(technicalReason ? { technical_reason: technicalReason } : {}),

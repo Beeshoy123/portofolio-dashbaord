@@ -117,6 +117,7 @@ function toFund(row: typeof fundsTable.$inferSelect) {
     costBasisTotal: Number(row.costBasisTotal),
     nav: Number(row.nav),
     apyPercent: row.apyPercent === null ? null : Number(row.apyPercent),
+    holdingType: row.holdingType,
   };
 }
 
@@ -139,6 +140,8 @@ function toTransaction(row: typeof transactionsTable.$inferSelect) {
     occurredAt: row.occurredAt.toISOString(),
     amount: Number(row.amount),
     txType: row.txType as "buy" | "sell",
+    holdingType: row.holdingType,
+    internalTransferId: row.internalTransferId,
   };
 }
 
@@ -353,6 +356,7 @@ router.post("/portfolio/gold/transactions", async (req, res) => {
     occurredAt: body.date,
     amount: String(body.totalPaid),
     txType: "buy",
+    holdingType: "fund",
   });
 
   const [goldTxRows, [goldSettings]] = await Promise.all([
@@ -399,13 +403,14 @@ router.patch("/portfolio/funds/:key", async (req, res) => {
 });
 
 router.post("/portfolio/funds", async (req, res) => {
-  const { key, ticker, name, icon, unitsHeld, costBasisTotal, nav } = req.body as Record<string, unknown>;
+  const { key, ticker, name, icon, unitsHeld, costBasisTotal, nav, holdingType } = req.body as Record<string, unknown>;
   const normalizedKey = typeof key === "string" ? key.trim().toLowerCase() : "";
   const normalizedTicker = typeof ticker === "string" ? ticker.trim() : "";
   const normalizedName = typeof name === "string" ? name.trim() : "";
   const numericUnits = Number(unitsHeld);
   const numericCost = Number(costBasisTotal);
   const numericNav = Number(nav);
+  const normalizedHoldingType = holdingType === "stock" ? "stock" : "fund";
 
   if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(normalizedKey) || !normalizedTicker || !normalizedName ||
       !Number.isFinite(numericUnits) || numericUnits < 0 || !Number.isFinite(numericCost) || numericCost < 0 ||
@@ -429,6 +434,7 @@ router.post("/portfolio/funds", async (req, res) => {
     costBasisTotal: String(numericCost),
     nav: String(numericNav),
     apyPercent: null,
+    holdingType: normalizedHoldingType,
   }).returning();
   res.status(201).json(toFund(created));
 });
@@ -823,6 +829,10 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
         const detectedFund = r.fund && typeof r.fund === "object" ? r.fund : {};
         const rawAsset = (detectedFund.key || r.assetType || r.asset || r.ticker) as string | undefined;
         const rawSide = (r.side || r.txType || r.type) as string | undefined;
+        const holdingType = r.holdingType === "stock" ? "stock" : "fund";
+        const internalTransferId = typeof r.internalTransferId === "string" && r.internalTransferId.trim()
+          ? r.internalTransferId.trim()
+          : null;
         const price = Number(r.pricePerUnit ?? r.price ?? null);
         const amount = Number(r.amountEgp ?? r.amount ?? null);
         const occurredAt = r.occurredAt ? new Date(r.occurredAt) : new Date();
@@ -919,6 +929,8 @@ router.post("/portfolio/fund-transactions", async (req, res) => {
           occurredAt: occurredAt,
           amount: String(amount),
           txType: side,
+          holdingType,
+          internalTransferId,
         }).returning();
 
         inserted.push(toTransaction(created));

@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { TransactionHoldingType } from './transactionHoldingType';
 import type { TransactionTxType } from './transactionTxType';
 
 export interface Transaction {
@@ -15,4 +16,6 @@ export interface Transaction {
   occurredAt: Date;
   amount: number;
   txType: TransactionTxType;
+  holdingType: TransactionHoldingType;
+  internalTransferId?: string | null;
 }

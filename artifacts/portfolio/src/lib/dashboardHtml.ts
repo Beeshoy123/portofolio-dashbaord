@@ -10,6 +10,7 @@ import type { Portfolio } from "@workspace/api-client-react";
 import type { Derived } from "./portfolioMath";
 import { fmt, fmt1, fmt2 } from "./portfolioMath";
 import type { Lang } from "./i18n";
+import { calculateGroupedXirr, type XirrTransaction } from "./xirr";
 import {
   realUSDReturn,
   requiredEGPReturn,
@@ -375,6 +376,51 @@ function buildCohortAnalysis(p: Portfolio, d: Derived): string {
   </div>`;
 }
 
+function buildAnnualizedReturnCard(p: Portfolio): string {
+  const transactions: XirrTransaction[] = p.transactions
+    .filter((transaction) => transaction.assetType !== "gold")
+    .map((transaction) => ({
+      date: transaction.occurredAt,
+      amount: transaction.amount,
+      txType: transaction.txType,
+      holdingType: transaction.holdingType ?? "fund",
+      internalTransferId: transaction.internalTransferId,
+    }));
+  const currentValues = p.funds.reduce(
+    (totals, fund) => {
+      totals[fund.holdingType ?? "fund"] += fund.unitsHeld * fund.nav;
+      return totals;
+    },
+    { stock: 0, fund: 0 },
+  );
+  const groups = [
+    { key: "stock" as const, label: "Stocks only", value: currentValues.stock },
+    { key: "fund" as const, label: "Funds only", value: currentValues.fund },
+    { key: "combined" as const, label: "Combined", value: currentValues.stock + currentValues.fund },
+  ].map((group) => ({
+    ...group,
+    result: calculateGroupedXirr(transactions, currentValues, group.key),
+  }));
+
+  const formatPercent = (value: number | null) => value === null ? "Not enough data" : `${value >= 0 ? "+" : ""}${(value * 100).toFixed(2)}%`;
+  const formatMoney = (value: number | null) => value === null ? "—" : `${value >= 0 ? "+" : ""}${fmt2(value)} EGP`;
+  const cards = groups.map((group) => `
+    <div style="padding:12px;border:1px solid var(--edge);border-radius:10px;background:var(--bg);${group.value <= 0 ? "opacity:.55" : ""}">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)">${group.label}</div>
+      <div style="font-size:23px;font-weight:800;color:var(--ink);margin-top:8px">${group.value <= 0 ? "No holdings yet" : formatPercent(group.result.xirr)}</div>
+      <div style="font-size:10px;color:var(--dim);margin-top:4px">Annualized using XIRR · ${group.result.cashFlowCount} cash flows</div>
+      <div style="font-size:11px;font-weight:700;color:${(group.result.profit ?? 0) >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"};margin-top:8px">Profit: ${formatMoney(group.result.profit)}</div>
+    </div>`).join("");
+
+  return `<div style="grid-column:span 6;margin-top:var(--gap)" data-view-card="annualized-return">
+    <div class="card">
+      <div class="card-lbl">Annualized Return</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.5;margin:6px 0 12px">Money-weighted return for direct stocks, funds, and the combined EGX portfolio. Internal transfers are excluded from the combined calculation.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">${cards}</div>
+    </div>
+  </div>`;
+}
+
 function buildUsdRealityCard(p: Portfolio, d: Derived, usdReality: any): string {
   if (!usdReality) {
     const usdRate = d.settings.usdEgpRate;
@@ -687,6 +733,9 @@ ${buildGoldCohortAnalysis(p, d)}
 
 <!-- COHORT ANALYSIS — liquid view only -->
 ${buildCohortAnalysis(p, d)}
+
+<!-- ANNUALIZED RETURN — EG Stock view only -->
+${buildAnnualizedReturnCard(p)}
 
 <!-- USD REALITY CHECK — total view only -->
 ${buildUsdRealityCard(p, d, usdReality)}

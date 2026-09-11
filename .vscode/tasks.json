@@ -28,6 +28,13 @@
 			],
 			"isBackground": false,
 			"problemMatcher": []
+		},
+		{
+			"label": "XIRR regression check",
+			"type": "shell",
+			"command": "node --test --experimental-strip-types scripts/xirr.test.mjs",
+			"isBackground": false,
+			"group": "test"
 		}
 	]
 }

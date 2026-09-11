@@ -5,6 +5,7 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
+import type { FundHoldingType } from './fundHoldingType';
 
 export interface Fund {
   id: number;
@@ -16,4 +17,5 @@ export interface Fund {
   costBasisTotal: number;
   nav: number;
   apyPercent?: number | null;
+  holdingType: FundHoldingType;
 }

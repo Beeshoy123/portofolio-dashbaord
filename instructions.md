@@ -38,6 +38,10 @@ A personal finance dashboard that tracks gold holdings, money-market/property fu
 
 ---
 
+### Graphify orientation rule
+
+At the start of a coding or review session, check the Graphify output when it is available (`graphify-out/graph.json` and `graphify-out/graph.html`) and use it as the architectural map for the repository. If the output is missing or stale, run the Graphify build for the currently opened repository folder before investigating broad changes. Use the graph to identify central modules, boundaries, high-complexity areas, and likely impact paths, then verify every finding against the actual source files, tests, and runtime behavior; the graph is an orientation aid, not proof of a bug or a substitute for source-level validation. Do not treat generated Graphify cache or wiki files as application source, and never expose secrets or real financial data while reporting graph findings.
+
 ## Startup sequence (automatic, every run)
 
 The **Project** run button executes these steps in order every time — not just on first run:
