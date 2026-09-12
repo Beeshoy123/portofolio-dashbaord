@@ -353,7 +353,7 @@ export const T: Record<Lang, Record<string, string>> = {
     'ai.stage.judge'      : '3. Comparison Judge',
     'ai.stage.alerts'     : '4. Alerts',
     'ai.stage.advisor'    : '5. Advisor',
-    'ai.diagnostics.title': 'Backend run diagnostics',
+    'ai.diagnostics.title': 'The Doctor',
     'ai.diagnostics.open' : 'Open to inspect the latest run.',
   },
 

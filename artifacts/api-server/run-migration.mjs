@@ -37,6 +37,8 @@ async function runMigration() {
       '019_advisor_watch_triggers.sql',
       '020_portfolio_summary_aggregates.sql',
       '021_portfolio_summary_value_weights.sql',
+      '027_advisor_opportunity_sort_rank.sql',
+      '028_remove_esrs_watchlist_row.sql',
     ];
     const client = await pool.connect();
     

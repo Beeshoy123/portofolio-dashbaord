@@ -100,25 +100,24 @@ const tierWeight: Record<"high" | "moderate" | "low", number> = {
   low: 1,
 };
 
-function technicalSortWeight(verdict: HoldingVerdict): number {
-  if (verdict.technical_grade === "Weak" || verdict.technical_grade === "Red Flag" || verdict.technical_signal?.reversal_risk === "elevated") {
-    return 0;
-  }
-  if (verdict.technical_grade === "Insufficient Data") return 1;
-  return 2;
-}
-
 export function compareOpportunityVerdicts(a: HoldingVerdict, b: HoldingVerdict): number {
   const confidenceDifference = tierWeight[confidenceTierFor(b)] - tierWeight[confidenceTierFor(a)];
   if (confidenceDifference !== 0) return confidenceDifference;
 
-  const technicalDifference = technicalSortWeight(b) - technicalSortWeight(a);
-  if (technicalDifference !== 0) return technicalDifference;
+  const signalDifference = (b.signal === "Excellent" ? 1 : 0) - (a.signal === "Excellent" ? 1 : 0);
+  if (signalDifference !== 0) return signalDifference;
 
-  const aPositive = a.holding_return_percent !== null && a.holding_return_percent > 0;
-  const bPositive = b.holding_return_percent !== null && b.holding_return_percent > 0;
-  if (aPositive !== bPositive) return aPositive ? -1 : 1;
-  return 0;
+  const returnDifference = (b.holding_return_percent ?? -Infinity) - (a.holding_return_percent ?? -Infinity);
+  if (returnDifference !== 0) return returnDifference;
+
+  const coverageDifference = (b.coverage_percent ?? -Infinity) - (a.coverage_percent ?? -Infinity);
+  if (coverageDifference !== 0) return coverageDifference;
+
+  const aWinRate = a.comparables_total > 0 ? a.comparables_beaten / a.comparables_total : -Infinity;
+  const bWinRate = b.comparables_total > 0 ? b.comparables_beaten / b.comparables_total : -Infinity;
+  if (bWinRate !== aWinRate) return bWinRate - aWinRate;
+
+  return a.holding_ticker.localeCompare(b.holding_ticker);
 }
 
 export function buildOpportunitySortOrder(verdicts: HoldingVerdict[]): HoldingVerdict[] {

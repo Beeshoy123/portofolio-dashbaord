@@ -33,6 +33,7 @@ type Snapshot = {
   market_cap: number | string | null;
   sector_rank: number | null;
   beta: number | string | null;
+  fundamentals_raw_fetch_ok?: boolean | null;
 };
 
 type Candle = { date: string; open: number; high: number; low: number; close: number; volume?: number | null };
@@ -377,25 +378,25 @@ const GRID_GLOSSARY = {
   cautionReasons: {
     weak_performance: { en: 'Underperforming most peers on returns', ar: 'يحقق أداءً أقل من معظم النظراء' },
     insufficient_financial_health: { en: 'Fundamentals data not available for this holding type', ar: 'بيانات الأساسيات غير متاحة لهذا النوع من الحيازات' },
-    weak_technical: { en: 'Weak technical/chart signal', ar: 'إشارة فنية/بيانية ضعيفة' },
+    weak_technical: { en: 'Chart context only; not used for the final label', ar: 'سياق الرسم فقط؛ لا يُستخدم للتصنيف النهائي' },
     mixed_signals: { en: 'No single dominant issue — review the grid below', ar: 'لا توجد مشكلة مهيمنة واحدة — راجع شبكة التقييم أدناه' },
   },
   labels: {
     Excellent: {
-      en: 'Performance is strong and the financial-health and technical checks do not show a material weakness.',
-      ar: 'الأداء قوي ولا تظهر فحوصات الصحة المالية والفنية ضعفاً جوهرياً.',
+      en: 'Performance is strong and financial health does not show a material weakness. Chart Reader context is shown separately.',
+      ar: 'الأداء قوي ولا تظهر الصحة المالية ضعفاً جوهرياً. يظهر سياق قارئ الرسم بشكل منفصل.',
     },
     Solid: {
-      en: 'The holding passed the main checks, but one category did not clear the higher Excellent bar.',
-      ar: 'اجتازت الحيازة الفحوصات الأساسية، لكن إحدى الفئات لم تصل إلى مستوى ممتاز.',
+      en: 'The holding passed the performance and financial-health checks, but one category did not clear the higher Excellent bar.',
+      ar: 'اجتازت الحيازة فحوصات الأداء والصحة المالية، لكن إحدى الفئات لم تصل إلى مستوى ممتاز.',
     },
     Caution: {
       en: 'Performance is not enough on its own; the result includes a meaningful weakness that needs attention.',
       ar: 'الأداء وحده لا يكفي؛ تتضمن النتيجة نقطة ضعف مهمة تحتاج إلى الانتباه.',
     },
     Avoid: {
-      en: 'Financial Health or Technical shows a serious red flag. A good price return cannot override that warning.',
-      ar: 'تظهر الصحة المالية أو المؤشرات الفنية علامة حمراء خطيرة. لا يمكن لعائد سعري جيد تجاوز هذا التحذير.',
+      en: 'Financial Health shows a serious red flag. A good price return cannot override that warning; Chart Reader is context only.',
+      ar: 'تظهر الصحة المالية علامة حمراء خطيرة. لا يمكن لعائد سعري جيد تجاوز هذا التحذير؛ قارئ الرسم سياق فقط.',
     },
     'Insufficient Data': {
       en: 'There is not enough usable comparison data to support a reliable combined label.',
@@ -412,8 +413,8 @@ const GRID_GLOSSARY = {
       ar: 'تقارن الربحية والديون ونمو الإيرادات والسيولة والتدفق النقدي وتغير الأسهم بالنظراء.',
     },
     Technical: {
-      en: 'Reads the recent price chart for trend direction and warning patterns.',
-      ar: 'تقرأ الرسم البياني الحديث لمعرفة الاتجاه وأنماط التحذير.',
+      en: 'Describes recent trend direction and candle patterns. This heuristic is unvalidated and is not a trading signal.',
+      ar: 'يصف اتجاه الحركة الحديث وأنماط الشموع. هذا الاستدلال غير مُختبر وليس إشارة تداول.',
     },
   },
   reasons: {
@@ -439,8 +440,8 @@ const GRID_GLOSSARY = {
     },
   },
   cap: {
-    en: 'If Financial Health or Technical shows a serious red flag, the final label is capped at Avoid; a good price return alone cannot earn a high rating.',
-    ar: 'إذا أظهرت الصحة المالية أو المؤشرات الفنية علامة حمراء خطيرة، يتم تحديد التصنيف النهائي عند تجنب؛ لا يكفي عائد سعري جيد وحده للحصول على تصنيف مرتفع.',
+    en: 'A Financial Health red flag caps the final label at Avoid. Chart Reader observations do not determine the final label.',
+    ar: 'تحدد علامة الصحة المالية الحمراء التصنيف النهائي عند تجنب. لا يحدد قارئ الرسم التصنيف النهائي.',
   },
 } as const;
 
@@ -580,6 +581,13 @@ function metric(value: number | string | null | undefined, suffix = '') {
   if (value === null || value === undefined || value === '') return '—';
   const number = Number(value);
   return `${Number.isFinite(number) ? number.toFixed(2) : '—'}${suffix}`;
+}
+
+function unavailableMetricReason(entity: Snapshot, lang: Lang): string {
+  if (entity.fundamentals_raw_fetch_ok === false) {
+    return lang === 'ar' ? 'فشل جلب بيانات المصدر' : 'Fetch failed at source';
+  }
+  return lang === 'ar' ? 'غير متاح أو غير مُعلن من المصدر' : 'Unavailable or not reported by source';
 }
 
 function slugify(text: string): string {
@@ -831,6 +839,42 @@ function technicalRiskLabel(risk: TechnicalSignal['reversal_risk'], lang: Lang):
   return risk === 'none' ? 'None' : risk === 'watch' ? 'Watch' : 'Elevated';
 }
 
+function buildOpportunityExplanation(
+  candidate: { ticker: string; signal: string; return_percent: number | null; confidence_tier: 'high' | 'moderate' | 'low'; fundamentals_flags?: string[] },
+  verdict: Verdict | undefined,
+  rank: number,
+  lang: Lang,
+): string {
+  const periodText = verdict?.return_period === 'return_6m' ? 'six-month' : verdict?.return_period === 'return_3m' ? 'three-month' : 'one-year';
+  const returnText = candidate.return_percent === null ? (lang === 'ar' ? 'عائده غير متاح' : 'its return is unavailable') : `${candidate.return_percent.toFixed(1)}% over the ${periodText} comparison period`;
+  const peerText = verdict
+    ? `it beat ${verdict.comparables_beaten ?? 0} of ${verdict.comparables_total ?? 0} comparable assets, with ${verdict.coverage_percent?.toFixed(1) ?? 'unavailable'}% usable coverage`
+    : 'peer comparison details are unavailable';
+  const rankingText = `The ranking first favors ${candidate.confidence_tier} evidence, then stronger labels, higher returns, broader coverage, and better peer win rates. This is a relative comparison, not a forecast of the next price move.`;
+  const financialText = verdict?.financial_health_grade
+    ? verdict.financial_health_grade === 'Strong'
+      ? 'the financial-health check is strong, so the return result is not being presented without a basic business-quality check'
+      : verdict.financial_health_grade === 'Neutral'
+        ? 'the financial-health check is neutral, so the return result has no clear financial-quality support or warning'
+        : `the financial-health check is ${verdict.financial_health_grade.toLowerCase()}, which is a reason to investigate further`
+    : 'its financial-health check is unavailable';
+  const riskText = verdict?.holding_risk_tier
+    ? `the recorded risk tier is ${verdict.holding_risk_tier.toLowerCase()}; this describes the observed risk profile, not a promise that the asset is safe`
+    : 'its risk tier is unavailable';
+  const technicalText = verdict?.technical_grade === 'Insufficient Data' || !verdict?.technical_signal
+    ? 'Chart Reader context is unavailable, so this is not chart-confirmed.'
+    : `Chart Reader describes a ${verdict.technical_signal.trend}, but that remains descriptive context rather than a validated trading signal.`;
+  const concernText = candidate.fundamentals_flags?.length
+    ? `Review the fundamentals concern${candidate.fundamentals_flags.length === 1 ? '' : 's'} before acting: ${candidate.fundamentals_flags.join(', ')}.`
+    : 'No fundamentals concern was recorded in the available data.';
+
+  if (lang === 'ar') {
+    return `احتل ${candidate.ticker} المرتبة ${rank} لأن حكم المقارنة أعطاه تصنيف ${candidate.signal}، وحقق ${returnText}. يقارن الحكم عائد الفترة المحددة بأصول مشابهة، وقد تفوق على ${verdict?.comparables_beaten ?? 0} من أصل ${verdict?.comparables_total ?? 0} من النظراء. التغطية تعني نسبة النظراء الذين توفرت لهم بيانات قابلة للاستخدام، ولذلك فهي تخبرك بمدى اتساع الدليل، لا بمدى ضمان النتيجة. ${financialText}، و${riskText}. ${concernText} ${technicalText} الترتيب يساعدك على البحث، لكنه ليس توقعاً للسعر ولا قرار شراء تلقائياً.`;
+  }
+
+  return `${candidate.ticker} is ranked ${rank} because the deterministic Comparison Judge gave it a ${candidate.signal} result and ${returnText}. The Judge compares that period's return with similar assets; in this case, ${peerText}. Coverage means the share of comparable assets with usable data, so it tells you how broad the evidence is, not how guaranteed the result is. ${rankingText} In addition, ${financialText}, and ${riskText}. ${concernText} ${technicalText} The result is a reason to research the candidate, not an automatic buy recommendation.`;
+}
+
 function TechnicalEvidence({ signal, lang, open, onToggle }: { signal: TechnicalSignal | null; lang: Lang; open: boolean; onToggle: (open: boolean) => void }) {
   const [range, setRange] = useState(90);
   const candles = signal?.candles ?? [];
@@ -854,7 +898,6 @@ function TechnicalEvidence({ signal, lang, open, onToggle }: { signal: Technical
       <MiniCandleChart candles={visibleCandles} lang={lang} limit={visibleCandles.length || 1} full />
       <div className="ai-bot-technical-stats">
         <span><label>{lang === 'ar' ? 'الاتجاه' : 'Trend'}</label><b>{signal ? formatTrend(signal.trend, lang) : unavailableValue(lang)}</b></span>
-        <span><label>{lang === 'ar' ? 'الثقة' : 'Confidence'}</label><b>{signal?.confidence === null || signal?.confidence === undefined ? unavailableValue(lang) : `${(Math.abs(Number(signal.confidence)) <= 1 ? Number(signal.confidence) * 100 : Number(signal.confidence)).toFixed(0)}%`}</b></span>
         <span><label>{lang === 'ar' ? 'تاريخ الشمعة' : 'Candle date'}</label><b>{signal?.candle_date || unavailableValue(lang)}</b></span>
         <span><label>{lang === 'ar' ? 'مخاطر الانعكاس' : 'Reversal risk'}</label><b>{technicalRiskLabel(signal?.reversal_risk, lang)}</b></span>
         <span><label>{lang === 'ar' ? 'حالة الجلب الخام' : 'Raw fetch status'}</label><b>{signal?.raw_fetch_ok === undefined ? unavailableValue(lang) : signal.raw_fetch_ok ? (lang === 'ar' ? 'تم بنجاح' : 'Fetched') : (lang === 'ar' ? 'فشل الجلب' : 'Fetch failed')}</b></span>
@@ -1009,6 +1052,7 @@ export function AiBotWorkspace() {
   const [runId, setRunId] = useState<number | null>(null);
   const [pipelineDiagnostics, setPipelineDiagnostics] = useState<PipelineDiagnostics>({});
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedOpportunityTicker, setSelectedOpportunityTicker] = useState<string | null>(null);
   const [filterMode, setFilterMode] = useState<'held' | 'all'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -1337,8 +1381,9 @@ export function AiBotWorkspace() {
         if (tierWeight[b.confidence_tier] !== tierWeight[a.confidence_tier]) {
           return tierWeight[b.confidence_tier] - tierWeight[a.confidence_tier];
         }
-        if (a.absolute_return_positive === b.absolute_return_positive) return 0;
-        return a.absolute_return_positive ? -1 : 1;
+        if (a.signal !== b.signal) return a.signal === 'Excellent' ? -1 : 1;
+        if (a.return_percent !== b.return_percent) return (b.return_percent ?? -Infinity) - (a.return_percent ?? -Infinity);
+        return a.ticker.localeCompare(b.ticker);
       });
     }
     const strongUnheld = verdicts
@@ -1373,8 +1418,9 @@ export function AiBotWorkspace() {
         if (tierWeight[b.confidence_tier] !== tierWeight[a.confidence_tier]) {
           return tierWeight[b.confidence_tier] - tierWeight[a.confidence_tier];
         }
-        if (a.absolute_return_positive === b.absolute_return_positive) return 0;
-        return a.absolute_return_positive ? -1 : 1;
+        if (a.signal !== b.signal) return a.signal === 'Excellent' ? -1 : 1;
+        if (a.return_percent !== b.return_percent) return (b.return_percent ?? -Infinity) - (a.return_percent ?? -Infinity);
+        return a.ticker.localeCompare(b.ticker);
       });
     return strongUnheld;
   }, [opportunitiesData, verdicts, allEntities]);
@@ -1509,7 +1555,7 @@ export function AiBotWorkspace() {
           <div className="ai-bot-engine-header">
             <div>
               <h3>{lang === 'ar' ? 'المستشار الذكي' : 'Smart Advisor'}</h3>
-              <p>{lang === 'ar' ? 'التوصية النهائية بناءً على التحليل المكتمل.' : 'Final recommendation based on the completed analysis.'}</p>
+              <p>{lang === 'ar' ? 'شرح منظم لنتائج التحليل الحتمي.' : 'Structured explanation of deterministic analysis.'}</p>
             </div>
             <Brain />
           </div>
@@ -1658,7 +1704,7 @@ export function AiBotWorkspace() {
               {fundamentals.map(([label, value]) => (
                 <div key={label}>
                   <span>{label}</span>
-                  <strong>{value}</strong>
+                  <strong title={value === '—' ? unavailableMetricReason(entity!, lang) : undefined}>{value}</strong>
                 </div>
               ))}
             </div>
@@ -1883,10 +1929,10 @@ export function AiBotWorkspace() {
                     return (
                     <div className="ai-bot-grid-grade" key={category}>
                       <div className="ai-bot-grid-grade-label">
-                        <span>{categoryLabel}</span>
+                        <span>{category === 'Technical' ? (lang === 'ar' ? 'سياق الرسم' : 'Chart Context') : categoryLabel}</span>
                         <GlossaryHint text={isFundQuality ? FUND_QUALITY_GLOSSARY[lang] : GRID_GLOSSARY.categories[category][lang]} lang={lang} />
                       </div>
-                      <strong>{reasonText ?? formatSignal(grade, lang)}</strong>
+                      <strong>{category === 'Technical' ? (lang === 'ar' ? 'وصفي فقط' : 'Descriptive only') : reasonText ?? formatSignal(grade, lang)}</strong>
                       {isFundQuality && verdict.fund_quality_metrics && (
                         <small>{lang === 'ar'
                           ? `درجة الاتساق ${verdict.fund_quality_metrics.consistency_score.toFixed(1)} · درجة معيارية مقابل ${verdict.fund_quality_metrics.peer_count} صناديق ${verdict.fund_quality_metrics.peer_z_score.toFixed(2)}`
@@ -1908,8 +1954,8 @@ export function AiBotWorkspace() {
                     <strong>{lang === 'ar' ? 'تباعد فني:' : 'Technical Divergence:'}</strong>
                     <p>
                       {lang === 'ar'
-                        ? 'يتفوق هذا الأصل على نظرائه في العوائد، لكن الرسم البياني في مسار هابط. ترسل بيانات أداء النظراء وحركة السعر إشارات متضاربة — انتظر تأكيد الرسم البياني قبل اتخاذ قرار بناءً على التقييم القوي.'
-                        : 'This holding beats its peers on returns, but the price chart is in a downtrend. Peer performance data and price action are sending conflicting signals — wait for the chart to confirm before acting on the positive final label.'}
+                        ? 'يتفوق هذا الأصل على نظرائه في العوائد، لكن الرسم البياني في مسار هابط. تعرض بيانات الأداء وحركة السعر سياقاً مختلفاً — راجع ذلك كقرينة وصفية غير مختبرة، وليس كإشارة تداول.'
+                        : 'This holding beats its peers on returns, but the price chart is in a downtrend. Performance and price action provide different context; treat the chart as unvalidated description, not a trading signal.'}
                     </p>
                   </div>
                 </div>
@@ -2288,31 +2334,23 @@ export function AiBotWorkspace() {
                       {sectorConcentrationNote && (
                         <div
                           className="ai-bot-opportunity-context-note"
-                          style={{
-                            marginBottom: '10px',
-                            fontSize: '12px',
-                            opacity: 0.8,
-                            lineHeight: 1.4,
-                          }}
+                          style={{ marginBottom: '10px', lineHeight: 1.4 }}
                         >
                           {sectorConcentrationNote}
                         </div>
                       )}
                       <div className="ai-bot-opportunities-list">
-                        {opportunities.length > 0 ? opportunities.map((opp) => (
+                        {opportunities.length > 0 ? opportunities.map((opp, index) => {
+                          const candidateVerdict = verdicts.find((item) => item.holding_ticker === opp.ticker);
+                          return <div className="ai-bot-opportunity-entry" key={opp.ticker}>
                           <div
-                            key={opp.ticker}
                             className="ai-bot-opportunity-item"
                             style={{ cursor: 'pointer' }}
-                          onClick={() => {
-                            const targetIndex = allEntities.findIndex((e) => e.ticker.toUpperCase() === opp.ticker.toUpperCase());
-                            if (targetIndex !== -1) {
-                              setFilterMode('all');
-                              setSelectedIndex(targetIndex);
-                            }
-                          }}
-                          title={lang === 'ar' ? `عرض تحليل ${opp.ticker}` : `View ${opp.ticker} analysis`}
-                        >
+                            onClick={() => setSelectedOpportunityTicker((current) => current === opp.ticker ? null : opp.ticker)}
+                            aria-pressed={selectedOpportunityTicker === opp.ticker}
+                            title={lang === 'ar' ? `عرض تحليل ${opp.ticker}` : `View ${opp.ticker} analysis`}
+                          >
+                          <span className="ai-bot-opp-rank">#{index + 1}</span>
                           <span className="ai-bot-opp-ticker">{opp.ticker}</span>
                           <span className="ai-bot-opp-name">{translateEntityName(opp.name || opp.ticker, lang)}</span>
                           <span className={`ai-bot-opp-badge ai-bot-opp-badge--${opp.confidence_tier}`}>
@@ -2344,8 +2382,16 @@ export function AiBotWorkspace() {
                               {opp.fundamentals_flags.map((flag) => <VerdictFlagHint key={flag} flag={flag} lang={lang} />)}
                             </span>
                           )}
-                        </div>
-                        )) : <p className="comparison-pending-label">{lang === 'ar' ? 'لم يتم العثور على مرشحين ممتازين أو متينين غير محتفظ بهم في هذا التشغيل.' : 'No Excellent/Solid unheld candidates were detected for this run.'}</p>}
+                          </div>
+                          {selectedOpportunityTicker === opp.ticker && (
+                            <section className="ai-bot-opportunity-block ai-bot-opportunity-detail">
+                              <span className="ai-bot-educational-workflow-label">{lang === 'ar' ? 'سير عمل تعليمي' : 'Educational Workflow'}</span>
+                              <h5>{lang === 'ar' ? `تفاصيل ${opp.ticker}` : `${opp.ticker} Candidate Details`}</h5>
+                              <p className="ai-bot-opportunity-explanation">{buildOpportunityExplanation(opp, candidateVerdict, index + 1, lang)}</p>
+                            </section>
+                          )}
+                        </div>;
+                        }) : <p className="comparison-pending-label">{lang === 'ar' ? 'لم يتم العثور على مرشحين ممتازين أو متينين غير محتفظ بهم في هذا التشغيل.' : 'No Excellent/Solid unheld candidates were detected for this run.'}</p>}
                       </div>
                       <section className="ai-bot-opportunity-block">
                         <h5>{lang === 'ar' ? 'النظر في زيادة المركز' : 'Consider increasing'}</h5>
@@ -2362,32 +2408,11 @@ export function AiBotWorkspace() {
                               </div>
                             ))}
                           </div>
-                        ) : <p className="comparison-pending-label">{lang === 'ar' ? 'لا توجد مراكز محتفظ بها مؤهلة ضمن حد الحجم الحالي.' : 'No held positions meet the current sizing threshold.'}</p>}
+                        ) : <p className="comparison-pending-label">{lang === 'ar'
+                          ? 'لا توجد حيازة تحقق كل الشروط: تصنيف ممتاز أو متين، وزن معروف في المحفظة، ووزن أقل من 10٪. هذا مرشح للحجم وليس دليلاً على فشل التحليل.'
+                          : 'No held position meets all three sizing conditions: Excellent/Solid result, known portfolio weight, and weight below 10%. This is a sizing filter, not an analysis failure.'}</p>}
                       </section>
                       <div className="ai-bot-opportunity-workspace">
-                          <section className="ai-bot-opportunity-block">
-                            <h5>{lang === 'ar' ? 'تفاصيل المرشحين غير المحتفظ بهم' : 'Unheld Candidate Details'}</h5>
-                            <div className="ai-bot-opportunity-table-wrap">
-                              <table>
-                                <thead><tr><th>{lang === 'ar' ? 'الرمز' : 'Ticker'}</th><th>{lang === 'ar' ? 'الاسم' : 'Name'}</th><th>{lang === 'ar' ? 'التصنيف' : 'Grade'}</th><th>{lang === 'ar' ? 'العائد' : 'Return'}</th><th>{lang === 'ar' ? 'التغطية' : 'Coverage'}</th><th>{lang === 'ar' ? 'النظراء' : 'Peers'}</th><th>{lang === 'ar' ? 'فني' : 'Technical'}</th><th>{lang === 'ar' ? 'الصحة المالية' : 'Financial health'}</th><th>{lang === 'ar' ? 'المخاطر' : 'Risk'}</th><th>{lang === 'ar' ? 'قيمة المحفظة' : 'Portfolio value'}</th><th>{lang === 'ar' ? 'الوزن' : 'Weight'}</th><th>{lang === 'ar' ? 'الحالة' : 'Status'}</th><th>{lang === 'ar' ? 'مخاوف الأساسيات' : 'Fundamentals flags'}</th></tr></thead>
-                                <tbody>{opportunitiesData.strong_unheld.map((candidate) => { const matchedVerdict = verdicts.find((item) => item.holding_ticker === candidate.holding_ticker); const technical = matchedVerdict?.technical_signal; const flags = matchedVerdict?.holding_fundamentals?.flags ?? []; return <tr key={candidate.holding_ticker}>
-                                  <td><b>{candidate.holding_ticker}</b></td>
-                                  <td>{translateEntityName(candidate.holding_name, lang)}</td>
-                                  <td>{candidate.signal || unavailableValue(lang)}</td>
-                                  <td className={candidate.holding_return_percent !== null && candidate.holding_return_percent >= 0 ? 'ai-positive' : 'ai-negative'}>{candidate.holding_return_percent === null ? unavailableValue(lang) : `${Number(candidate.holding_return_percent).toFixed(1)}%`}</td>
-                                  <td>{matchedVerdict?.coverage_percent === null || matchedVerdict?.coverage_percent === undefined ? unavailableValue(lang) : `${Number(matchedVerdict.coverage_percent).toFixed(1)}%`}</td>
-                                  <td>{matchedVerdict ? `${matchedVerdict.comparables_beaten ?? 0}/${matchedVerdict.comparables_total ?? 0}` : unavailableValue(lang)}</td>
-                                  <td>{matchedVerdict?.technical_grade || unavailableValue(lang)}{technical ? ` · ${technical.trend}` : ''}{technical?.confidence !== null && technical?.confidence !== undefined ? ` · ${Math.round(Number(technical.confidence) * 100)}%` : ''}{technical?.reversal_risk ? ` · ${technical.reversal_risk}` : ''}{technical?.patterns?.length ? ` · ${technical.patterns.map((pattern) => pattern.name).join(', ')}` : ''}</td>
-                                  <td>{matchedVerdict?.financial_health_grade || unavailableValue(lang)}</td>
-                                  <td><RiskTierHint tier={matchedVerdict?.holding_risk_tier || candidate.risk_tier} lang={lang} /></td>
-                                  <td>{matchedVerdict?.holding_current_value_egp === null || matchedVerdict?.holding_current_value_egp === undefined ? unavailableValue(lang) : `${Number(matchedVerdict.holding_current_value_egp).toLocaleString()} EGP`}</td>
-                                  <td>{matchedVerdict?.holding_portfolio_weight_percent === null || matchedVerdict?.holding_portfolio_weight_percent === undefined ? unavailableValue(lang) : `${Number(matchedVerdict.holding_portfolio_weight_percent).toFixed(1)}%`}</td>
-                                  <td>{matchedVerdict?.data_quality?.holding_snapshot_status || unavailableValue(lang)}{matchedVerdict?.data_quality?.holding_snapshot_age_hours !== null && matchedVerdict?.data_quality?.holding_snapshot_age_hours !== undefined ? ` · ${Number(matchedVerdict.data_quality.holding_snapshot_age_hours).toFixed(0)}h` : ''}{matchedVerdict?.data_completeness_warning ? ' · incomplete' : ''}{matchedVerdict?.flags?.length ? ` · ${matchedVerdict.flags.join(', ')}` : ''}</td>
-                                  <td>{flags.length ? flags.map((flag) => <span key={flag.flag}>{getVerdictFlagMeta(flag.flag, lang).label}{flag.detail ? `: ${flag.detail}` : ''} <VerdictFlagHint flag={flag.flag} lang={lang} /></span>) : candidate.fundamentals_flags?.length ? candidate.fundamentals_flags.map((flag) => <span key={flag}>{getVerdictFlagMeta(flag, lang).label} <VerdictFlagHint flag={flag} lang={lang} /></span>) : unavailableValue(lang)}</td>
-                                </tr>; })}</tbody>
-                              </table>
-                            </div>
-                          </section>
                           <div className="ai-bot-opportunity-analysis-grid">
                             <section className="ai-bot-opportunity-block">
                               <h5>{lang === 'ar' ? 'فجوات وتركيز القطاعات' : 'Sector Gaps & Concentration'}</h5>
@@ -2554,8 +2579,8 @@ export function AiBotWorkspace() {
                     </div>
                     <p className="ai-bot-verdict-caption">
                       {lang === 'ar'
-                        ? 'توصية تنفيذية مُصاغة من مقارنة أداء النظراء وأدلة الرسم البياني ومستوى تحمل المخاطر.'
-                        : 'Action recommendation synthesized from relative peer performance, chart evidence, and portfolio risk tolerance.'}
+                        ? 'شرح احتمالي لنتائج حكم المقارنة الحتمي، وليس تحليلاً مالياً مستقلاً أو ضماناً للنتائج.'
+                        : 'Probabilistic explanation of the deterministic Comparison Judge, not independent financial analysis or a guarantee.'}
                     </p>
                   </div>
                 );
@@ -2600,7 +2625,7 @@ export function AiBotWorkspace() {
                 )}
 
                 <small className="ai-bot-summary-meta">
-                  {formatModelName(recommendation.model_used, lang)} · {new Date(recommendation.generated_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
+                  {lang === 'ar' ? 'طبقة شرح مولدة بالذكاء الاصطناعي' : 'AI-generated explanation layer'} · {formatModelName(recommendation.model_used, lang)} · {new Date(recommendation.generated_at).toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US')}
                 </small>
               </div>
 

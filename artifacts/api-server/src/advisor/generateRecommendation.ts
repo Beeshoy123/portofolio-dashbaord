@@ -193,12 +193,6 @@ function parseStructuredResponse(text: string): StructuredAdvisorResult {
 }
 
 function isStructuredAdvisorResult(value: unknown): value is StructuredAdvisorResult {
-  // NOTE: The confidence field has a prompt-enforced ceiling based on data quality
-  // (see rule 13 in SYSTEM_INSTRUCTIONS: 0-2 comparables => ≤40, 3-5 comparables => ≤65,
-  // 6+ comparables => no ceiling). Similarly, consider_entry is only for unheld holdings
-  // as instructed in prompt rules. This validation only checks schema shape and ranges.
-  // Gemini may still violate prompt-level constraints — consider adding post-parse clamps
-  // if violations become a problem, but for now we rely on prompt enforcement.
   if (!value || typeof value !== "object") return false;
   const result = value as Record<string, unknown>;
   const isTextArray = (entry: unknown, maxLength: number) =>
@@ -220,6 +214,73 @@ function isStructuredAdvisorResult(value: unknown): value is StructuredAdvisorRe
     && typeof result.watch_trigger === "string" && result.watch_trigger.length <= 600
     && isTextArray(result.do_not_act_reasons, 6)
   );
+}
+
+function normalizeAdvisorResult(
+  result: StructuredAdvisorResult,
+  verdict: HoldingVerdict,
+): StructuredAdvisorResult {
+  const usableComparables = verdict.data_quality.comparable_with_return_count;
+  const confidenceCap = usableComparables <= 2 ? 40 : usableComparables <= 5 ? 65 : 100;
+  let decision = result.decision;
+
+  if (decision === "consider_entry" && (verdict.is_held || !["Excellent", "Solid"].includes(verdict.signal))) {
+    decision = "watch_and_wait";
+  }
+  if (decision === "consider_rotation" && (!verdict.is_held || !verdict.flags.includes("underperforming_comparables"))) {
+    decision = "watch_and_wait";
+  }
+  if (decision === "hold" && ["Caution", "Avoid", "Insufficient Data"].includes(verdict.signal)) {
+    decision = "watch_and_wait";
+  }
+
+  const watchTrigger = decision === "watch_and_wait" || decision === "consider_rotation"
+    ? result.watch_trigger.trim() || "Review the next scheduled bot run against the same comparison data."
+    : "";
+  const doNotActReasons = decision === "watch_and_wait" || decision === "hold"
+    ? result.do_not_act_reasons.length > 0
+      ? result.do_not_act_reasons
+      : ["The deterministic Comparison Judge remains the source of the underlying decision."]
+    : [];
+
+  return {
+    ...result,
+    decision,
+    confidence: Math.min(result.confidence, confidenceCap),
+    watch_trigger: watchTrigger,
+    do_not_act_reasons: doNotActReasons,
+  };
+}
+
+function deterministicAdvisorFallback(verdict: HoldingVerdict): StructuredAdvisorResult {
+  const comparableCount = verdict.data_quality.comparable_with_return_count;
+  const confidence = Math.min(comparableCount <= 2 ? 40 : comparableCount <= 5 ? 65 : 80, 100);
+  let decision: StructuredAdvisorResult["decision"];
+  if (verdict.is_held) {
+    decision = ["Caution", "Avoid", "Insufficient Data"].includes(verdict.signal) ? "watch_and_wait" : "hold";
+  } else {
+    decision = ["Excellent", "Solid"].includes(verdict.signal) ? "consider_entry" : "watch_and_wait";
+  }
+  const review = decision === "watch_and_wait"
+    ? "Review the next scheduled bot run against the same comparison data."
+    : "";
+
+  return {
+    decision,
+    confidence,
+    summary: `The deterministic Comparison Judge currently labels ${verdict.holding_ticker} as ${verdict.signal}. Smart Advisor narrative was unavailable for this run, so this is a structured data summary rather than an independent financial analysis.`,
+    thesis_risk: "The language-model explanation was unavailable; use the deterministic verdict and its data-quality fields as the source of truth.",
+    evidence: [
+      `Comparison Judge signal: ${verdict.signal}.`,
+      `${comparableCount} comparable entities had usable returns.`,
+    ],
+    risks: verdict.flags.length > 0 ? verdict.flags.slice(0, 6) : ["No additional diagnostic flags were recorded."],
+    next_review_days: 14,
+    watch_trigger: review,
+    do_not_act_reasons: decision === "hold" || decision === "watch_and_wait"
+      ? ["The deterministic Comparison Judge remains the source of the underlying decision."]
+      : [],
+  };
 }
 
 export async function generateRecommendation(
@@ -351,14 +412,22 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
     );
   }
 
-  const structured = parseStructuredResponse(text);
+  let structured: StructuredAdvisorResult;
+  let outputModel = selectedModel;
+  try {
+    structured = normalizeAdvisorResult(parseStructuredResponse(text), verdict);
+  } catch (error) {
+    console.warn(`[Smart Advisor] ${selectedModel} returned unusable JSON; using deterministic fallback`, error);
+    structured = deterministicAdvisorFallback(verdict);
+    outputModel = "deterministic-fallback";
+  }
   const recommendationText = structured.summary;
 
   return {
     holding_ticker: verdict.holding_ticker,
     recommendation_text: recommendationText,
     generated_at: new Date().toISOString(),
-    model_used: selectedModel,
+    model_used: outputModel,
     structured,
   };
 }

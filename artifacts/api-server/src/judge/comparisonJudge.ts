@@ -164,13 +164,12 @@ export function combineIntoFinalLabel(
   financialHealthGrade: "Red Flag" | "Weak" | "Strong" | "Neutral" | "Insufficient Data",
   technicalGrade: TechnicalGrade,
 ): "Excellent" | "Solid" | "Caution" | "Avoid" | "Insufficient Data" {
+  void technicalGrade;
   if (performanceGrade === "Insufficient Data") {
     return "Insufficient Data";
   }
 
-  // Disqualification cap: a serious weakness in the business or chart should
-  // never be hidden by an otherwise strong return profile.
-  if (financialHealthGrade === "Red Flag" || technicalGrade === "Red Flag") {
+  if (financialHealthGrade === "Red Flag") {
     return "Avoid";
   }
 
@@ -178,8 +177,6 @@ export function combineIntoFinalLabel(
     performanceGrade === "Strong"
     && financialHealthGrade !== "Weak"
     && financialHealthGrade !== "Insufficient Data"
-    && technicalGrade !== "Weak"
-    && technicalGrade !== "Insufficient Data"
   ) {
     return "Excellent";
   }
@@ -191,15 +188,10 @@ export function combineIntoFinalLabel(
     return "Solid";
   }
 
-  if (
-    performanceGrade === "Strong"
-    && (financialHealthGrade === "Weak" || technicalGrade === "Weak")
-  ) {
+  if (performanceGrade === "Strong" && financialHealthGrade === "Weak") {
     return "Caution";
   }
 
-  // Policy question: keep Weak performance as Caution unless we decide it should escalate to Avoid.
-  // Current design: only Financial Health or Technical Red Flag can produce Avoid.
   return "Caution";
 }
 
@@ -248,13 +240,10 @@ function numeric(value: string | number | null): number | null {
 
 function returnFor(snapshot: SnapshotRow | undefined, period: ReturnPeriod): number | null {
   if (!snapshot) return null;
-  if (period === "return_1y") {
-    return numeric(snapshot.return_1y_percent) ?? numeric(snapshot.return_ytd_percent);
-  }
-  if (period === "return_6m" || period === "return_3m") {
-    return numeric(snapshot.return_30d_percent) ?? numeric(snapshot.return_ytd_percent);
-  }
-  return numeric(snapshot.return_1y_percent) ?? numeric(snapshot.return_ytd_percent);
+  if (period === "return_1y") return numeric(snapshot.return_1y_percent);
+  // Exact 3M/6M source columns are not available yet. Keep these periods
+  // unavailable instead of substituting a shorter or different period.
+  return null;
 }
 
 function riskTier(riskLevel: string | null): "Low" | "Medium" | "High" | null {
@@ -315,12 +304,14 @@ async function getWatchlistRows(): Promise<WatchlistRow[]> {
         `SELECT cw.id, cw.ticker, cw.name, cw.entity_type, cw.sector, cw.manager,
           cw.funds_table_key,
           CASE
-            WHEN cw.funds_table_key IS NOT NULL THEN COALESCE(f.units_held, 0) > 0
+            WHEN f.id IS NOT NULL THEN COALESCE(f.units_held, 0) > 0
             ELSE cw.is_held
           END AS is_held,
           cw.portfolio_bucket, f.units_held, f.nav AS fund_nav
      FROM comparison_watchlist cw
-     LEFT JOIN funds f ON f.key = cw.funds_table_key
+     LEFT JOIN funds f
+       ON f.key = cw.funds_table_key
+       OR (cw.entity_type = 'stock' AND lower(f.ticker) = lower(cw.ticker) AND f.holding_type = 'stock')
      ORDER BY cw.entity_type, cw.ticker`,
   );
   return result.rows;
@@ -424,8 +415,10 @@ async function getPortfolioValueBreakdown(): Promise<{ totalValueEgp: number; by
     `SELECT cw.ticker,
             COALESCE(f.units_held, 0) * COALESCE(f.nav, 0) AS current_value_egp
        FROM comparison_watchlist cw
-       LEFT JOIN funds f ON f.key = cw.funds_table_key
-      WHERE cw.funds_table_key IS NOT NULL
+       LEFT JOIN funds f
+         ON f.key = cw.funds_table_key
+         OR (cw.entity_type = 'stock' AND lower(f.ticker) = lower(cw.ticker) AND f.holding_type = 'stock')
+      WHERE (cw.funds_table_key IS NOT NULL OR cw.entity_type = 'stock')
         AND COALESCE(f.units_held, 0) > 0
         AND f.nav IS NOT NULL`
   );

@@ -205,6 +205,16 @@ results without recording secrets or real portfolio values.
 - 2026-09-11: Verified the startup blocker was a stale generated Zod schema (`zod.int()` in `lib/api-zod/src/generated/api.ts`), not a bad database configuration; after replacing it with `zod.number().int()` and rebuilding the API bundle, the backend started successfully with the Supabase host `aws-1-eu-west-1.pooler.supabase.com` on port `8080` and the frontend served the dashboard at `http://localhost:3001/`.
 - 2026-09-12: Removed the inactive `ESRS` / `Ezz Steel` watchlist row from the source migration files and the live `comparison_watchlist` table so it no longer participates in the active EGX stock set. The app-specific translation label remains only as a legacy display fallback, not as an active watchlist entity.
 - 2026-09-12: Added the authenticated read-only `/api/ai-bot/diagnostics` endpoint and the AI Insights bell popover beside Refresh prices; verified live diagnostics against the Supabase-backed API on port `8080` and frontend on port `3001`.
+- 2026-09-12: Startup verified after reading this file first: the backend loaded the root secrets file, selected the Supabase pooler host, and listened on port `8080`; the existing Vite frontend served port `3001`. Frontend and API health checks returned `200`. The backend logged a non-fatal persisted-opportunity query warning because the live `advisor_opportunities` table lacks `sort_rank`; no credentials or financial values were recorded.
+- 2026-09-12: Added migration `027_advisor_opportunity_sort_rank.sql` to repair the live opportunity table mismatch; it adds the missing nullable `sort_rank` column and supporting index idempotently.
+- 2026-09-12: Applied migration `027_advisor_opportunity_sort_rank.sql` to the Supabase pooler; verified the live `advisor_opportunities.sort_rank` column exists. Temporary migration verifier was deleted immediately.
+- 2026-09-12: Run 50 diagnostics showed Chart Reader rejected valid Yahoo `MUTUALFUND` and `INDEX` metadata and Smart Advisor failed on malformed model JSON. Chart Reader now accepts `EQUITY`, `MUTUALFUND`, and `INDEX` instruments with EGP currency; Smart Advisor now uses a deterministic structured fallback when provider output is not valid JSON. API bundle rebuilt and restarted on Supabase port `8080`.
+- 2026-09-12: Opportunity Scanner ranking was corrected across backend output, summary cards, and candidate details: confidence tier, final signal quality, return, coverage, win rate, then ticker are now deterministic tie-breakers. API typecheck/build passed and the rebuilt backend restarted on port `8080`; the portfolio package still has an unrelated pre-existing `StageCounts` type error in `dashboardBehavior.ts`.
+- 2026-09-12: Fixed the `StageCounts` declaration in `artifacts/portfolio/src/lib/dashboardBehavior.ts`; the full workspace `typecheck` now passes across API, portfolio, mockup, and scripts.
+- 2026-09-12: ESRS / Ezz Steel had been reinserted into the live `comparison_watchlist` despite being absent from the source seed. Added and applied migration `028_remove_esrs_watchlist_row.sql`, including cleanup of its historical snapshots, fundamentals, and verdict rows; verified no live ESRS watchlist row remains.
+- 2026-09-12: Backend diagnostics now classify rows as `needs_review` versus `expected_unavailable`; the notification badge counts only serious pipeline cases while source-reported gaps remain available under a separate filter. API rebuilt and restarted on Supabase port `8080`.
+- 2026-09-12: Clarified Run 50 diagnostics: Price Checker succeeded for all 62 entities; the historical 0/39 Chart Reader result represents the older Yahoo/StockAnalysis failure before Yahoo accepted `MUTUALFUND` and `INDEX` metadata. New runs are required to measure the Chart Reader fix.
+- 2026-09-12: Corrected diagnostic stage applicability: unheld entities are not expected to have Comparison Judge or Smart Advisor rows, and entities without a Yahoo mapping are not expected to have Chart Reader rows. These are no longer reported as serious missing-stage failures; genuine failures remain visible.
 
 ## Stack
 
@@ -515,8 +525,9 @@ for it. Do not use the overlapping legacy SQL under
 | 023   | `migrations/023_portfolio_summary_final_labels.sql`  | Summary final-label buckets    |
 | 024   | `migrations/024_bot_run_stage_diagnostics.sql`       | Bot stage diagnostics          |
 | 025   | `migrations/025_technical_range_levels.sql`          | Chart Reader range levels      |
+| 027   | `migrations/027_advisor_opportunity_sort_rank.sql`   | Advisor opportunity ordering  |
 
-For a fresh database, execute `001`, `002`, `004`, then `005` through `025`
+For a fresh database, execute `001`, `002`, `004`, then `005` through `027` (there is no `003` or `026` root migration)
 in that order. Existing databases should be checked with
 `information_schema` after applying any missing file. All migration statements
 are intended to be additive and use `IF NOT EXISTS` where appropriate.

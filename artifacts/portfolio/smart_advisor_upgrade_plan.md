@@ -48,7 +48,7 @@ graph TD
   - `Watch and Wait` — Signal ambiguity or pending data warrants waiting.
   - `Hold` — Healthy position meeting thesis expectations.
 - **Confidence Rating:** Numerical score ($0\text{--}100\%$) indicating data grounding and statistical conviction.
-- **Educational Caption:** *"Action recommendation synthesized from relative peer performance, chart evidence, and portfolio risk tolerance."*
+- **Educational Caption:** *"AI-generated explanation of deterministic peer-performance and risk outputs; not independent financial analysis."*
 
 ### Feature 2 — Recommendation Core Synthesis
 - **What it is:** The AI-generated advisory narrative explaining the core thesis for the selected asset, with model name and generation timestamp.

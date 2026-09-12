@@ -86,7 +86,8 @@ router.get("/scraper/snapshots", async (req, res) => {
         f.current_ratio,
         f.revenue_growth_percent,
         f.dividend_yield_percent,
-        f.beta
+        f.beta,
+        f.raw_fetch_ok AS fundamentals_raw_fetch_ok
       FROM comparison_watchlist w
       LEFT JOIN LATERAL (
         SELECT * FROM comparison_snapshots cs
@@ -98,11 +99,11 @@ router.get("/scraper/snapshots", async (req, res) => {
         LIMIT 1
       ) s ON true
       LEFT JOIN LATERAL (
-        SELECT pe_ratio, forward_pe, roe_percent, debt_to_equity,
-               current_ratio, revenue_growth_percent, dividend_yield_percent, beta
+           SELECT pe_ratio, forward_pe, roe_percent, debt_to_equity,
+             current_ratio, revenue_growth_percent, dividend_yield_percent, beta,
+             sf.raw_fetch_ok
         FROM stock_fundamentals sf
-        WHERE sf.watchlist_id = w.id
-          AND sf.raw_fetch_ok = true
+         WHERE sf.watchlist_id = w.id
           AND sf.fetched_at >= now() - interval '30 days'
           AND ($1::bigint IS NULL OR sf.run_id = $1::bigint)
         ORDER BY sf.fetched_at DESC

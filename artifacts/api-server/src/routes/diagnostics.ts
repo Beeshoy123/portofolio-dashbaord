@@ -3,6 +3,7 @@ import { pool } from "../lib/dbPool";
 import { diagnoseEntity, type DiagnosticEntityRow } from "./diagnosticLogic";
 
 const router = Router();
+type DiagnosticState = "complete" | "partial" | "missing" | "dash";
 
 type RunRow = {
   id: number;
@@ -64,7 +65,7 @@ router.get("/ai-bot/diagnostics", async (req, res) => {
          WHERE run_id = $1
          ORDER BY watchlist_id, generated_at DESC
        )
-       SELECT cw.id, cw.ticker, cw.name, cw.entity_type, cw.is_held,
+      SELECT cw.id, cw.ticker, cw.name, cw.entity_type, cw.is_held, cw.yahoo_ticker,
          s.id AS snapshot_id, s.raw_fetch_ok AS snapshot_raw_fetch_ok, s.nav_or_price AS snapshot_value,
          t.id AS technical_id, t.raw_fetch_ok AS technical_raw_fetch_ok, t.trend AS technical_trend,
          v.id AS verdict_id, v.raw_verdict,
@@ -84,9 +85,10 @@ router.get("/ai-bot/diagnostics", async (req, res) => {
     const chartReaderMessages = Array.isArray(run.stage_errors?.chartReader) ? run.stage_errors.chartReader : [];
     const entities = entityResult.rows.map((entity) => diagnoseEntity(entity, chartReaderMessages));
     const counts = entities.reduce((result, entity) => {
-      result[entity.state]++;
+      if (entity.state !== "complete") result[entity.state]++;
+      result[entity.severity]++;
       return result;
-    }, { complete: 0, partial: 0, missing: 0, dash: 0 } as Record<DiagnosticState, number>);
+    }, { complete: 0, partial: 0, missing: 0, dash: 0, expected_unavailable: 0, needs_review: 0 } as Record<DiagnosticState | "expected_unavailable" | "needs_review", number>);
 
     res.json({
       run: {

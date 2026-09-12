@@ -25,16 +25,19 @@ export interface DashboardCallbacks {
 }
 
 type WindowFns = Record<string, unknown>;
+type StageCounts = { succeeded: number; failed: number; total: number };
 type DiagnosticEntity = {
   ticker: string;
   name: string;
   entity_type: string;
   is_held: boolean;
+  yahoo_ticker: string | null;
   state: 'complete' | 'partial' | 'missing' | 'dash';
+  severity: 'complete' | 'expected_unavailable' | 'needs_review';
   reason: string;
   missing_fields: string[];
   dash_fields: string[];
-  stages: Record<string, { present: boolean; usable: boolean }>;
+  stages: Record<string, { applicable: boolean; present: boolean; usable: boolean }>;
 };
 type DiagnosticResponse = {
   run: {
@@ -46,7 +49,7 @@ type DiagnosticResponse = {
     stage_counts: Record<string, StageCounts>;
     stage_errors: Record<string, string[]>;
   };
-  summary: { entity_count: number; complete: number; partial: number; missing: number; dash: number };
+  summary: { entity_count: number; complete: number; partial: number; missing: number; dash: number; expected_unavailable: number; needs_review: number };
   entities: DiagnosticEntity[];
 };
 
@@ -160,17 +163,16 @@ export function initDashboardBehavior(
     const badge = el('ai-diagnostics-badge');
     if (!content || !badge) return;
 
-    const incompleteCount = data.summary.partial + data.summary.missing + data.summary.dash;
-    badge.textContent = String(incompleteCount);
-    badge.style.display = incompleteCount > 0 ? 'block' : 'none';
+    badge.textContent = String(data.summary.needs_review);
+    badge.style.display = data.summary.needs_review > 0 ? 'block' : 'none';
     const statusLabel = data.run.status === 'completed'
       ? (currentLang === 'ar' ? 'مكتمل' : 'Completed')
       : data.run.status === 'partial'
         ? (currentLang === 'ar' ? 'جزئي' : 'Partial')
         : data.run.status;
-    const stateLabel: Record<DiagnosticEntity['state'], string> = currentLang === 'ar'
-      ? { complete: 'مكتمل', partial: 'جزئي', missing: 'مفقود', dash: 'شرطة / قيمة مفقودة' }
-      : { complete: 'Complete', partial: 'Partial', missing: 'Missing', dash: 'Dash / unavailable' };
+    const severityLabel = currentLang === 'ar'
+      ? { complete: 'مكتمل', expected_unavailable: 'غير متاح من المصدر', needs_review: 'يحتاج مراجعة' }
+      : { complete: 'Complete', expected_unavailable: 'Expected unavailable', needs_review: 'Needs review' };
     const stageLabels: Record<string, string> = {
       priceChecker: currentLang === 'ar' ? 'الأسعار' : 'Prices',
       chartReader: currentLang === 'ar' ? 'الرسم البياني' : 'Chart Reader',
@@ -181,26 +183,80 @@ export function initDashboardBehavior(
     const stageMarkup = Object.entries(data.run.stage_counts).map(([stage, counts]) =>
       `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--edge)"><span>${escapeHtml(stageLabels[stage] ?? stage)}</span><b>${counts.succeeded}/${counts.total} ${currentLang === 'ar' ? 'نجح' : 'succeeded'}${counts.failed ? ` · ${counts.failed} ${currentLang === 'ar' ? 'فشل' : 'failed'}` : ''}</b></div>`,
     ).join('');
+    const classifyDiagnosticError = (error: string): string => error.includes('StockAnalysis history HTTP 403')
+      ? 'StockAnalysis blocked access'
+      : error.includes('Yahoo instrument type')
+        ? 'Yahoo unsupported instrument type'
+        : error.includes('Yahoo currency')
+          ? 'Yahoo unknown currency'
+          : error.includes('invalid JSON')
+            ? 'AI provider invalid JSON'
+            : error.includes('HTTP 404')
+              ? 'Yahoo symbol not found'
+              : 'Other stage error';
+    const stageFailureSummary = (stage: string): string | null => {
+      const counts = data.run.stage_counts[stage];
+      if (!counts || counts.failed === 0) return null;
+      const errors = data.run.stage_errors?.[stage] ?? [];
+      const grouped = new Map<string, number>();
+      for (const error of errors) {
+        const category = classifyDiagnosticError(error);
+        grouped.set(category, (grouped.get(category) ?? 0) + 1);
+      }
+      const causes = [...grouped.entries()].slice(0, 3).map(([cause, count]) => `${cause}${count > 1 ? ` (${count})` : ''}`);
+      return `${stageLabels[stage] ?? stage}: ${counts.succeeded}/${counts.total} succeeded${causes.length ? `; ${causes.join('; ')}` : ''}.`;
+    };
+    const rootCauseLines = Object.keys(data.run.stage_counts)
+      .map(stageFailureSummary)
+      .filter((line): line is string => Boolean(line));
+    const groupedCauses = new Map<string, number>();
+    for (const error of Object.values(data.run.stage_errors ?? {}).flat()) {
+      const cause = classifyDiagnosticError(error);
+      groupedCauses.set(cause, (groupedCauses.get(cause) ?? 0) + 1);
+    }
+    const missingMappingCount = data.entities.filter((entity) => !entity.yahoo_ticker).length;
+    if (missingMappingCount > 0) groupedCauses.set('Missing Yahoo source mapping', missingMappingCount);
+    const groupedCauseMarkup = [...groupedCauses.entries()]
+      .sort((left, right) => right[1] - left[1])
+      .map(([cause, count]) => `<span style="display:inline-block;margin:4px 4px 0 0;padding:4px 6px;border:1px solid var(--edge);border-radius:5px;color:var(--dim)">${escapeHtml(cause)}: <b style="color:var(--ink)">${count}</b></span>`)
+      .join('');
+    const completedStageLines = ['priceChecker', 'chartReader', 'comparisonJudge', 'alerts', 'smartAdvisor']
+      .map((stage) => {
+        const counts = data.run.stage_counts[stage];
+        return counts && counts.failed === 0 && counts.total > 0
+          ? `${stageLabels[stage] ?? stage} ${counts.succeeded}/${counts.total}`
+          : null;
+      })
+      .filter((line): line is string => Boolean(line));
+    const rootCauseSummary = rootCauseLines.length === 0
+      ? (currentLang === 'ar' ? 'اكتملت المراحل المسجلة دون أخطاء.' : 'All recorded stages completed without reported failures.')
+      : `${currentLang === 'ar' ? 'التشغيل جزئي.' : 'This run is partial.'} ${rootCauseLines.join(' ')}${completedStageLines.length ? ` ${currentLang === 'ar' ? 'المراحل المكتملة:' : 'Completed stages:'} ${completedStageLines.join(', ')}.` : ''}`;
+    const failedChartTickers = data.entities
+      .filter((entity) => entity.stages.technical.applicable && !entity.stages.technical.usable)
+      .map((entity) => entity.ticker);
+    const retryMarkup = `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px"><button type="button" data-doctor-action="retry-chart" ${failedChartTickers.length === 0 ? 'disabled' : ''} style="border:1px solid var(--warning-border);border-radius:6px;padding:5px 8px;background:transparent;color:var(--ink);font-size:9px;font-weight:700;cursor:${failedChartTickers.length === 0 ? 'not-allowed' : 'pointer'}">${currentLang === 'ar' ? 'إعادة محاولة قارئ الرسم' : `Retry Chart Reader${failedChartTickers.length ? ` (${failedChartTickers.length})` : ''}`}</button><button type="button" data-doctor-action="retry-full" style="border:1px solid var(--accent);border-radius:6px;padding:5px 8px;background:transparent;color:var(--ink);font-size:9px;font-weight:700;cursor:pointer">${currentLang === 'ar' ? 'بدء تشغيل كامل جديد' : 'Start new full run'}</button></div>`;
     const entityFilter = (entity: DiagnosticEntity): boolean => {
       const search = diagnosticSearch.trim().toLowerCase();
       const matchesSearch = !search || `${entity.ticker} ${entity.name}`.toLowerCase().includes(search);
       if (!matchesSearch) return false;
-      if (diagnosticStageFilter === 'issues') return entity.state !== 'complete';
-      if (diagnosticStageFilter === 'priceChecker') return !entity.stages.snapshot.usable;
-      if (diagnosticStageFilter === 'chartReader') return !entity.stages.technical.usable;
-      if (diagnosticStageFilter === 'comparisonJudge') return !entity.stages.verdict.usable;
-      if (diagnosticStageFilter === 'smartAdvisor') return !entity.stages.advisor.usable;
+      if (diagnosticStageFilter === 'needsReview') return entity.severity === 'needs_review';
+      if (diagnosticStageFilter === 'expectedUnavailable') return entity.severity === 'expected_unavailable';
+      if (diagnosticStageFilter === 'priceChecker') return entity.stages.snapshot.applicable && !entity.stages.snapshot.usable;
+      if (diagnosticStageFilter === 'chartReader') return entity.stages.technical.applicable && !entity.stages.technical.usable;
+      if (diagnosticStageFilter === 'comparisonJudge') return entity.stages.verdict.applicable && !entity.stages.verdict.usable;
+      if (diagnosticStageFilter === 'smartAdvisor') return entity.stages.advisor.applicable && !entity.stages.advisor.usable;
       return true;
     };
     const filteredEntities = data.entities.filter(entityFilter);
     const entityMarkup = filteredEntities.map((entity) => {
       const issue = [...entity.missing_fields, ...entity.dash_fields].join(', ');
-      return `<div style="padding:9px 0;border-top:1px solid var(--edge)"><div style="display:flex;justify-content:space-between;gap:8px"><b>${escapeHtml(entity.ticker)} · ${escapeHtml(entity.name)}</b><span style="color:${entity.state === 'complete' ? 'var(--pnl-up)' : 'var(--warning-border)'};font-weight:700">${escapeHtml(stateLabel[entity.state])}</span></div><div style="margin-top:3px">${escapeHtml(entity.reason)}</div>${issue ? `<div style="margin-top:3px;color:var(--warning-border)">${escapeHtml(issue)}</div>` : ''}</div>`;
+      const severityColor = entity.severity === 'needs_review' ? 'var(--pnl-down)' : entity.severity === 'expected_unavailable' ? 'var(--warning-border)' : 'var(--pnl-up)';
+      return `<div style="padding:9px 0;border-top:1px solid var(--edge)"><div style="display:flex;justify-content:space-between;gap:8px"><b>${escapeHtml(entity.ticker)} · ${escapeHtml(entity.name)}</b><span style="color:${severityColor};font-weight:700">${escapeHtml(severityLabel[entity.severity])}</span></div><div style="margin-top:3px">${escapeHtml(entity.reason)}</div>${issue ? `<div style="margin-top:3px;color:${severityColor}">${escapeHtml(issue)}</div>` : ''}</div>`;
     }).join('');
     const filterLabels: Record<string, string> = currentLang === 'ar'
-      ? { all: 'الكل', issues: 'المشكلات', priceChecker: 'الأسعار', chartReader: 'الرسم', comparisonJudge: 'الحكم', smartAdvisor: 'المستشار', alerts: 'التنبيهات' }
-      : { all: 'All', issues: 'Issues', priceChecker: 'Prices', chartReader: 'Chart', comparisonJudge: 'Judge', smartAdvisor: 'Advisor', alerts: 'Alerts' };
-    const filterKeys = ['all', 'issues', 'priceChecker', 'chartReader', 'comparisonJudge', 'smartAdvisor', 'alerts'];
+      ? { all: 'الكل', needsReview: 'تحتاج مراجعة', expectedUnavailable: 'غير متاح من المصدر', priceChecker: 'الأسعار', chartReader: 'الرسم', comparisonJudge: 'الحكم', smartAdvisor: 'المستشار', alerts: 'التنبيهات' }
+      : { all: 'All', needsReview: 'Needs review', expectedUnavailable: 'Expected unavailable', priceChecker: 'Prices', chartReader: 'Chart', comparisonJudge: 'Judge', smartAdvisor: 'Advisor', alerts: 'Alerts' };
+    const filterKeys = ['all', 'needsReview', 'expectedUnavailable', 'priceChecker', 'chartReader', 'comparisonJudge', 'smartAdvisor', 'alerts'];
     const filterMarkup = filterKeys.map((filter) => `<button type="button" data-diagnostic-filter="${filter}" style="border:1px solid ${diagnosticStageFilter === filter ? 'var(--accent)' : 'var(--edge)'};border-radius:999px;padding:4px 8px;background:${diagnosticStageFilter === filter ? 'var(--accent)' : 'transparent'};color:${diagnosticStageFilter === filter ? '#fff' : 'var(--ink)'};font-size:9px;cursor:pointer">${filterLabels[filter]}</button>`).join('');
     const alertNote = diagnosticStageFilter === 'alerts'
       ? `<div style="margin-top:8px;padding:8px;border:1px solid var(--edge);border-radius:7px;color:var(--dim)">${currentLang === 'ar' ? 'نتائج التنبيهات متاحة على مستوى التشغيل فقط.' : 'Alert results are available at run level only.'}</div>`
@@ -208,7 +264,25 @@ export function initDashboardBehavior(
     const entityTitle = diagnosticStageFilter === 'alerts'
       ? ''
       : `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${currentLang === 'ar' ? 'الحالات حسب الأصل' : 'Entity results'}</b><small>${filteredEntities.length}/${data.entities.length}</small></div><div style="max-height:280px;overflow:auto;margin-top:4px">${entityMarkup || `<div style="padding:8px 0">${currentLang === 'ar' ? 'لا توجد كيانات مطابقة.' : 'No matching entities.'}</div>`}</div></div>`;
-    content.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px"><div><b>${data.summary.complete}</b><small style="display:block">${escapeHtml(stateLabel.complete)}</small></div><div><b>${data.summary.partial}</b><small style="display:block">${escapeHtml(stateLabel.partial)}</small></div><div><b>${data.summary.missing}</b><small style="display:block">${escapeHtml(stateLabel.missing)}</small></div><div><b>${data.summary.dash}</b><small style="display:block">${escapeHtml(stateLabel.dash)}</small></div></div><div style="margin-bottom:10px"><b>${currentLang === 'ar' ? 'التشغيل' : 'Run'} #${data.run.id} · ${escapeHtml(statusLabel)}</b>${data.run.error_message ? `<div style="color:var(--pnl-down);margin-top:3px">${escapeHtml(data.run.error_message)}</div>` : ''}</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">${filterMarkup}</div><input id="ai-diagnostics-search" type="search" value="${escapeHtml(diagnosticSearch)}" placeholder="${currentLang === 'ar' ? 'بحث عن أصل…' : 'Search entity…'}" style="box-sizing:border-box;width:100%;margin-bottom:10px;padding:7px 8px;border:1px solid var(--edge);border-radius:7px;background:transparent;color:var(--ink);font-size:10px"><div style="margin-bottom:10px"><b>${currentLang === 'ar' ? 'المراحل' : 'Stages'}</b>${stageMarkup || `<div style="margin-top:4px">${currentLang === 'ar' ? 'لا توجد بيانات مراحل.' : 'No stage data recorded.'}</div>`}</div>${alertNote}${entityTitle}`;
+    content.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px"><div><b>${data.summary.needs_review}</b><small style="display:block;color:var(--pnl-down)">${escapeHtml(severityLabel.needs_review)}</small></div><div><b>${data.summary.expected_unavailable}</b><small style="display:block;color:var(--warning-border)">${escapeHtml(severityLabel.expected_unavailable)}</small></div><div><b>${data.summary.complete}</b><small style="display:block;color:var(--pnl-up)">${escapeHtml(severityLabel.complete)}</small></div><div><b>${data.summary.entity_count}</b><small style="display:block">${currentLang === 'ar' ? 'إجمالي الأصول' : 'Total entities'}</small></div></div><div style="margin-bottom:10px"><b>${currentLang === 'ar' ? 'التشغيل' : 'Run'} #${data.run.id} · ${escapeHtml(statusLabel)}</b>${data.run.error_message ? `<div style="color:var(--pnl-down);margin-top:3px">${escapeHtml(data.run.error_message)}</div>` : ''}</div><div style="margin-bottom:10px;padding:9px 10px;border-left:3px solid ${rootCauseLines.length ? 'var(--pnl-down)' : 'var(--pnl-up)'};border-radius:6px;background:rgba(255,255,255,.03)"><b>${currentLang === 'ar' ? 'ملخص السبب الجذري' : 'Root Cause Summary'}</b><div style="margin-top:4px;line-height:1.5">${escapeHtml(rootCauseSummary)}</div>${groupedCauseMarkup ? `<div style="margin-top:5px">${groupedCauseMarkup}</div>` : ''}${retryMarkup}</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">${filterMarkup}</div><input id="ai-diagnostics-search" type="search" value="${escapeHtml(diagnosticSearch)}" placeholder="${currentLang === 'ar' ? 'بحث عن أصل…' : 'Search entity…'}" style="box-sizing:border-box;width:100%;margin-bottom:10px;padding:7px 8px;border:1px solid var(--edge);border-radius:7px;background:transparent;color:var(--ink);font-size:10px"><div style="margin-bottom:10px"><b>${currentLang === 'ar' ? 'المراحل' : 'Stages'}</b>${stageMarkup || `<div style="margin-top:4px">${currentLang === 'ar' ? 'لا توجد بيانات مراحل.' : 'No stage data recorded.'}</div>`}</div>${alertNote}${entityTitle}`;
+    content.querySelectorAll<HTMLButtonElement>('[data-doctor-action]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const action = button.dataset.doctorAction;
+        button.disabled = true;
+        button.textContent = currentLang === 'ar' ? 'جارٍ التنفيذ…' : 'Running…';
+        try {
+          const response = action === 'retry-chart'
+            ? await authenticatedFetch(`/api/ai-bot/retry-chart-reader?runId=${encodeURIComponent(data.run.id)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tickers: failedChartTickers }) })
+            : await authenticatedFetch('/api/ai-bot/run', { method: 'POST' });
+          if (!response.ok) throw new Error(`Request failed (${response.status})`);
+          button.textContent = currentLang === 'ar' ? 'بدأت إعادة المحاولة' : 'Retry started';
+          window.setTimeout(() => void loadDiagnostics(), 1500);
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = error instanceof Error ? error.message : (currentLang === 'ar' ? 'فشلت المحاولة' : 'Retry failed');
+        }
+      });
+    });
     content.querySelectorAll<HTMLButtonElement>('[data-diagnostic-filter]').forEach((button) => {
       button.addEventListener('click', () => {
         diagnosticStageFilter = button.dataset.diagnosticFilter ?? 'all';

@@ -101,7 +101,9 @@ async function fetchYahooCandles(yahooTicker: string, expectedName: string): Pro
   const payload = (await response.json()) as YahooChartResponse;
   const result = payload.chart?.result?.[0];
   const meta = result?.meta;
-  if (meta?.instrumentType !== "EQUITY") throw new Error(`Yahoo instrument type is ${meta?.instrumentType ?? "unknown"}`);
+  if (!meta?.instrumentType || !["EQUITY", "MUTUALFUND", "INDEX"].includes(meta.instrumentType)) {
+    throw new Error(`Yahoo instrument type is ${meta?.instrumentType ?? "unknown"}`);
+  }
   if (meta.currency !== "EGP") throw new Error(`Yahoo currency is ${meta.currency ?? "unknown"}`);
   const yahooName = meta.longName ?? meta.shortName ?? "";
   if (!namesPlausiblyMatch(expectedName, yahooName)) {
@@ -224,7 +226,7 @@ async function analyzeEntity(row: { id: number; ticker: string; name: string; ya
       candle_date: latestDate,
       trend,
       patterns,
-      confidence: patterns.length > 0 ? Math.min(1, 0.5 + patterns.length * 0.1) : null,
+      confidence: null,
       raw_fetch_ok: true,
       reversal_risk: reversalRisk,
       ...range,

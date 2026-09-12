@@ -1,6 +1,6 @@
 # Smart Advisor Engine
 
-The Smart Advisor is an AI-powered recommendation engine that sits after Comparison Judge in your portfolio pipeline. It takes structured verdicts from Comparison Judge and uses Gemini to generate clear, actionable investment recommendations.
+The Smart Advisor is an AI-generated explanation layer that sits after Comparison Judge in your portfolio pipeline. It takes structured verdicts from Comparison Judge and uses Gemini to explain the deterministic outputs; it is not an independent financial analyst or a source of validated trading signals.
 
 ## Architecture Flow
 

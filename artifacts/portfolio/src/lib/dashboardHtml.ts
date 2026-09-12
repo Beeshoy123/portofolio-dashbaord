@@ -1035,8 +1035,8 @@ ${buildUsdRealityCard(p, d, usdReality)}
           <button
             id="ai-diagnostics-btn"
             type="button"
-            aria-label="Open backend run diagnostics"
-            title="Backend run diagnostics"
+            aria-label="Open The Doctor"
+            title="The Doctor · run health"
             style="position:relative;display:grid;place-items:center;width:34px;height:34px;border:1px solid var(--edge);border-radius:8px;background:var(--bg);color:var(--ink);font-size:16px;cursor:pointer;flex-shrink:0">
             🔔<span id="ai-diagnostics-badge" style="display:none;position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--pnl-down);color:#fff;font-size:9px;line-height:16px;text-align:center">0</span>
           </button>
@@ -1056,8 +1056,8 @@ ${buildUsdRealityCard(p, d, usdReality)}
 
       <div id="ai-diagnostics-popover" role="dialog" aria-modal="true" aria-labelledby="ai-diagnostics-title" style="display:none;position:fixed;top:72px;right:24px;width:min(520px,calc(100vw - 32px));max-height:calc(100vh - 96px);overflow:auto;z-index:1200;padding:14px;border:1px solid var(--edge);border-radius:10px;background:var(--bg);box-shadow:0 18px 48px rgba(0,0,0,.3);">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px">
-          <strong id="ai-diagnostics-title" style="font-size:12px" data-i18n="ai.diagnostics.title">Backend run diagnostics</strong>
-          <button id="ai-diagnostics-close" type="button" aria-label="Close backend run diagnostics" title="Close" style="border:0;background:transparent;color:var(--dim);font-size:16px;cursor:pointer">×</button>
+          <strong id="ai-diagnostics-title" style="font-size:12px" data-i18n="ai.diagnostics.title">The Doctor</strong>
+          <button id="ai-diagnostics-close" type="button" aria-label="Close The Doctor" title="Close" style="border:0;background:transparent;color:var(--dim);font-size:16px;cursor:pointer">×</button>
         </div>
         <div id="ai-diagnostics-content" style="font-size:10px;color:var(--dim)">
           <span data-i18n="ai.diagnostics.open">Open to inspect the latest run.</span>
