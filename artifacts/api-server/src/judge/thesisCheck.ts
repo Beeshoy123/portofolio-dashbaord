@@ -150,7 +150,11 @@ export async function checkThesis(watchlistId: number, runId?: number): Promise<
 export async function checkAllTheses(runId?: number): Promise<ThesisCheckResult[]> {
   try {
     const result = await pool.query<{ id: number }>(
-      `SELECT id FROM comparison_watchlist WHERE is_held = true`
+      `SELECT cw.id
+         FROM comparison_watchlist cw
+         LEFT JOIN funds f ON f.key = cw.funds_table_key
+        WHERE cw.funds_table_key IS NOT NULL
+          AND COALESCE(f.units_held, 0) > 0`
     );
 
     const results: ThesisCheckResult[] = [];

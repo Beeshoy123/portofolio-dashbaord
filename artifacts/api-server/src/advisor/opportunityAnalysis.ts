@@ -19,9 +19,7 @@
 // ├── Sector Concentration Detection
 // └── Main Entry Points (analyzePortfolioOpportunities, findOpportunities)
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PART 0: TYPES & INTERFACES
-// ═══════════════════════════════════════════════════════════════════════════
+// ─── Types (OpportunitySector, OpportunitiesAnalysis, etc.) ─────────────────────────────────────
 
 import type { HoldingVerdict, ComparisonEntry } from "../judge/types";
 
@@ -95,6 +93,7 @@ export function confidenceTierFor(verdict: HoldingVerdict): "high" | "moderate" 
   return confidenceTier;
 }
 
+// ─── Analysis Helpers (compareGroups, buildOpportunityAnalysisPrompt) ───────────────────────────────────────────
 const tierWeight: Record<"high" | "moderate" | "low", number> = {
   high: 3,
   moderate: 2,
@@ -122,10 +121,11 @@ export function compareOpportunityVerdicts(a: HoldingVerdict, b: HoldingVerdict)
   return 0;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// MAIN ENTRY POINT: analyzePortfolioOpportunities
-// Orchestrates all 6 types of opportunity detection and returns structured result
-// ═══════════════════════════════════════════════════════════════════════════
+export function buildOpportunitySortOrder(verdicts: HoldingVerdict[]): HoldingVerdict[] {
+  return [...verdicts].sort(compareOpportunityVerdicts);
+}
+
+// ─── Sector Concentration Detection ─────────────────────────────────────
 
 export function analyzePortfolioOpportunities(
   verdicts: HoldingVerdict[],
@@ -381,6 +381,8 @@ export function analyzePortfolioOpportunities(
     },
   };
 }
+
+// ─── Main Entry Points (analyzePortfolioOpportunities, findOpportunities) ─────────────────────────────────────
 
 export function buildOpportunityAnalysisPrompt(
   analysis: PortfolioOpportunityAnalysis,

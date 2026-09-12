@@ -1,6 +1,13 @@
 // Deposit Suggestion Engine
 // Deterministic allocation recommendations for new deposits
 // Does NOT call Gemini — all math is rule-based and verifiable
+//
+// FILE STRUCTURE:
+// ├── Types & Response Shape
+// ├── Core Allocation Logic
+// └── Main Entry Point (suggestDepositAllocation)
+
+// ─── Types & Response Shape ───────────────────────────────────
 
 import { pool } from "../lib/dbPool";
 import { judgeAllHoldings, findOpportunities } from "../judge/comparisonJudge";
@@ -30,6 +37,7 @@ export interface DepositAllocationResponse {
  * 3. Split allocation proportionally to opportunity strength and sector underrepresentation
  * 4. No Gemini — all math is deterministic
  */
+// ─── Core Allocation Logic ─────────────────────────────────────
 export async function suggestDepositAllocation(
   amountEgp: number,
   runId?: number,

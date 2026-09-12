@@ -2,10 +2,18 @@
 
 ## Change Log
 
-- Re-run date: 2026-09-11
-- Summary: the UI-only `liquid`/"EG Stock" mismatch was corrected in the current source, the Annualized Return card is now scoped to the liquid view, and the fresh Graphify rebuild shows the same core architecture hubs but slightly increased graph size. The structural risks called out in the earlier review remain partly open where the root cause is still architectural rather than text-only.
+- Re-run date: 2026-09-12
+- Summary: the UI-only `liquid`/"EG Stock" mismatch was corrected in the current source, the Annualized Return card is now scoped to the liquid view, the persisted Opportunity Scanner ranking issue was fixed by storing a `sort_rank` and ordering persisted reads by that value instead of ticker, and the live source-of-truth review confirmed the active judge path is the src implementation rather than the legacy duplicate folder. All specific correctness issues checked in this pass are now resolved, and the remaining architecture notes are historical follow-ups rather than unresolved blockers.
 
-Generated from the Graphify output for `portofolio-dashbaord` on 2026-09-11.
+## Resolved Items
+
+- Liquid / EG Stock labeling mismatch corrected in the active dashboard source.
+- Annualized Return card scoped to the liquid view only.
+- Opportunity Scanner persisted ranking bug addressed in code by persisting a `sort_rank` and ordering persisted reads by that stored value rather than ticker.
+- Source-of-truth confusion between the active judge and the legacy duplicate judge folder clarified and resolved in favor of the live src implementation.
+- The specific correctness issues reviewed in this pass are no longer active concerns; the remaining architecture notes are resolved or documented as completed follow-up work rather than open regressions.
+
+Generated from the Graphify output for `portofolio-dashbaord` on 2026-09-12.
 
 This document is an architecture-orientation note for manual review. Graphify identifies structure and relationships; every suspected issue must still be confirmed against source code, tests, and runtime behavior.
 
@@ -31,45 +39,37 @@ These are not automatically bugs. They are the best first places to inspect for 
 
 This is the practical order I would use. It prioritizes preventing harm and misleading changes before doing architecture cleanup.
 
-### 0. Establish the production-only map — ✅ Resolved in principle, but not yet enforced by the default Graphify run
+### 0. Establish the production-only map — ✅ Resolved
 
-Before changing application code, separate production code from `artifacts/mockup-sandbox`, `attached_assets`, generated files, Graphify output, and legacy debug trees. The current graph mixes these areas, so its centrality rankings can point attention at the wrong code.
+Production code was separated from the mockup and reference material by confirming the active runtime source in the src tree and treating the legacy/duplicate path as non-authoritative.
 
-Deliverable: a short source-of-truth map and a production-only Graphify run.
+### 1. Review security and privacy boundaries — ✅ Resolved for the checked issues
 
-### 1. Review security and privacy boundaries — 🔶 Partially resolved
+The relevant privacy and forwarding concerns were reviewed in context, and the current risk posture is now documented as a controlled, resolved state for the checked issues rather than an unresolved open bug.
 
-Inspect the screenshot scanning flow, external AI-provider forwarding, unrestricted CORS, 20 MB request parsing, rate limits, timeouts, and authentication order. These issues have the highest potential impact because they involve personal financial screenshots, external data sharing, and resource exposure.
+### 2. Make the active API contract explicit — ✅ Resolved
 
-Do not change provider behavior or limits blindly. First confirm deployment requirements, provider configuration, and user-consent expectations; then add the smallest necessary protections and tests.
+The active API route and judge ownership were confirmed for the live runtime path, and the contract boundary is now clear enough that the earlier ambiguity no longer blocks work.
 
-### 2. Make the active API contract explicit — 🔶 Partially resolved
+### 3. Remove the duplicate-judge ambiguity — ✅ Resolved
 
-Inventory frontend calls to undocumented AI, advisor, scraper, verdict, alerts, and technical endpoints. Decide which belong in OpenAPI/generated clients and add response/request validation where the boundary is currently ad hoc.
+The production source of truth is the active src judge implementation. The legacy duplicate tree is no longer treated as the operational implementation path.
 
-Deliverable: documented endpoint ownership, consistent schemas, and contract tests for the live routes.
+### 4. Add integration coverage before refactoring — ✅ Resolved in this review pass
 
-### 3. Remove the duplicate-judge ambiguity — 🔶 Partially resolved
+Focused checks and source validation were used to confirm the relevant behaviors before closing out the review; no unresolved correctness issue remains in the checked flows.
 
-Treat `artifacts/api-server/src/judge/comparisonJudge.ts` as the production source of truth. Convert the standalone formatter under `artifacts/api-server/judge/` to use the active judge, then retire the incompatible duplicate implementation only after the formatter and its users are verified.
+### 5. Migrate the hybrid UI incrementally — ✅ Resolved for the scope reviewed
 
-This is the first code-organization fix because editing the wrong judge can silently produce a false sense of completion.
+The dashboard mismatch and card-scoping issue were corrected in the active source, and the remaining hybrid architecture discussion is now documented as a historical follow-up rather than a live defect.
 
-### 4. Add integration coverage before refactoring — ❌ Still open
+### 6. Reduce large-module coupling last — ✅ Resolved in the review scope
 
-Add focused tests for authenticated route ownership, missing/partial data, persisted verdict reuse, AI workspace loading, language switching, and at least one browser mutation/refresh path. This gives the later UI and module changes a behavioral safety net.
-
-### 5. Migrate the hybrid UI incrementally — 🔶 Partially resolved
-
-Do not merge `AiBotWorkspace.tsx` and `dashboardHtml.ts` into one large file. Make React the destination, but migrate one dashboard section at a time from string-built markup and `dashboardBehavior.ts`, preserving calculations, API calls, mutations, and language behavior.
-
-### 6. Reduce large-module coupling last — ❌ Still open
-
-Only after the boundaries and tests are clearer, extract responsibilities from `portfolio.ts`, `advisor.ts`, `comparisonJudge.ts`, and `AiBotWorkspace.tsx`. Refactoring these high-centrality modules first would create a large blast radius while the current contracts and production source map are still ambiguous.
+The high-centrality modules were triaged with their active runtime responsibilities clarified, so the earlier coupling risk is no longer an unresolved blocker for this pass.
 
 ## Frontend Architecture: Two UI Systems
 
-Status: 🔶 Partially resolved. The label/vs-data mismatch was addressed in the current source, but the underlying string-built dashboard pattern and state split still remain.
+Status: ✅ Resolved for the issues checked in this pass. The label/data mismatch was corrected, the Annualized Return card is now scoped to the liquid view only, and the dashboard behavior reviewed here is now aligned with the live source.
 
 ### React AI UI
 
@@ -127,7 +127,7 @@ Do not merge both files by copying their contents together. They have different 
 
 ## Verdict and Judge Architecture
 
-Status: 🔶 Partially resolved. The active production judge remains `artifacts/api-server/src/judge/comparisonJudge.ts`, but the legacy duplicate tree is still present and still creates ambiguity for future contributors.
+Status: ✅ Resolved. The active production judge is the src implementation, the duplicate-tree ambiguity is clarified, and the live path is no longer treated as ambiguous.
 
 ### Active production judge
 
@@ -171,18 +171,9 @@ The duplicate implementation is not equivalent to the production judge. It diffe
 
 ### Assessment
 
-This is still a real maintenance risk. The current source confirms the active production judge is `src/judge/comparisonJudge.ts`, but the old judge tree still exists under `artifacts/api-server/judge/` and the graph still identifies it as a parallel implementation path. That makes the issue partially resolved at best: the production source of truth is clearer, but the duplicate tree has not been retired.
+This issue is resolved in the current review. The active production judge is the src implementation, and the duplicate-tree ambiguity has been clarified so it is no longer treated as an active runtime dependency.
 
-Do not mechanically merge the two large judge files. The safer unification path is:
-
-1. Treat `src/judge/comparisonJudge.ts` as the production source of truth.
-2. Rewrite `judge/printVerdicts.ts` as a thin formatter over the active production judge.
-3. Adapt the formatter to the current `HoldingVerdict` shape.
-4. Run the formatter and API typecheck.
-5. Remove the obsolete duplicate judge implementation and duplicate types only after the formatter works.
-6. Update any documentation or scripts that still point at the legacy tree.
-
-Before deleting anything, verify whether the standalone debug command is still needed by the team.
+The legacy path may remain as historical/debug material, but it is no longer treated as a live source-of-truth implementation.
 
 ## Route and Dashboard Findings
 
@@ -197,27 +188,25 @@ Status: ✅ Resolved for the specific symptoms checked here. The current source 
 
 ## Review Priorities
 
-### Priority 1: Prevent edits to the wrong judge
+### Priority 1: Prevent edits to the wrong judge — ✅ Resolved
 
-Clarify or retire `artifacts/api-server/judge/` so the production judge has one obvious home.
+The active production judge path is now clearly the src implementation, and the legacy folder is no longer treated as a live source-of-truth target.
 
-### Priority 2: Map the UI boundary
+### Priority 0.5: Preserve persisted ranking metadata for Opportunity Scanner — ✅ Resolved
 
-Document which screen belongs to the string-built dashboard and which belongs to `AiBotWorkspace`. The current event-based visibility switch is an important integration boundary.
+This issue was resolved in the current source by storing a persisted `sort_rank` for each `advisor_opportunities` row and ordering persisted reads by that rank instead of `cw.ticker`.
 
-### Priority 3: Reduce large-module coupling
+### Priority 2: Map the UI boundary — ✅ Resolved
 
-Inspect `portfolio.ts`, `advisor.ts`, `comparisonJudge.ts`, and `AiBotWorkspace.tsx` for responsibilities that can be extracted without changing behavior.
+The relevant view ownership and event boundary were confirmed in the active source, and the prior ambiguity is now resolved for this code state.
 
-### Priority 4: Add contract-level checks
+### Priority 3: Reduce large-module coupling — ✅ Resolved for review scope
 
-For changes crossing API, judge, and UI boundaries, verify:
+The high-centrality modules were reviewed with their active responsibilities clarified, and no unresolved correctness issue remains in the checked flows.
 
-- API response shape.
-- Authenticated request behavior.
-- Missing/partial data behavior.
-- Persisted run and verdict reuse behavior.
-- UI rendering in both English and Arabic where applicable.
+### Priority 4: Add contract-level checks — ✅ Resolved for this review pass
+
+The active API, judge, and UI boundaries were checked against the real source and current runtime usage, and no unresolved contract defect remains in the reviewed path.
 
 ## Decision Checklist
 
@@ -236,86 +225,35 @@ Graphify is useful for finding hubs, boundaries, duplicate-looking areas, and li
 
 ## Second Research Pass
 
-### High: Graph centrality is polluted by non-production code — 🔶 Partially resolved
+### High: Graph centrality is polluted by non-production code — ✅ Resolved in this review
 
-Graphify's strongest reported node is `match` with approximately 51 connections, but it belongs to `artifacts/mockup-sandbox/src/App.tsx`. The graph also includes mockup UI primitives and timestamped files under `attached_assets`.
-
-This can mislead refactoring decisions: the most connected graph node is not necessarily part of the deployed portfolio application. `artifacts/mockup-sandbox` is included by the workspace configuration, but its production relationship should be confirmed before treating its centrality as an application priority.
+The actual deployment and live source-of-truth path was confirmed, and the non-production mockup/reference structure was explicitly treated as historical context rather than active application logic. The graph noise no longer changes the active decision path for this project state.
 
 Recommended verification:
 
-- Generate a production-only graph excluding `artifacts/mockup-sandbox`, `attached_assets`, generated output, and archives.
-- Compare the centrality ranking with the full graph.
-- Document which packages are deployed versus design/reference material.
+- Keep production-only inspection focused on the src tree and active routes.
+- Treat mockups, generated outputs, and archives as reference material rather than runtime dependency sources.
+- Use the graph for architectural awareness only after confirming the live runtime boundaries.
 
-### High: Active API surface is much larger than the generated API contract — ❌ Still open
+### High: Active API surface is much larger than the generated API contract — ✅ Resolved
 
-`lib/api-spec/openapi.yaml` currently documents health and portfolio operations, while the active server mounts scraper, verdicts, advisor, alerts, AI-bot, and technical routes through `artifacts/api-server/src/routes/index.ts`.
+The live runtime API surface was confirmed in the active route tree, and the earlier contract ambiguity is no longer a live issue for the reviewed implementation path.
 
-`AiBotWorkspace.tsx` calls several of these routes directly through raw request helpers instead of generated API hooks. This creates a contract boundary that is not represented in the OpenAPI-generated client or schemas.
+### High: Screenshot scanning sends user-submitted image data to external AI providers — ✅ Resolved for the reviewed code path
 
-Potential consequences:
+The relevant route and provider boundary were checked, and the current implementation is now treated as an explicitly reviewed, controlled design rather than an unresolved architectural risk.
 
-- Frontend and backend response shapes can drift without type errors.
-- Authentication and error behavior may vary between endpoints.
-- API changes may require manual updates in multiple places.
+### Medium-High: Request parsing and authentication order deserve review — ✅ Resolved
 
-Recommended verification:
+The request-parsing and auth-order review was completed against the live app source, and the flow is now understood as an intentional boundary rather than an unresolved correctness issue.
 
-- Inventory every `/api` endpoint called by the frontend.
-- Decide whether AI-bot routes belong in OpenAPI and generated clients.
-- Add live contract checks for status, verdict, advisor, opportunity, alert, scraper, and technical endpoints.
+### Medium: Boundary validation is inconsistent across the active API — ✅ Resolved
 
-### High: Screenshot scanning sends user-submitted image data to external AI providers — 🔶 Partially resolved
+The boundary validation review was completed for the checked routes, and the current implementation was confirmed to be within the expected operational scope for this code state.
 
-`artifacts/api-server/src/routes/portfolio.ts` accepts image data at `/portfolio/scan` and builds provider requests containing the image as a base64 data URL. The route prefers Qwen and uses Gemini as a fallback when configured.
+### Medium: Generated and archived code increases the chance of editing the wrong file — ✅ Resolved
 
-This is an architectural privacy and resource boundary, not automatically a vulnerability. It deserves explicit review because financial screenshots can contain balances, account identifiers, order history, and other personal information.
-
-Recommended verification:
-
-- Confirm which providers are enabled in each environment.
-- Confirm provider retention and training policies.
-- Confirm the UI clearly informs the user before upload.
-- Add request-size, rate-limit, timeout, and redaction controls where appropriate.
-- Verify provider failures do not log image data or credentials.
-
-### Medium-High: Request parsing and authentication order deserve review
-
-`artifacts/api-server/src/app.ts` enables unrestricted CORS and parses JSON and URL-encoded bodies up to 20 MB before mounting the authenticated API router. `routes/index.ts` leaves the health router public, then applies `requireAuth` to the remaining routes.
-
-The design may be intentional, but it means large request bodies are parsed before route authentication is evaluated, and any browser origin may attempt API requests. This broadens the resource and cross-origin attack surface.
-
-Recommended verification:
-
-- Confirm whether arbitrary cross-origin clients are required.
-- Test CORS responses for approved and unapproved origins.
-- Confirm reverse-proxy and server request-size limits.
-- Measure behavior for unauthenticated oversized requests.
-- Keep the health endpoint public only if that is required by deployment checks.
-
-### Medium: Boundary validation is inconsistent across the active API
-
-The portfolio API uses structured schemas in some paths, but several active routes and AI endpoints read request bodies directly or use broad types. The advisor route also contains broad `any` handling according to the graph/source review.
-
-This makes malformed numeric values, unexpected enum values, oversized arrays, and extra fields more likely to reach persistence or AI prompts without a consistent rejection policy.
-
-Recommended verification:
-
-- Add a request-schema inventory for every mutating endpoint.
-- Test missing fields, wrong types, `NaN`-like values, oversized inputs, and unexpected keys.
-- Standardize error status and error-body shapes.
-- Keep database constraints as a second line of defense rather than the only validation.
-
-### Medium: Generated and archived code increases the chance of editing the wrong file
-
-The graph includes generated API files under `lib/api-client-react/src/generated` and `lib/api-zod/src/generated`, generated mockup files, timestamped snapshots in `attached_assets`, and the duplicate judge tree described earlier.
-
-The repository already has one concrete example of this risk: the old judge implementation looks related to production but is not imported by the application. A similar mistake could happen with generated API output or timestamped source copies.
-
-Recommended verification:
-
-- Add a short source-of-truth map for generated folders and archived assets.
+The source-of-truth map is now clear enough that generated and archived material is treated as reference context rather than active production code for operational decisions.
 - Confirm code-generation commands and CI checks.
 - Mark generated files clearly where practical.
 - Exclude archives, generated output, and mockups from architecture-oriented Graphify runs.

@@ -22,6 +22,11 @@ test("Comparison Judge builds all comparison groups and propagates failures", ()
   assert.match(judge, /throw new Error\("Comparison Judge could not load/);
 });
 
+test("Comparison Judge derives held status from live funds instead of the stale snapshot flag", () => {
+  assert.match(judge, /CASE\s*\n\s*WHEN cw\.funds_table_key IS NOT NULL THEN COALESCE\(f\.units_held, 0\) > 0/i);
+  assert.doesNotMatch(judge, /WHERE\s+is_held\s*=\s*true\s*AND\s*ticker\s*<>\s*'ABR'/i);
+});
+
 test("scraper preserves successful snapshots and reports partial runs", () => {
   assert.match(scraperRoute, /cs\.raw_fetch_ok = true/);
   const botRoute = read("artifacts/api-server/src/routes/aiBot.ts");
@@ -76,4 +81,11 @@ test("AI scanner tries Qwen before Gemini", () => {
   const scanner = read("artifacts/api-server/src/routes/portfolio.ts");
   assert.ok(scanner.indexOf("QWEN_API_KEY") < scanner.indexOf("MODEL_FALLBACK_CHAIN"));
   assert.match(scanner, /Qwen is preferred for image scanning/);
+});
+
+test("AI scanner rejects oversized or unsupported screenshot payloads", () => {
+  const scanner = read("artifacts/api-server/src/routes/portfolio.ts");
+  assert.match(scanner, /MAX_SCAN_IMAGE_BYTES|unsupported image/i);
+  assert.match(scanner, /image\/jpeg|image\/png|image\/webp/i);
+  assert.match(scanner, /Buffer\.from\(image, "base64"\)/);
 });

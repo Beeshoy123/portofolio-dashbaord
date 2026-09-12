@@ -485,6 +485,10 @@ router.get("/portfolio/gold-prices", (_req, res) => {
 // ── AI Scanner proxy ─────────────────────────────────────────────────────────
 // Calls Gemini from the server so the request originates from Replit's
 // infrastructure, bypassing regional free-tier quota restrictions.
+const MAX_SCAN_IMAGE_BYTES = 5 * 1024 * 1024;
+const ALLOWED_SCAN_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ALLOWED_SCAN_MODES = new Set(["order", "nav", "stock", "orders-list"]);
+
 router.post("/portfolio/scan", async (req, res) => {
   const { image, mimeType, mode } = req.body as {
     image?: string;
@@ -498,6 +502,37 @@ router.post("/portfolio/scan", async (req, res) => {
     res.status(400).json({ error: "Missing required fields: image, mimeType, mode, and a valid Gemini API key." });
     return;
   }
+
+  const normalizedMimeType = String(mimeType).trim().toLowerCase();
+  const normalizedMode = String(mode).trim().toLowerCase();
+  const imageBase64 = String(image).trim();
+
+  if (!ALLOWED_SCAN_MIME_TYPES.has(normalizedMimeType)) {
+    res.status(415).json({ error: "Unsupported image type. Please upload a JPG, PNG, or WebP screenshot." });
+    return;
+  }
+
+  if (!ALLOWED_SCAN_MODES.has(normalizedMode)) {
+    res.status(400).json({ error: "Unsupported scan mode." });
+    return;
+  }
+
+  let imageBytes = 0;
+  try {
+    imageBytes = Buffer.from(imageBase64, "base64").length;
+  } catch {
+    res.status(400).json({ error: "Invalid screenshot payload. Please re-capture the image and try again." });
+    return;
+  }
+
+  if (imageBytes === 0 || imageBytes > MAX_SCAN_IMAGE_BYTES) {
+    res.status(413).json({ error: "Screenshot is too large or empty. Please upload a JPG, PNG, or WebP image under 5 MB." });
+    return;
+  }
+
+  const safeMimeType = normalizedMimeType;
+  const safeMode = normalizedMode;
+  const safeImage = imageBase64;
 
   const ordersListPrompt = `You are analyzing a screenshot that contains multiple executed orders (an orders list/table).
 Extract ONLY a JSON ARRAY of rows — no markdown, no code fences, just the JSON array. Each row must contain these fields:
@@ -514,7 +549,7 @@ Extract ONLY a JSON ARRAY of rows — no markdown, no code fences, just the JSON
 Omit any row you cannot read confidently. Return ONLY the JSON array.`;
 
   let prompt =
-    mode === "order"
+    safeMode === "order"
       ? `You are analyzing a Thndr (Egyptian investment app) order confirmation screenshot.
 Extract ONLY these fields as a raw JSON object — no markdown, no code fences, just the JSON:
 {
@@ -533,7 +568,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
 
   // Support an orders-list mode which returns an ARRAY of simple order rows
   // so the frontend can render a multi-row review UI before writing to DB.
-  if (mode === "orders-list") {
+  if (safeMode === "orders-list") {
     // The rows should be an array of objects with these fields:
     // { assetType: "abr"|"re"|"azs", side: "buy"|"sell", pricePerUnit: <number>, amountEgp: <number>, occurredAt?: <iso string> }
     // Return ONLY the raw JSON array.
@@ -558,7 +593,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: `data:${mimeType};base64,${image}` } },
+              { type: "image_url", image_url: { url: `data:${safeMimeType};base64,${safeImage}` } },
             ],
           }],
           max_tokens: 256,
@@ -600,7 +635,7 @@ Omit any field you cannot read confidently. Return ONLY the JSON.`;
             {
               parts: [
                 { text: prompt },
-                { inline_data: { mime_type: mimeType, data: image } },
+                { inline_data: { mime_type: safeMimeType, data: safeImage } },
               ],
             },
           ],

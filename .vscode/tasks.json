@@ -70,6 +70,16 @@
 			"command": "cd /d G:\\AI\\portofolio-dashbaord\\artifacts\\api-server && pnpm run build",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Refresh Graphify map",
+			"type": "shell",
+			"command": "node scripts/graphify-refresh.mjs",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

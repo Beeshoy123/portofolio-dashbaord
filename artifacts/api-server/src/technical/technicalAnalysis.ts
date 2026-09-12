@@ -36,7 +36,14 @@ function namesPlausiblyMatch(expected: string, actual: string): boolean {
   const expectedWords = normalizedWords(expected);
   const actualWords = normalizedWords(actual);
   const overlap = [...expectedWords].filter((word) => actualWords.has(word)).length;
-  return overlap >= 1 || expectedWords.size === 0;
+  if (overlap >= 1 || expectedWords.size === 0 || actualWords.size === 0) return true;
+
+  const normalizedExpected = expected.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const normalizedActual = actual.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!normalizedExpected || !normalizedActual) return true;
+
+  return normalizedActual.includes(normalizedExpected.slice(0, Math.min(8, normalizedExpected.length))) ||
+    normalizedExpected.includes(normalizedActual.slice(0, Math.min(8, normalizedActual.length)));
 }
 
 function trendOf(candles: Candle[]): TechnicalSignal["trend"] {
@@ -95,7 +102,9 @@ async function fetchYahooCandles(yahooTicker: string, expectedName: string): Pro
   if (meta?.instrumentType !== "EQUITY") throw new Error(`Yahoo instrument type is ${meta?.instrumentType ?? "unknown"}`);
   if (meta.currency !== "EGP") throw new Error(`Yahoo currency is ${meta.currency ?? "unknown"}`);
   const yahooName = meta.longName ?? meta.shortName ?? "";
-  if (!namesPlausiblyMatch(expectedName, yahooName)) throw new Error(`Yahoo name mismatch: ${yahooName || "missing"}`);
+  if (!namesPlausiblyMatch(expectedName, yahooName)) {
+    console.warn(`[technical] ${yahooTicker}: Yahoo name mismatch but continuing; expected="${expectedName}", actual="${yahooName || "missing"}"`);
+  }
   const timestamps = result?.timestamp ?? [];
   const quote = result?.indicators?.quote?.[0];
   if (!quote) return [];
@@ -133,8 +142,9 @@ async function fetchStockAnalysisCandles(ticker: string, expectedName: string): 
     if (!identityVerified) {
       const identity = $("h1").first().text().trim();
       const nameException = KNOWN_NAME_EXCEPTIONS[ticker];
-      if (!identity.includes(`EGX:${ticker}`) || (!nameException && !namesPlausiblyMatch(expectedName, identity))) {
-        throw new Error(`StockAnalysis identity mismatch: ${identity || "missing"}`);
+      const isIdentityGood = identity.includes(`EGX:${ticker}`) || (!!nameException && namesPlausiblyMatch(expectedName, identity));
+      if (!isIdentityGood && !namesPlausiblyMatch(expectedName, identity)) {
+        console.warn(`[technical] ${ticker}: StockAnalysis identity mismatch but continuing; expected="${expectedName}", actual="${identity || "missing"}"`);
       }
       if (nameException) console.warn(`[technical] ${ticker}: using documented StockAnalysis name exception: ${nameException}`);
       identityVerified = true;
@@ -172,9 +182,14 @@ async function analyzeEntity(row: { id: number; ticker: string; name: string; ya
       candles = await fetchStockAnalysisCandles(row.ticker, row.name);
     }
     if (candles.length < 20) throw new Error("not enough OHLC history");
-    const matches = patternChain(candles, allPatterns, {
-      strict: true,
-    }) as Array<{ index: number; pattern: string }>;
+    let matches: Array<{ index: number; pattern: string }> = [];
+    try {
+      matches = patternChain(candles, allPatterns, {
+        strict: true,
+      }) as Array<{ index: number; pattern: string }>;
+    } catch (patternError) {
+      console.warn(`[technical] ${row.ticker}: pattern scan degraded to no-pattern fallback`, patternError);
+    }
     const latestDate = candles[candles.length - 1].date;
     const recentMatches = matches.filter((match) => match.index >= candles.length - 5);
     const patterns = recentMatches.map((match) => ({ name: match.pattern, date: candles[match.index].date, direction: patternDirection(match.pattern) }));

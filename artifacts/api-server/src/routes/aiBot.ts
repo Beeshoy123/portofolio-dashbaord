@@ -132,7 +132,7 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           stageCounts.chartReader = { succeeded: result.succeeded, failed: result.failed, total: result.total };
           if (result.failure_messages.length > 0) stageErrors.chartReader = result.failure_messages;
           await persistProgress();
-          status.stages.chartReader = result.total > 0 && result.failed === result.total
+          status.stages.chartReader = result.total > 0 && result.succeeded === 0
             ? "failed"
             : "completed";
           if (result.failed > 0 && result.succeeded > 0) {
@@ -301,9 +301,14 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
           let totalExpectedHoldings = verdicts.length;
           try {
             const heldCountResult = await pool.query<{ count: number }>(
-              `SELECT COUNT(*)::int AS count FROM comparison_watchlist
-               -- ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
-               WHERE is_held = true AND ticker <> 'ABR' AND COALESCE(funds_table_key, '') <> 'abr' AND lower(name) NOT LIKE '%bareeq%'`
+              `SELECT COUNT(*)::int AS count
+                 FROM comparison_watchlist cw
+                 LEFT JOIN funds f ON f.key = cw.funds_table_key
+                -- ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
+                WHERE COALESCE(f.units_held, 0) > 0
+                  AND cw.ticker <> 'ABR'
+                  AND COALESCE(cw.funds_table_key, '') <> 'abr'
+                  AND lower(cw.name) NOT LIKE '%bareeq%'`
             );
             if (heldCountResult.rows.length > 0 && heldCountResult.rows[0].count > 0) {
               totalExpectedHoldings = Number(heldCountResult.rows[0].count);
@@ -401,12 +406,13 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
               };
 
               const portfolioBucketRows = await pool.query<{ ticker: string; portfolio_bucket: string | null }>(
-                `SELECT ticker, portfolio_bucket
-                   FROM comparison_watchlist
-                  WHERE is_held = true
-                    AND ticker <> 'ABR'
-                    AND COALESCE(funds_table_key, '') <> 'abr'
-                    AND lower(name) NOT LIKE '%bareeq%'`
+                `SELECT cw.ticker, cw.portfolio_bucket
+                   FROM comparison_watchlist cw
+                   LEFT JOIN funds f ON f.key = cw.funds_table_key
+                  WHERE COALESCE(f.units_held, 0) > 0
+                    AND cw.ticker <> 'ABR'
+                    AND COALESCE(cw.funds_table_key, '') <> 'abr'
+                    AND lower(cw.name) NOT LIKE '%bareeq%'`
               );
               const bucketOrder = ["safety", "steady_growth", "broad_market", "individual_stocks"] as const;
               const valueByTicker = new Map(

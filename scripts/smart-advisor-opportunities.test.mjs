@@ -1,6 +1,57 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildPortfolioSummaryPrompt } from "../artifacts/api-server/src/advisor/buildPrompt.ts";
+import { buildDataBlock, buildPortfolioSummaryPrompt } from "../artifacts/api-server/src/advisor/buildPrompt.ts";
+
+test("fund verdicts explicitly explain that the financial health grade is a fund-quality measure, not stock fundamentals", () => {
+  const verdict = {
+    holding_ticker: "FUND1",
+    holding_name: "Fund One",
+    holding_asset_role: "growth_fund",
+    holding_return_percent: 7.5,
+    holding_current_value_egp: 100000,
+    holding_portfolio_weight_percent: 10,
+    portfolio_total_value_egp: 1000000,
+    holding_risk_tier: "Medium",
+    technical_signal: null,
+    is_held: true,
+    data_quality: {
+      holding_snapshot_status: "fresh",
+      holding_snapshot_age_hours: 2,
+      comparable_count: 5,
+      comparable_with_return_count: 5,
+    },
+    return_period: "return_1y",
+    groups: [],
+    signal: "Strong",
+    confidence_tier: "moderate",
+    performance_grade: "Strong",
+    financial_health_grade: "A",
+    technical_grade: "Strong",
+    fund_quality_source: "consistency_only",
+    fund_quality_metrics: {
+      consistency_score: 80,
+      peer_z_score: 1.2,
+      available_points: 20,
+      peer_count: 9,
+    },
+    financial_health_reason: "not_applicable_fund",
+    technical_reason: "no_chart_data",
+    final_label: "Strong",
+    coverage_percent: 100,
+    flags: ["thin_comparable_sample"],
+    data_completeness_warning: false,
+    fundamentals_flags_found: false,
+    comparables_beaten: 3,
+    comparables_total: 5,
+  };
+
+  const singlePrompt = buildDataBlock(verdict);
+  const portfolioPrompt = buildPortfolioSummaryPrompt([verdict]);
+
+  assert.match(singlePrompt, /This is a fund\. "Financial Health grade" above is NOT a stock-fundamentals grade/i);
+  assert.match(singlePrompt, /fund_quality_source: consistency_only/i);
+  assert.match(portfolioPrompt, /Some graded funds use the fund-quality consistency measure/i);
+});
 
 test("portfolio summary prompt calls out strong unheld opportunities", () => {
   const verdicts = [
@@ -309,4 +360,92 @@ test("analyzePortfolioOpportunities correctly computes absolute_return_positive 
   assert.match(prompt, /confidence=low/);
   assert.match(prompt, /beat peers, but absolute return <= 0/);
   assert.match(prompt, /FUNDAMENTALS CONCERNS: low_return_on_equity, high_debt_load/);
+});
+
+import { buildOpportunitySortOrder } from "../artifacts/api-server/src/advisor/opportunityAnalysis.ts";
+
+test("buildOpportunitySortOrder preserves comparator priority for persisted readings", () => {
+  const verdicts = [
+    {
+      holding_ticker: "LOW_CONF",
+      holding_name: "Low Confidence",
+      holding_asset_role: "stock",
+      holding_return_percent: 25,
+      holding_current_value_egp: null,
+      holding_risk_tier: "High",
+      technical_signal: null,
+      is_held: false,
+      data_quality: {
+        holding_snapshot_status: "fresh",
+        holding_snapshot_age_hours: 1,
+        comparable_count: 10,
+        comparable_with_return_count: 4,
+      },
+      return_period: "return_1y",
+      groups: [],
+      signal: "Excellent",
+      coverage_percent: 40,
+      flags: [],
+      data_completeness_warning: false,
+      fundamentals_flags_found: false,
+      comparables_beaten: 4,
+      comparables_total: 10,
+      technical_grade: "Strong",
+    },
+    {
+      holding_ticker: "HIGH_CONF",
+      holding_name: "High Confidence",
+      holding_asset_role: "stock",
+      holding_return_percent: 8,
+      holding_current_value_egp: null,
+      holding_risk_tier: "Low",
+      technical_signal: null,
+      is_held: false,
+      data_quality: {
+        holding_snapshot_status: "fresh",
+        holding_snapshot_age_hours: 1,
+        comparable_count: 10,
+        comparable_with_return_count: 10,
+      },
+      return_period: "return_1y",
+      groups: [],
+      signal: "Excellent",
+      coverage_percent: 90,
+      flags: [],
+      data_completeness_warning: false,
+      fundamentals_flags_found: false,
+      comparables_beaten: 9,
+      comparables_total: 10,
+      technical_grade: "Strong",
+    },
+    {
+      holding_ticker: "NEGATIVE_HIGH",
+      holding_name: "Negative High",
+      holding_asset_role: "stock",
+      holding_return_percent: -3,
+      holding_current_value_egp: null,
+      holding_risk_tier: "Low",
+      technical_signal: null,
+      is_held: false,
+      data_quality: {
+        holding_snapshot_status: "fresh",
+        holding_snapshot_age_hours: 1,
+        comparable_count: 10,
+        comparable_with_return_count: 10,
+      },
+      return_period: "return_1y",
+      groups: [],
+      signal: "Excellent",
+      coverage_percent: 90,
+      flags: [],
+      data_completeness_warning: false,
+      fundamentals_flags_found: false,
+      comparables_beaten: 9,
+      comparables_total: 10,
+      technical_grade: "Strong",
+    },
+  ];
+
+  const order = buildOpportunitySortOrder(verdicts).map((entry) => entry.ticker);
+  assert.deepEqual(order, ["HIGH_CONF", "NEGATIVE_HIGH", "LOW_CONF"]);
 });

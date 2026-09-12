@@ -15,6 +15,8 @@
 // ├── Data Block Builders (format verdict data for the prompt)
 // └── Main Entry Points (buildPrompt, buildPortfolioSummaryPrompt)
 
+// ─── Types & Context ───────────────────────────────────────────
+
 import type { HoldingVerdict, ComparisonGroup, ComparisonEntry } from "../judge/types";
 import type { SignalHistoryRow } from "../judge/signalTrend";
 
@@ -33,6 +35,7 @@ export interface AdvisorAlertContext {
   };
 }
 
+// ─── System Instructions (advisor rules, confidence caps, fundamentals) ───────────────────────────────────────
 export const SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are NOT a licensed financial advisor, and you must say so is implicit — never use language implying guaranteed outcomes.
 
 STRICT RULES (violating any of these makes your response unusable):
@@ -71,6 +74,7 @@ WATCH_TRIGGER: when decision is watch_and_wait or consider_rotation, you MUST st
 DO_NOT_ACT_REASONS: when decision is watch_and_wait or hold, list 1-3 short reasons grounded in the DATA block for why no action is needed yet (e.g. 'still beating comparable peers', 'no reversal pattern confirmed'). When decision is consider_entry or consider_rotation, return an empty array.
 
 15. COMPLETE GRID REASONING — The DATA block includes the holding's complete available financial picture, performance grade, financial health grade, and technical grade. Explain the recommendation like a senior analyst mentoring a junior analyst: connect multiple metrics rather than listing them separately. If the final label is Caution or Avoid, identify specifically whether Financial Health or Technical caused the cap and cite the actual supplied numbers. Never invent a metric, peer average, or explanation that is not supported by the DATA block.
+16. FUND-SPECIFIC QUALITY NOTE — When the DATA block includes the fund-quality caveat note (meaning the holding is a fund and its fund_quality_source is not "insufficient_data"), you MUST explicitly say that this Financial Health grade is a fund-specific consistency measure, not the same fundamentals analysis used for stocks. Do not hide that caveat or describe it as stock ROE/debt-equity analysis; the distinction is part of the explanation. This rule does not apply to stock holdings.
 `;
 
 export const PORTFOLIO_SUMMARY_SYSTEM_INSTRUCTIONS = `You are a financial explainer inside a personal investment dashboard for an Egyptian investor tracking EGX mutual funds and stocks. You are not a licensed financial advisor.
@@ -132,6 +136,17 @@ OPPORTUNITY ANALYSIS RULES:
 7. ACTIONABLE — End with 1-2 clear next steps: e.g., "Watch XYZ for one quarter" or "Research ABC's fundamentals before considering".
 `;
 
+
+// ─── Data Block Builders (format verdict data for the prompt) ───────────────────────────────────────
+function buildFundQualityContextNote(verdict: HoldingVerdict): string {
+  if (verdict.fund_quality_source === "insufficient_data") return "";
+
+  const peerZScore = typeof verdict.fund_quality_metrics?.peer_z_score === "number"
+    ? ` (peer z-score ${verdict.fund_quality_metrics.peer_z_score.toFixed(2)})`
+    : "";
+
+  return `- NOTE: This is a fund. "Financial Health grade" above is NOT a stock-fundamentals grade. It reflects fund_quality_source: ${verdict.fund_quality_source}${peerZScore} — a fund-specific consistency/peer comparison measure across this fund's reported time horizons, not ROE, debt/equity, or other stock fundamentals.`;
+}
 
 export function buildPortfolioSummaryPrompt(
   verdicts: HoldingVerdict[],
@@ -220,6 +235,9 @@ export function buildPortfolioSummaryPrompt(
 
   const distributionLine = `- Signal distribution: By holding count: ${countStr}. By portfolio value: ${valueStr}.`;
   const aggregateLine = `- Aggregate metrics: Flags raised: ${flaggedCount} of ${totalCount} holdings | Avg coverage: ${avgCoverageStr} | Reversal risk: ${reversalRiskCount} holdings | Diverging from trend: ${divergenceCount} holdings`;
+  const fundQualityNotice = verdicts.some((verdict) => verdict.fund_quality_source !== "insufficient_data")
+    ? "- NOTE: Some graded funds use the fund-quality consistency measure, not the stock-fundamentals analysis used for stock holdings."
+    : "";
 
   let opportunityLines: string[];
   if (opportunities?.strong_unheld && opportunities.strong_unheld.length > 0) {
@@ -273,7 +291,7 @@ export function buildPortfolioSummaryPrompt(
     "- Include only actual watchlist evidence; do not invent sectors or holdings.",
   ].join("\n");
 
-  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}${partialEvaluationLine}\n${distributionLine}\n${aggregateLine}\n${bucketAllocationLine}\n\nHELD WINNERS:\n${heldWinnerLines.join("\n")}\n\nHELD LAGGARDS:\n${heldLaggardLines.join("\n")}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nReturn ONLY valid JSON matching this exact shape. Do not use Markdown fences:\n{"decision":"hold|watch|rebalance","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30}`;
+  return `PORTFOLIO VERDICTS:\n${lines.join("\n")}${partialEvaluationLine}\n${distributionLine}\n${aggregateLine}\n${fundQualityNotice ? `${fundQualityNotice}\n` : ""}${bucketAllocationLine}\n\nHELD WINNERS:\n${heldWinnerLines.join("\n")}\n\nHELD LAGGARDS:\n${heldLaggardLines.join("\n")}\n\nDETERMINISTIC OPPORTUNITY ANALYSIS:\n${opportunityLines.join("\n")}\n\n${sectorsLine}\n\nReturn ONLY valid JSON matching this exact shape. Do not use Markdown fences:\n{"decision":"hold|watch|rebalance","confidence":0,"summary":"...","evidence":["..."],"risks":["..."],"next_review_days":30}`;
 }
 
 function formatGroupForPrompt(group: ComparisonGroup): string {
@@ -449,6 +467,8 @@ export function buildDataBlock(
     }
   }
 
+  const fundQualityContextLine = buildFundQualityContextNote(verdict);
+
   const dataBlock = `
 HOLDING: ${verdict.holding_name} (${verdict.holding_ticker})
 ASSET ROLE: ${verdict.holding_asset_role}
@@ -462,7 +482,7 @@ DATA QUALITY: holding snapshot ${verdict.data_quality.holding_snapshot_status}${
 
 COMPARISON JUDGE'S SIGNAL: ${verdict.signal}
 FLAGS RAISED: ${verdict.flags.length > 0 ? verdict.flags.join(", ") : "none"}${alerts?.signalTrend && alerts.signalTrend.length >= 2 ? `\nSIGNAL TREND (last ${alerts.signalTrend.length} runs, oldest to newest): ${alerts.signalTrend.map((row) => row.signal).join(", ")}` : ""}
-${alerts?.portfolioSummary ? `
+${fundQualityContextLine ? `${fundQualityContextLine}\n` : ""}${alerts?.portfolioSummary ? `
 PORTFOLIO-WIDE COMPARISON JUDGE SUMMARY (same run; use as context, do not repeat every detail):
 - Excellent holdings: ${alerts.portfolioSummary.excellent_count}
 - Solid holdings: ${alerts.portfolioSummary.solid_count}

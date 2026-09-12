@@ -12,6 +12,8 @@
 // ├── Signal Computation (computeSignal + flag logic)
 // └── Main Entry Points (judgeHolding, judgeAllHoldings, findOpportunities)
 
+// ─── Types & Constants ───────────────────────────────────────
+
 import { pool } from "../lib/dbPool";
 import { analyzePortfolioOpportunities, compareOpportunityVerdicts, confidenceTierFor, type PortfolioOpportunityAnalysis } from "../advisor/opportunityAnalysis";
 import type { AssetRole, CautionReason, HeldLaggardEvidence, HoldingVerdict, ComparisonGroup, ComparisonEntry, JudgeRunDiagnostics, TechnicalSignal } from "./types";
@@ -34,6 +36,7 @@ export interface FundQualityMetrics {
   peer_count: number;
 }
 
+// ─── Utility Functions ────────────────────────────────────────
 function percentile(values: number[], p: number): number {
   const sorted = [...values].sort((a, b) => a - b);
   if (sorted.length === 0) return 0;
@@ -206,6 +209,7 @@ export function combineIntoFinalLabel(
 // warrant the same conviction as beating 6 of 10 solid ones).
 const MIN_RELIABLE_COMPARABLES = 4;
 
+// ─── Group Construction ─────────────────────────────────────────
 type ReturnPeriod = "return_1y" | "return_6m" | "return_3m";
 
 interface WatchlistRow {
@@ -309,7 +313,12 @@ function groupFor(
 async function getWatchlistRows(): Promise<WatchlistRow[]> {
   const result = await pool.query<WatchlistRow>(
         `SELECT cw.id, cw.ticker, cw.name, cw.entity_type, cw.sector, cw.manager,
-          cw.funds_table_key, cw.is_held, cw.portfolio_bucket, f.units_held, f.nav AS fund_nav
+          cw.funds_table_key,
+          CASE
+            WHEN cw.funds_table_key IS NOT NULL THEN COALESCE(f.units_held, 0) > 0
+            ELSE cw.is_held
+          END AS is_held,
+          cw.portfolio_bucket, f.units_held, f.nav AS fund_nav
      FROM comparison_watchlist cw
      LEFT JOIN funds f ON f.key = cw.funds_table_key
      ORDER BY cw.entity_type, cw.ticker`,
@@ -416,9 +425,8 @@ async function getPortfolioValueBreakdown(): Promise<{ totalValueEgp: number; by
             COALESCE(f.units_held, 0) * COALESCE(f.nav, 0) AS current_value_egp
        FROM comparison_watchlist cw
        LEFT JOIN funds f ON f.key = cw.funds_table_key
-      WHERE cw.is_held = true
-        AND cw.funds_table_key IS NOT NULL
-        AND f.units_held > 0
+      WHERE cw.funds_table_key IS NOT NULL
+        AND COALESCE(f.units_held, 0) > 0
         AND f.nav IS NOT NULL`
   );
 
@@ -435,12 +443,7 @@ async function getPortfolioValueBreakdown(): Promise<{ totalValueEgp: number; by
   return { totalValueEgp, byTicker };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// GROUP CONSTRUCTION — buildGroup()
-// Takes a holding and a set of candidates, constructs a ComparisonGroup
-// with entries, win/loss counts, and metadata for signal computation.
-// ═══════════════════════════════════════════════════════════════════════════
-
+// ─── Group Construction ─────────────────────────────────────────
 function buildGroup(
   groupType: ComparisonGroup["group_type"],
   holding: WatchlistRow,
@@ -948,8 +951,7 @@ export async function findOpportunities(runId?: number): Promise<OpportunitiesAn
 
   // Phase 2: Fetch watchlist to classify entities as held/unheld and by sector
   try {
-    const watchlistResult = await pool.query<WatchlistRow>("SELECT * FROM comparison_watchlist");
-    watchlist = watchlistResult.rows;
+    watchlist = await getWatchlistRows();
     console.log(`[findOpportunities] Phase 2: Fetched ${watchlist.length} watchlist entries`);
   } catch (err) {
     const message = `[findOpportunities] Phase 2 (watchlist fetch) failed: ${err instanceof Error ? err.message : String(err)}`;

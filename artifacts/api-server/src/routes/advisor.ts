@@ -116,7 +116,8 @@ router.get("/recommendations", async (req: Request, res: Response) => {
               ar.watch_trigger, ar.do_not_act_reasons
        FROM advisor_recommendations ar
        JOIN comparison_watchlist cw ON ar.watchlist_id = cw.id
-       WHERE cw.is_held = true
+       LEFT JOIN funds f ON f.key = cw.funds_table_key
+       WHERE COALESCE(f.units_held, 0) > 0
            -- ABR is a money-market reserve whose NAV accrues yield rather than tracking market price movement; Comparison Judge's Performance, Financial Health, and Technical categories do not meaningfully apply, so it is intentionally excluded from this pipeline.
          AND cw.ticker <> 'ABR'
          AND COALESCE(cw.funds_table_key, '') <> 'abr'
@@ -481,8 +482,7 @@ router.get("/opportunities", async (req: Request, res: Response) => {
     let persistedRows: unknown[] = [];
     try {
       const result = await pool.query(
-        `SELECT DISTINCT ON (cw.ticker, ao.opportunity_type)
-                cw.ticker, cw.name, ao.opportunity_text, ao.model_used, ao.generated_at, ao.opportunity_type
+        `SELECT cw.ticker, cw.name, ao.opportunity_text, ao.model_used, ao.generated_at, ao.opportunity_type, ao.sort_rank
          FROM advisor_opportunities ao
          JOIN comparison_watchlist cw ON ao.watchlist_id = cw.id
          WHERE ao.run_id = $1
@@ -490,7 +490,7 @@ router.get("/opportunities", async (req: Request, res: Response) => {
            AND cw.ticker <> 'ABR'
            AND COALESCE(cw.funds_table_key, '') <> 'abr'
            AND lower(cw.name) NOT LIKE '%bareeq%'
-         ORDER BY cw.ticker, ao.opportunity_type, ao.generated_at DESC`,
+         ORDER BY COALESCE(ao.sort_rank, 2147483647) ASC, cw.ticker ASC, ao.opportunity_type ASC`,
         [runId]
       );
       persistedRows = result.rows;
@@ -553,7 +553,7 @@ router.post("/generate-opportunities", async (req: Request, res: Response) => {
     const results = [];
 
     // 1. Save strong unheld entities as opportunity candidates
-    for (const strongUnheld of analysis.strong_unheld_entities) {
+    for (const [sortRank, strongUnheld] of analysis.strong_unheld_entities.entries()) {
       try {
         const watchlistResult = await pool.query<{ id: number }>(
           `SELECT id FROM comparison_watchlist WHERE ticker = $1`,
@@ -572,13 +572,14 @@ router.post("/generate-opportunities", async (req: Request, res: Response) => {
         const opportunityText = `Strong performer not currently in portfolio. Return: ${strongUnheld.return_percent !== null ? strongUnheld.return_percent.toFixed(1) + '%' : 'unavailable'}. Risk tier: ${strongUnheld.risk_tier || 'unknown'}. Worth considering for portfolio diversification based on comparison analysis.`;
 
         await pool.query(
-          `INSERT INTO advisor_opportunities (watchlist_id, opportunity_text, model_used, run_id, opportunity_type)
-           VALUES ($1, $2, $3, $4, $5)
+          `INSERT INTO advisor_opportunities (watchlist_id, opportunity_text, model_used, run_id, opportunity_type, sort_rank)
+           VALUES ($1, $2, $3, $4, $5, $6)
            ON CONFLICT (watchlist_id, run_id, opportunity_type) WHERE run_id IS NOT NULL
            DO UPDATE SET opportunity_text = EXCLUDED.opportunity_text,
                          model_used = EXCLUDED.model_used,
+                         sort_rank = EXCLUDED.sort_rank,
                          generated_at = EXCLUDED.generated_at`,
-          [watchlistResult.rows[0].id, opportunityText, "deterministic-analysis", runId, "strong_unheld"]
+          [watchlistResult.rows[0].id, opportunityText, "deterministic-analysis", runId, "strong_unheld", sortRank + 1]
         );
 
         results.push({
@@ -596,7 +597,7 @@ router.post("/generate-opportunities", async (req: Request, res: Response) => {
 
     // 2. Save sector gap opportunities
     for (const sectorGap of analysis.sectors_no_strong_exposure) {
-      for (const opportunity of sectorGap.unheld_strong_entities) {
+      for (const [sortRank, opportunity] of sectorGap.unheld_strong_entities.entries()) {
         try {
           const watchlistResult = await pool.query<{ id: number }>(
             `SELECT id FROM comparison_watchlist WHERE ticker = $1`,
@@ -608,13 +609,14 @@ router.post("/generate-opportunities", async (req: Request, res: Response) => {
           const opportunityText = `${opportunity.ticker} is a strong performer in the ${sectorGap.sector} sector, where your portfolio currently has no strong holdings. Return: ${opportunity.return_percent !== null ? opportunity.return_percent.toFixed(1) + '%' : 'unavailable'}. Consider for sector diversification.`;
 
           await pool.query(
-            `INSERT INTO advisor_opportunities (watchlist_id, opportunity_text, model_used, run_id, opportunity_type)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO advisor_opportunities (watchlist_id, opportunity_text, model_used, run_id, opportunity_type, sort_rank)
+             VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (watchlist_id, run_id, opportunity_type) WHERE run_id IS NOT NULL
              DO UPDATE SET opportunity_text = EXCLUDED.opportunity_text,
                            model_used = EXCLUDED.model_used,
+                           sort_rank = EXCLUDED.sort_rank,
                            generated_at = EXCLUDED.generated_at`,
-            [watchlistResult.rows[0].id, opportunityText, "deterministic-analysis", runId, "sector_gap"]
+            [watchlistResult.rows[0].id, opportunityText, "deterministic-analysis", runId, "sector_gap", sortRank + 1]
           );
 
           results.push({
@@ -633,7 +635,7 @@ router.post("/generate-opportunities", async (req: Request, res: Response) => {
 
     // 3. Save underrepresented sector opportunities
     for (const underrep of analysis.underrepresented_sectors) {
-      for (const opportunity of underrep.unheld_strong_entities) {
+      for (const [sortRank, opportunity] of underrep.unheld_strong_entities.entries()) {
         try {
           const watchlistResult = await pool.query<{ id: number }>(
             `SELECT id FROM comparison_watchlist WHERE ticker = $1`,
@@ -654,13 +656,14 @@ router.post("/generate-opportunities", async (req: Request, res: Response) => {
           const opportunityText = `${opportunity.ticker} is strong in ${underrep.sector}, a sector where your portfolio has limited strong exposure (${underrep.held_strong_count} strong holding${underrep.held_strong_count !== 1 ? 's' : ''}). Return: ${opportunity.return_percent !== null ? opportunity.return_percent.toFixed(1) + '%' : 'unavailable'}. Consider for sector strengthening.`;
 
           await pool.query(
-            `INSERT INTO advisor_opportunities (watchlist_id, opportunity_text, model_used, run_id, opportunity_type)
-             VALUES ($1, $2, $3, $4, $5)
+            `INSERT INTO advisor_opportunities (watchlist_id, opportunity_text, model_used, run_id, opportunity_type, sort_rank)
+             VALUES ($1, $2, $3, $4, $5, $6)
              ON CONFLICT (watchlist_id, run_id, opportunity_type) WHERE run_id IS NOT NULL
              DO UPDATE SET opportunity_text = EXCLUDED.opportunity_text,
                            model_used = EXCLUDED.model_used,
+                           sort_rank = EXCLUDED.sort_rank,
                            generated_at = EXCLUDED.generated_at`,
-            [watchlistResult.rows[0].id, opportunityText, "deterministic-analysis", runId, "underrepresented"]
+            [watchlistResult.rows[0].id, opportunityText, "deterministic-analysis", runId, "underrepresented", sortRank + 1]
           );
 
           results.push({

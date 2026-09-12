@@ -30,7 +30,6 @@ UPDATE comparison_watchlist SET yahoo_ticker = 'EGS65571C019.CA' WHERE ticker = 
 UPDATE comparison_watchlist SET yahoo_ticker = 'COMI.CA'          WHERE ticker = 'COMI';
 UPDATE comparison_watchlist SET yahoo_ticker = 'EGS60081C014.CA' WHERE ticker = 'QNBE';
 UPDATE comparison_watchlist SET yahoo_ticker = 'EGS3G0Z1C014.CA' WHERE ticker = 'SWDY';
-UPDATE comparison_watchlist SET yahoo_ticker = 'EGS3C251C013-EGP.CA' WHERE ticker = 'ESRS';
 UPDATE comparison_watchlist SET yahoo_ticker = 'EGS48031C016.CA' WHERE ticker = 'ETEL';
 UPDATE comparison_watchlist SET yahoo_ticker = 'EGS745L1C014.CA' WHERE ticker = 'FWRY';
 UPDATE comparison_watchlist SET yahoo_ticker = 'EGS729J1C018.CA' WHERE ticker = 'CLHO';

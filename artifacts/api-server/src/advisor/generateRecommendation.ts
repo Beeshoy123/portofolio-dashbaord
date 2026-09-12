@@ -1,24 +1,13 @@
 // Smart Advisor — Gemini Caller
 //
-// ⚠️ IMPORTANT — CHECK THIS AGAINST YOUR EXISTING GEMINI SETUP ⚠️
-// You mentioned your app already has a working Gemini API key/integration
-// elsewhere (Part 1 of your app). This file is written standalone since I
-// don't have visibility into that existing code's exact pattern (env var
-// name, SDK vs plain fetch, model version used, etc.).
-//
-// BEFORE USING THIS FILE: check how your existing Gemini call is wired and
-// either (a) replace the fetch logic below with a call to your existing
-// wrapper/function, or (b) at minimum, make sure GEMINI_API_KEY below
-// matches whatever environment variable name your existing integration
-// already uses — using a different key name would mean managing two
-// separate keys for one API, which is unnecessary duplication.
-//
 // FILE STRUCTURE:
 // ├── Configuration & Schema (GEMINI_RESPONSE_SCHEMA, env config)
 // ├── Gemini API Callers (callGemini, callGeminiWithSchema)
 // ├── Response Parsing (parseStructuredResponse, parsePortfolioResponse)
 // ├── Recommendation Builders (generateRecommendation, generatePortfolioSummary)
 // └── Entry Points (exported functions for route handlers)
+
+// ─── Configuration & Schema (GEMINI_RESPONSE_SCHEMA, env config) ───────────────────────────────────
 
 import {
   SYSTEM_INSTRUCTIONS,
@@ -181,11 +170,7 @@ export async function verifyGeminiModel(): Promise<void> {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// RESPONSE PARSING & VALIDATION
-// parseStructuredResponse() — JSON schema validation for single recommendations
-// parsePortfolioResponse() — JSON schema validation for portfolio summaries
-// ═══════════════════════════════════════════════════════════════════════════
+// ─── Response Parsing (parseStructuredResponse, parsePortfolioResponse) ─────────────────────────────
 
 function parseStructuredResponse(text: string): StructuredAdvisorResult {
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -378,11 +363,11 @@ Return ONLY valid JSON matching this exact shape. Do not use Markdown fences:
   };
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// PUBLIC ENTRY POINTS — Exported recommendation generators
+// ─── Recommendation Builders (generateRecommendation, generatePortfolioSummary) ───────────────────────────────────
 // generateRecommendation() — Single holding recommendation via Gemini
 // generatePortfolioSummary() — Portfolio-wide summary via Gemini
-// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Entry Points (exported functions for route handlers) ───────────────────────────────────
 
 function isStructuredPortfolioResult(value: unknown): value is PortfolioSummaryResult {
   if (!value || typeof value !== "object") return false;

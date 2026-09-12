@@ -40,7 +40,7 @@ A personal finance dashboard that tracks gold holdings, money-market/property fu
 
 ### Graphify orientation rule
 
-At the start of a coding or review session, check the Graphify output when it is available (`graphify-out/graph.json` and `graphify-out/graph.html`) and use it as the architectural map for the repository. If the output is missing or stale, run the Graphify build for the currently opened repository folder before investigating broad changes. Use the graph to identify central modules, boundaries, high-complexity areas, and likely impact paths, then verify every finding against the actual source files, tests, and runtime behavior; the graph is an orientation aid, not proof of a bug or a substitute for source-level validation. Do not treat generated Graphify cache or wiki files as application source, and never expose secrets or real financial data while reporting graph findings.
+At the start of a coding or review session, check the Graphify output when it is available (`graphify-out/graph.json` and `graphify-out/graph.html`) and use it as the architectural map for the repository. If the output is missing or stale, use the repo task `Refresh Graphify map` or run the equivalent refresh command before investigating broad changes. Use the graph to identify central modules, boundaries, high-complexity areas, and likely impact paths, then verify every finding against the actual source files, tests, and runtime behavior; the graph is an orientation aid, not proof of a bug or a substitute for source-level validation. Do not treat generated Graphify cache or wiki files as application source, and never expose secrets or real financial data while reporting graph findings.
 
 ## Startup sequence (automatic, every run)
 
@@ -193,6 +193,7 @@ results without recording secrets or real portfolio values.
 - 2026-09-10: Cleared inherited database variables and verified the API loaded the Supabase pooler on port `8080`; the frontend loaded live AI run data on port `3001`.
 - 2026-09-10: Live UI check verified readable glossary popovers for Risk Tier, an incomplete-data fundamentals flag, and the translated Growth Fund asset role on a real entity.
 - 2026-09-11: Verified the startup blocker was a stale generated Zod schema (`zod.int()` in `lib/api-zod/src/generated/api.ts`), not a bad database configuration; after replacing it with `zod.number().int()` and rebuilding the API bundle, the backend started successfully with the Supabase host `aws-1-eu-west-1.pooler.supabase.com` on port `8080` and the frontend served the dashboard at `http://localhost:3001/`.
+- 2026-09-12: Removed the inactive `ESRS` / `Ezz Steel` watchlist row from the source migration files and the live `comparison_watchlist` table so it no longer participates in the active EGX stock set. The app-specific translation label remains only as a legacy display fallback, not as an active watchlist entity.
 
 ## Stack
 

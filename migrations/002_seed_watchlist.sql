@@ -37,7 +37,6 @@ INSERT INTO "comparison_watchlist" ("ticker", "name", "entity_type", "source_cod
 ('COMI', 'Commercial International Bank',     'stock', NULL, 'Banks/Financial',        NULL, false),
 ('QNBE', 'QNB Egypt',                         'stock', NULL, 'Banks/Financial',        NULL, false),
 ('SWDY', 'Elsewedy Electric',                 'stock', NULL, 'Export & Industry',      NULL, false),
-('ESRS', 'Ezz Steel',                         'stock', NULL, 'Export & Industry',      NULL, false),
 ('ETEL', 'Telecom Egypt',                     'stock', NULL, 'Telecom/Tech',           NULL, false),
 ('FWRY', 'Fawry',                             'stock', NULL, 'Telecom/Tech',           NULL, false),
 ('PHAR', 'EIPICO',                            'stock', NULL, 'Pharma/Healthcare',      NULL, false),
