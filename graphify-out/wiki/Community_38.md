@@ -1,17 +1,17 @@
 # Community 38
 
-> 8 nodes · cohesion 0.25
+> 8 nodes · cohesion 0.29
 
 ## Key Concepts
 
-- [navigation-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx#L1) (6 connections)
-- [NavigationMenu](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/navigation-menu.tsx#L7) (2 connections)
-- [navigation-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/navigation-menu.tsx#L1) (1 connections)
-- [NavigationMenuContent](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx#L65) (1 connections)
-- [NavigationMenuItem](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx#L41) (1 connections)
-- [NavigationMenuList](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx#L26) (1 connections)
-- [NavigationMenuTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx#L47) (1 connections)
-- [navigationMenuTriggerStyle](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx#L43) (1 connections)
+- [eurEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L1) (7 connections)
+- [refresh()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L23) (2 connections)
+- [startEurEgpScheduler()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L61) (2 connections)
+- [API_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L17) (1 connections)
+- [cache](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L21) (1 connections)
+- [FETCH_TIMEOUT_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L19) (1 connections)
+- [getEurEgpRate()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L53) (1 connections)
+- [REFRESH_INTERVAL_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L18) (1 connections)
 
 ## Relationships
 
@@ -19,12 +19,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\navigation-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/navigation-menu.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\navigation-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/navigation-menu.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\eurEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 14 (100%)
+- EXTRACTED: 16 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

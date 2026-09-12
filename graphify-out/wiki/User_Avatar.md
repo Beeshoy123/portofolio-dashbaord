@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [avatar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L1) (3 connections)
-- [Avatar](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L8) (1 connections)
-- [AvatarFallback](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L35) (1 connections)
-- [AvatarImage](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L23) (1 connections)
+- [mockupPreviewPlugin.ts](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L1) (3 connections)
+- [GENERATED_MODULE](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L9) (1 connections)
+- [mockupPreviewPlugin()](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L16) (1 connections)
+- [MOCKUPS_DIR](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L8) (1 connections)
 
 ## Relationships
 
@@ -15,7 +15,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\avatar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\mockupPreviewPlugin.ts](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts)
 
 ## Audit Trail
 

@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [mockupPreviewPlugin.ts](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L1) (3 connections)
-- [GENERATED_MODULE](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L9) (1 connections)
-- [mockupPreviewPlugin()](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L16) (1 connections)
-- [MOCKUPS_DIR](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts#L8) (1 connections)
+- [technical.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L1) (3 connections)
+- [result](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L10) (1 connections)
+- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L4) (1 connections)
+- [runId](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L6) (1 connections)
 
 ## Relationships
 
@@ -15,7 +15,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\mockupPreviewPlugin.ts](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/mockupPreviewPlugin.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\technical.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts)
 
 ## Audit Trail
 

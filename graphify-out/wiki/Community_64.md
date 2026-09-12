@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [technical.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L1) (3 connections)
-- [result](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L10) (1 connections)
-- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L4) (1 connections)
-- [runId](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts#L6) (1 connections)
+- [app.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L1) (3 connections)
+- [app](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L12) (1 connections)
+- [req()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L18) (1 connections)
+- [res()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L25) (1 connections)
 
 ## Relationships
 
@@ -15,7 +15,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\technical.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/technical.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\app.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts)
 
 ## Audit Trail
 

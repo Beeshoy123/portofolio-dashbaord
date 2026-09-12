@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [health.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts#L1) (2 connections)
-- [data](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts#L7) (1 connections)
-- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts#L4) (1 connections)
+- [build.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs#L1) (2 connections)
+- [artifactDir](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs#L11) (1 connections)
+- [buildAll()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs#L13) (1 connections)
 
 ## Relationships
 
@@ -14,7 +14,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\health.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\build.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs)
 
 ## Audit Trail
 

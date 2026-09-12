@@ -2,7 +2,7 @@
   "hotspots": [
     {
       "label": "initDashboardBehavior()",
-      "risk": 0.609,
+      "risk": 0.608,
       "type": "FUNCTION"
     },
     {
@@ -28,9 +28,9 @@
   ],
   "blast_radius": {
     "match": 51,
-    "judgeHolding()": 22,
     "customFetch()": 16,
-    "buildDashboardHtml()": 14,
+    "buildDashboardHtml()": 15,
+    "judgeHolding()": 14,
     "query": 13
   }
 }

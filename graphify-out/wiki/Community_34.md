@@ -4,15 +4,15 @@
 
 ## Key Concepts
 
-- [pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/pagination.tsx#L1) (7 connections)
-- [pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L1) (7 connections)
-- [Pagination()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L6) (2 connections)
-- [PaginationContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L16) (2 connections)
-- [PaginationEllipsis()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L93) (2 connections)
-- [PaginationItem](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L28) (2 connections)
-- [PaginationLink()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L41) (2 connections)
-- [PaginationNext()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L77) (2 connections)
-- [PaginationPrevious()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L61) (2 connections)
+- [context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/context-menu.tsx#L1) (7 connections)
+- [context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L1) (7 connections)
+- [ContextMenu](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L6) (2 connections)
+- [ContextMenuGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L10) (2 connections)
+- [ContextMenuPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L12) (2 connections)
+- [ContextMenuRadioGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L16) (2 connections)
+- [ContextMenuSub](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L14) (2 connections)
+- [ContextMenuSubTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L18) (2 connections)
+- [ContextMenuTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L8) (2 connections)
 
 ## Relationships
 
@@ -20,8 +20,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/pagination.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/context-menu.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx)
 
 ## Audit Trail
 

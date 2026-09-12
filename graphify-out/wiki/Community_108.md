@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [transactionTxType.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/transactionTxType.ts#L1) (1 connections)
-- [TransactionTxType](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/transactionTxType.ts#L12) (1 connections)
+- [not-found.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/pages/not-found.tsx#L1) (1 connections)
+- [NotFound()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/pages/not-found.tsx#L4) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\api-zod\src\generated\types\transactionTxType.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/transactionTxType.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\pages\not-found.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/pages/not-found.tsx)
 
 ## Audit Trail
 

@@ -52,7 +52,7 @@ function attribBar(
   </div>`;
 }
 
-// Donut ring built from three segments (gold, EG stock, certificates) as fractions of
+// Donut ring built from three segments (gold, liquid, certificates) as fractions of
 // a circle with r=28 (circumference ≈ 175.93).
 function buildDonutRing(d: Derived): string {
   const r = 28;
@@ -667,7 +667,7 @@ export function buildDashboardHtml(p: Portfolio, d: Derived, usdReality?: any): 
     <span class="segment-pill-pct" id="segment-pill-gold-pct"></span>
   </button>
   <button class="segment-pill" id="segment-pill-liquid" onclick="setView('liquid')">
-    <span>💧 EG Stock</span>
+    <span>💧 Liquid</span>
     <span class="segment-pill-pct" id="segment-pill-liquid-pct"></span>
   </button>
   <button class="segment-pill" id="segment-pill-certs" onclick="setView('certs')">
@@ -734,7 +734,7 @@ ${buildGoldCohortAnalysis(p, d)}
 <!-- COHORT ANALYSIS — liquid view only -->
 ${buildCohortAnalysis(p, d)}
 
-<!-- ANNUALIZED RETURN — EG Stock view only -->
+<!-- ANNUALIZED RETURN — liquid view only -->
 ${buildAnnualizedReturnCard(p)}
 
 <!-- USD REALITY CHECK — total view only -->
@@ -749,7 +749,7 @@ ${buildUsdRealityCard(p, d, usdReality)}
     <div id="heatmap-container" style="width:100%;aspect-ratio:16/7;position:relative;border-radius:12px;overflow:hidden">
       <div class="hm-cell" id="hm-cert-cell" style="left:3px;top:3px;width:43%;height:94%;background:${heatColor(d.certTotals.weightedAvgRate)};animation-delay:0ms"><div class="hm-name" style="font-size:15px">Certificates</div><div class="hm-pct" style="font-size:13px" id="hm-cert-pct">${pctStr(d.certTotals.weightedAvgRate)}</div></div>
       <div class="hm-cell" style="left:47%;top:3px;width:50%;height:55%;background:${heatColor(goldHeatPct)};animation-delay:80ms"><div class="hm-name" style="font-size:15px">Gold 24K</div><div class="hm-pct" style="font-size:13px">${goldPnlPctDisplay1}</div></div>
-      <div class="hm-cell" style="left:47%;top:60%;width:50%;height:37%;background:${heatColor(d.liquid.pnlPct)};animation-delay:160ms"><div class="hm-name" style="font-size:13px">EG Stock</div><div class="hm-pct" style="font-size:11px">${pctStr(d.liquid.pnlPct)}</div></div>
+      <div class="hm-cell" style="left:47%;top:60%;width:50%;height:37%;background:${heatColor(d.liquid.pnlPct)};animation-delay:160ms"><div class="hm-name" style="font-size:13px">Liquid</div><div class="hm-pct" style="font-size:11px">${pctStr(d.liquid.pnlPct)}</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
       <span style="font-size:10px;color:var(--dim)" data-i18n="heatmap.loss">Loss</span>
@@ -852,15 +852,15 @@ ${buildUsdRealityCard(p, d, usdReality)}
       <div style="font-size:10.5px;font-weight:600;margin-top:5px;color:var(--dim)">${totCapPctStr} · <span data-i18n="perf.vs">vs</span> ${fmt(d.total.cost)} EGP <span data-i18n="perf.deployed">deployed</span></div>
       <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);margin-top:14px;margin-bottom:10px" data-i18n="perf.return.attr">Return Attribution</div>
       ${attribBar("🥇", "Gold", d.gold.pnlAvailable ? `${fmt(d.gold.gramsHeld)}g physical` : "live price pending", d.total.contributions.goldCapitalPct, goldCapLabel, goldCapColor, "attr.gold", d.gold.pnlAvailable ? undefined : "attr.price.pending")}
-      ${attribBar("💧", "EG Stock", "Bareeq + Real Est.", d.total.contributions.liquidCapitalPct, liquidCapLabel, liquidCapColor, "attr.liquid", "attr.liquid.sub")}
+      ${attribBar("💧", "Liquid", "Bareeq + Real Est.", d.total.contributions.liquidCapitalPct, liquidCapLabel, liquidCapColor, "attr.liquid", "attr.liquid.sub")}
       <div style="font-size:9.5px;color:var(--dim);margin-top:4px;padding:6px 0 0;border-top:1px solid var(--edge)" data-i18n="perf.certs.note">📜 Certificates · held at face value — interest income is in the Income tab</div>
       <div class="math-section" id="math-total-capital">
         ${d.gold.pnlAvailable
           ? `<div class="math-line"><span class="math-label" data-i18n="ml.gold.pnl">Gold PnL:</span><span class="math-calc" data-i18n="mc.val.cb.minus.cost">(value + cashback) − cost</span><span class="math-result" style="color:${goldCapColor}">${goldCapLabel}</span></div>`
           : `<div class="math-line"><span class="math-label" data-i18n="ml.gold.pnl">Gold PnL:</span><span class="math-calc" data-i18n="attr.price.pending">live price pending</span><span class="math-result" style="color:var(--dim)">N/A</span></div>`}
-        <div class="math-line"><span class="math-label" data-i18n="ml.liquid.pnl">EG Stock PnL:</span><span class="math-calc" data-i18n="mc.bareeq.re.combined">Bareeq + Real Est. combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
+        <div class="math-line"><span class="math-label" data-i18n="ml.liquid.pnl">Liquid PnL:</span><span class="math-calc" data-i18n="mc.bareeq.re.combined">Bareeq + Real Est. combined</span><span class="math-result" style="color:${liquidCapColor}">${liquidCapLabel}</span></div>
         <div class="math-divider"></div>
-        <div class="math-line math-total${d.total.capitalPnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.total.cap.pnl">Total Capital PnL:</span><span class="math-calc" data-i18n="mc.gold.plus.liquid">gold + EG Stock</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
+        <div class="math-line math-total${d.total.capitalPnl < 0 ? " neg" : ""}"><span class="math-label" data-i18n="ml.total.cap.pnl">Total Capital PnL:</span><span class="math-calc" data-i18n="mc.gold.plus.liquid">gold + Liquid</span><span class="math-result">${totCapLabel} (${totCapPctStr})</span></div>
       </div>
     </div>
 
@@ -943,13 +943,13 @@ ${buildUsdRealityCard(p, d, usdReality)}
       </div>
       <div style="display:flex;flex-direction:column;gap:5px;flex:1">
         <div class="dl-row"><span class="dl-dot" style="background:#b8893f"></span><span class="dl-name" data-i18n="seg.gold">Gold 24K</span><span class="dl-pct" id="pct-gold">${d.allocation.pctGold.toFixed(1)}%</span></div>
-        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name" data-i18n="attr.liquid">EG Stock</span><span class="dl-pct" id="pct-liquid">${d.allocation.pctLiquid.toFixed(1)}%</span></div>
+        <div class="dl-row"><span class="dl-dot" style="background:#0f6a5e"></span><span class="dl-name" data-i18n="attr.liquid">Liquid</span><span class="dl-pct" id="pct-liquid">${d.allocation.pctLiquid.toFixed(1)}%</span></div>
         <div class="dl-row" id="row-cert" style="display:flex"><span class="dl-dot" style="background:#8b6fb0"></span><span class="dl-name" data-i18n="seg.certs">Certificates</span><span class="dl-pct" id="pct-cert">${d.allocation.pctCert.toFixed(1)}%</span></div>
       </div>
     </div>
     <div style="display:flex;flex-direction:column;gap:0">
       <div class="seg-row"><div class="seg-icon" style="background:var(--gold-soft)">🥇</div><div class="seg-body"><div class="seg-name"><span data-i18n="seg.gold">Gold 24K</span> · ${fmt(d.gold.gramsHeld)}g</div></div><div class="seg-right"><div class="seg-val" id="seg-gold-val">${goldValueDisplay}</div><div class="seg-pct" id="seg-gold-pct" style="color:${d.gold.pnlAvailable ? (d.gold.pnlPct! >= 0 ? 'var(--pnl-up)' : 'var(--pnl-down)') : 'var(--dim)'}">${goldPnlPctDisplay1}${d.gold.pnlAvailable ? ' <span data-i18n="seg.vs.cost">vs cost</span>' : ''}</div></div></div>
-      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">💧</div><div class="seg-body"><div class="seg-name" data-i18n="attr.liquid">EG Stock</div></div><div class="seg-right"><div class="seg-val" id="seg-liquid-val">${fmt(d.liquid.value)}</div><div class="seg-pct" style="color:${d.liquid.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${pctStr(d.liquid.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
+      <div class="seg-row"><div class="seg-icon" style="background:var(--pnl-up-soft)">💧</div><div class="seg-body"><div class="seg-name" data-i18n="attr.liquid">Liquid</div></div><div class="seg-right"><div class="seg-val" id="seg-liquid-val">${fmt(d.liquid.value)}</div><div class="seg-pct" style="color:${d.liquid.pnl >= 0 ? "var(--pnl-up)" : "var(--pnl-down)"}">${pctStr(d.liquid.pnlPct)} <span data-i18n="seg.vs.cost">vs cost</span></div></div></div>
       <div class="seg-row" id="seg-cert-row" style="display:flex"><div class="seg-icon" style="background:#ece7f4">📜</div><div class="seg-body"><div class="seg-name" data-i18n="seg.nbe.certs">NBE Certificates</div></div><div class="seg-right"><div class="seg-val" id="seg-cert-val">${fmt(d.certTotals.totalPrincipal)}</div><div class="seg-pct" id="seg-cert-pct" style="color:var(--pnl-up)">${signedFmt(d.certTotals.totalMonthly)}/mo</div></div></div>
     </div>
     <div class="math-section" id="alloc-detail" style="margin-top:auto">

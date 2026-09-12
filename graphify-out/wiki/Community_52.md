@@ -1,14 +1,15 @@
 # Community 52
 
-> 5 nodes · cohesion 0.40
+> 6 nodes · cohesion 0.33
 
 ## Key Concepts
 
-- [db-proof.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-proof.mjs#L1) (4 connections)
-- [client](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-proof.mjs#L23) (1 connections)
-- [{ Pool }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-proof.mjs#L3) (1 connections)
-- [res](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-proof.mjs#L26) (1 connections)
-- [uri](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-proof.mjs#L4) (1 connections)
+- [verify-portfolio-bucket.mjs](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L1) (5 connections)
+- [client](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L6) (1 connections)
+- [connectionString](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L4) (1 connections)
+- [message](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L14) (1 connections)
+- [migrationSql](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L10) (1 connections)
+- [result](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L20) (1 connections)
 
 ## Relationships
 
@@ -16,11 +17,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\db-proof.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-proof.mjs)
+- [G:\AI\portofolio-dashbaord\scripts\verify-portfolio-bucket.mjs](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs)
 
 ## Audit Trail
 
-- EXTRACTED: 8 (100%)
+- EXTRACTED: 10 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

@@ -4,12 +4,12 @@
 
 ## Key Concepts
 
-- [verify-portfolio-bucket.mjs](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L1) (5 connections)
-- [client](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L6) (1 connections)
-- [connectionString](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L4) (1 connections)
-- [message](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L14) (1 connections)
-- [migrationSql](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L10) (1 connections)
-- [result](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs#L20) (1 connections)
+- [check-helium.js](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L1) (5 connections)
+- [dns](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L1) (1 connections)
+- [host](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L4) (1 connections)
+- [net](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L2) (1 connections)
+- [port](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L5) (1 connections)
+- [socket](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L19) (1 connections)
 
 ## Relationships
 
@@ -17,7 +17,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\scripts\verify-portfolio-bucket.mjs](file:///G:/AI/portofolio-dashbaord/scripts/verify-portfolio-bucket.mjs)
+- [G:\AI\portofolio-dashbaord\scripts\check-helium.js](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js)
 
 ## Audit Trail
 

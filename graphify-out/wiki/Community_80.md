@@ -1,12 +1,13 @@
 # Community 80
 
-> 3 nodes · cohesion 0.67
+> 4 nodes · cohesion 0.50
 
 ## Key Concepts
 
-- [logger.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts#L1) (2 connections)
-- [isProduction](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts#L3) (1 connections)
-- [logger](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts#L5) (1 connections)
+- [api.schemas.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts#L1) (3 connections)
+- [FundHoldingType](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts#L61) (1 connections)
+- [TransactionHoldingType](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts#L103) (1 connections)
+- [TransactionTxType](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts#L95) (1 connections)
 
 ## Relationships
 
@@ -14,11 +15,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\logger.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts)
+- [G:\AI\portofolio-dashbaord\lib\api-client-react\src\generated\api.schemas.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 4 (100%)
+- EXTRACTED: 6 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

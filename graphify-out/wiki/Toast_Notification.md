@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [{ toasts }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/toaster.tsx#L12) (2 connections)
-- [toaster.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/toaster.tsx#L1) (1 connections)
-- [toaster.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/toaster.tsx#L1) (1 connections)
+- [Table](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/table.tsx#L4) (2 connections)
+- [table.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/table.tsx#L1) (1 connections)
+- [table.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/table.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\toaster.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/toaster.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\toaster.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/toaster.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\table.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/table.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\table.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/table.tsx)
 
 ## Audit Trail
 

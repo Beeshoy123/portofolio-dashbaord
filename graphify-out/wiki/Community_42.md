@@ -1,15 +1,16 @@
 # Community 42
 
-> 6 nodes · cohesion 0.33
+> 7 nodes · cohesion 0.48
 
 ## Key Concepts
 
-- [db-host-check.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L1) (5 connections)
-- [connectOne()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L18) (1 connections)
-- [dnsOne()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L6) (1 connections)
-- [dnsResult](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L41) (1 connections)
-- [hosts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L4) (1 connections)
-- [results](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L39) (1 connections)
+- [item.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/item.tsx#L1) (5 connections)
+- [item.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/item.tsx#L1) (5 connections)
+- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/item.tsx#L109) (2 connections)
+- [Comp](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/item.tsx#L61) (2 connections)
+- [ItemGroup()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/item.tsx#L7) (2 connections)
+- [ItemSeparator()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/item.tsx#L18) (2 connections)
+- [itemVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/item.tsx#L32) (2 connections)
 
 ## Relationships
 
@@ -17,11 +18,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\db-host-check.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\item.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/item.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\item.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/item.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 10 (100%)
+- EXTRACTED: 20 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

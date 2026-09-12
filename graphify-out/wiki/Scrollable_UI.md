@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/scroll-area.tsx#L1) (2 connections)
-- [scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx#L1) (2 connections)
-- [ScrollArea](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx#L5) (2 connections)
-- [ScrollBar](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx#L23) (2 connections)
+- [buttonGroupVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx#L6) (2 connections)
+- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx#L68) (2 connections)
+- [button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/button-group.tsx#L1) (2 connections)
+- [button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx#L1) (2 connections)
 
 ## Relationships
 
@@ -15,8 +15,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/scroll-area.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/button-group.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx)
 
 ## Audit Trail
 

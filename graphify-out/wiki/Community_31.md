@@ -1,18 +1,18 @@
 # Community 31
 
-> 9 nodes · cohesion 0.39
+> 9 nodes · cohesion 0.28
 
 ## Key Concepts
 
-- [carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/carousel.tsx#L1) (7 connections)
-- [carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L1) (7 connections)
-- [Carousel](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L42) (2 connections)
-- [CarouselContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L30) (2 connections)
-- [{ carouselRef, orientation }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L154) (2 connections)
-- [{ orientation }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L176) (2 connections)
-- [{ orientation, scrollNext, canScrollNext }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L227) (2 connections)
-- [{ orientation, scrollPrev, canScrollPrev }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L198) (2 connections)
-- [useCarousel()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L32) (2 connections)
+- [globalGoldCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L1) (8 connections)
+- [refresh()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L58) (3 connections)
+- [fetchPrice()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L29) (2 connections)
+- [startGlobalGoldScheduler()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L106) (2 connections)
+- [cache](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L23) (1 connections)
+- [FETCH_TIMEOUT_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L21) (1 connections)
+- [getGlobalGoldPrice()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L98) (1 connections)
+- [QUOTES_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L18) (1 connections)
+- [REFRESH_INTERVAL_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L20) (1 connections)
 
 ## Relationships
 
@@ -20,12 +20,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/carousel.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\globalGoldCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 28 (100%)
+- EXTRACTED: 20 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

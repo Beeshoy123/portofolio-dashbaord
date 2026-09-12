@@ -1,17 +1,18 @@
 # Community 36
 
-> 8 nodes · cohesion 0.29
+> 9 nodes · cohesion 0.39
 
 ## Key Concepts
 
-- [eurEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L1) (7 connections)
-- [refresh()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L23) (2 connections)
-- [startEurEgpScheduler()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L61) (2 connections)
-- [API_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L17) (1 connections)
-- [cache](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L21) (1 connections)
-- [FETCH_TIMEOUT_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L19) (1 connections)
-- [getEurEgpRate()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L53) (1 connections)
-- [REFRESH_INTERVAL_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts#L18) (1 connections)
+- [pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/pagination.tsx#L1) (7 connections)
+- [pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L1) (7 connections)
+- [Pagination()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L6) (2 connections)
+- [PaginationContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L16) (2 connections)
+- [PaginationEllipsis()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L93) (2 connections)
+- [PaginationItem](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L28) (2 connections)
+- [PaginationLink()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L41) (2 connections)
+- [PaginationNext()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L77) (2 connections)
+- [PaginationPrevious()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx#L61) (2 connections)
 
 ## Relationships
 
@@ -19,11 +20,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\eurEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/eurEgpCache.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/pagination.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\pagination.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/pagination.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 16 (100%)
+- EXTRACTED: 28 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

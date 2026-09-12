@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [TransactionTxType](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts#L86) (1 connections)
-- [api.schemas.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts#L1) (1 connections)
+- [textarea.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/textarea.tsx#L1) (1 connections)
+- [Textarea](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/textarea.tsx#L4) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\api-client-react\src\generated\api.schemas.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.schemas.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\textarea.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/textarea.tsx)
 
 ## Audit Trail
 

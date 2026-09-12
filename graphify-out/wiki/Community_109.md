@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [schemaPath](file:///G:/AI/portofolio-dashbaord/lib/db/drizzle.config.ts#L8) (1 connections)
-- [drizzle.config.ts](file:///G:/AI/portofolio-dashbaord/lib/db/drizzle.config.ts#L1) (1 connections)
+- [FundHoldingType](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/fundHoldingType.ts#L12) (1 connections)
+- [fundHoldingType.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/fundHoldingType.ts#L1) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\db\drizzle.config.ts](file:///G:/AI/portofolio-dashbaord/lib/db/drizzle.config.ts)
+- [G:\AI\portofolio-dashbaord\lib\api-zod\src\generated\types\fundHoldingType.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/fundHoldingType.ts)
 
 ## Audit Trail
 

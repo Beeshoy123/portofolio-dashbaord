@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [use-mobile.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/hooks/use-mobile.tsx#L1) (2 connections)
-- [use-mobile.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/hooks/use-mobile.tsx#L1) (2 connections)
-- [MOBILE_BREAKPOINT](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/hooks/use-mobile.tsx#L3) (2 connections)
-- [useIsMobile()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/hooks/use-mobile.tsx#L5) (2 connections)
+- [input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/input-otp.tsx#L1) (2 connections)
+- [input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx#L1) (2 connections)
+- [{ char, hasFakeCaret, isActive }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx#L35) (2 connections)
+- [inputOTPContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx#L34) (2 connections)
 
 ## Relationships
 
@@ -15,8 +15,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\hooks\use-mobile.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/hooks/use-mobile.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\hooks\use-mobile.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/hooks/use-mobile.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/input-otp.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx)
 
 ## Audit Trail
 

@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [main.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/main.tsx#L1) (1 connections)
-- [queryClient](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/main.tsx#L10) (1 connections)
+- [menubar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/menubar.tsx#L1) (1 connections)
+- [Menubar](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/menubar.tsx#L37) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\main.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/main.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\menubar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/menubar.tsx)
 
 ## Audit Trail
 

@@ -4,16 +4,16 @@
 
 ## Key Concepts
 
-- [index.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L1) (9 connections)
-- [chosenDatabaseUrl](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L38) (1 connections)
-- [db](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L96) (1 connections)
-- [isLocalDatabase](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L76) (1 connections)
-- [isSupabasePooler](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L77) (1 connections)
-- [normalizedDatabaseUrl](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L74) (1 connections)
-- [parsedDbUrl](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L61) (1 connections)
-- [{ Pool }](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L28) (1 connections)
-- [poolerEnv](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L39) (1 connections)
-- [sslConfig](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L78) (1 connections)
+- [scraper.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L1) (9 connections)
+- [allowedBuckets](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L16) (1 connections)
+- [lastRunAt](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L113) (1 connections)
+- [normalizedBucket](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L23) (1 connections)
+- [rawBucket](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L17) (1 connections)
+- [result](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L31) (1 connections)
+- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L4) (1 connections)
+- [runId](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L53) (1 connections)
+- [since](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L56) (1 connections)
+- [ticker](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts#L24) (1 connections)
 
 ## Relationships
 
@@ -21,7 +21,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\db\src\index.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\scraper.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/scraper.ts)
 
 ## Audit Trail
 

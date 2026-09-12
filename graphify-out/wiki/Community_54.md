@@ -1,14 +1,14 @@
 # Community 54
 
-> 5 nodes · cohesion 0.60
+> 5 nodes · cohesion 0.50
 
 ## Key Concepts
 
-- [timeStop.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/timeStop.ts#L1) (4 connections)
-- [checkTimeStop()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/timeStop.ts#L53) (3 connections)
-- [checkAllTimeStops()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/timeStop.ts#L122) (2 connections)
-- [sameVerdict()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/timeStop.ts#L41) (2 connections)
-- [STALE_DAYS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/timeStop.ts#L22) (1 connections)
+- [thesisCheck.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/thesisCheck.ts#L1) (4 connections)
+- [checkAllTheses()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/thesisCheck.ts#L150) (2 connections)
+- [checkThesis()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/thesisCheck.ts#L52) (2 connections)
+- [LOOKBACK_DAYS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/thesisCheck.ts#L20) (1 connections)
+- [SIGNAL_RANK](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/thesisCheck.ts#L22) (1 connections)
 
 ## Relationships
 
@@ -16,11 +16,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\timeStop.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/timeStop.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\thesisCheck.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/thesisCheck.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 12 (100%)
+- EXTRACTED: 10 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [Slider](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/slider.tsx#L5) (2 connections)
-- [slider.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/slider.tsx#L1) (1 connections)
-- [slider.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/slider.tsx#L1) (1 connections)
+- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/kbd.tsx#L7) (2 connections)
+- [kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/kbd.tsx#L1) (1 connections)
+- [kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/kbd.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\slider.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/slider.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\slider.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/slider.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/kbd.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/kbd.tsx)
 
 ## Audit Trail
 

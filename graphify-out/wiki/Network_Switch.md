@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [switch.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/switch.tsx#L1) (1 connections)
-- [Switch](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/switch.tsx#L5) (1 connections)
+- [separator.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/separator.tsx#L1) (1 connections)
+- [Separator](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/separator.tsx#L5) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\switch.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/switch.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\separator.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/separator.tsx)
 
 ## Audit Trail
 

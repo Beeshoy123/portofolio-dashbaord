@@ -4,15 +4,15 @@
 
 ## Key Concepts
 
-- [dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/dropdown-menu.tsx#L1) (7 connections)
-- [dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L1) (7 connections)
-- [DropdownMenu](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L8) (2 connections)
-- [DropdownMenuGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L12) (2 connections)
-- [DropdownMenuPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L14) (2 connections)
-- [DropdownMenuRadioGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L18) (2 connections)
-- [DropdownMenuSub](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L16) (2 connections)
-- [DropdownMenuSubTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L20) (2 connections)
-- [DropdownMenuTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L10) (2 connections)
+- [carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/carousel.tsx#L1) (7 connections)
+- [carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L1) (7 connections)
+- [Carousel](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L42) (2 connections)
+- [CarouselContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L30) (2 connections)
+- [{ carouselRef, orientation }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L154) (2 connections)
+- [{ orientation }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L176) (2 connections)
+- [{ orientation, scrollNext, canScrollNext }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L227) (2 connections)
+- [{ orientation, scrollPrev, canScrollPrev }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L198) (2 connections)
+- [useCarousel()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx#L32) (2 connections)
 
 ## Relationships
 
@@ -20,8 +20,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/dropdown-menu.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/carousel.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\carousel.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/carousel.tsx)
 
 ## Audit Trail
 

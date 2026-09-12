@@ -1,18 +1,18 @@
 # Contextual Menus
 
-> 9 nodes · cohesion 0.39
+> 9 nodes · cohesion 0.25
 
 ## Key Concepts
 
-- [context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/context-menu.tsx#L1) (7 connections)
-- [context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L1) (7 connections)
-- [ContextMenu](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L6) (2 connections)
-- [ContextMenuGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L10) (2 connections)
-- [ContextMenuPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L12) (2 connections)
-- [ContextMenuRadioGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L16) (2 connections)
-- [ContextMenuSub](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L14) (2 connections)
-- [ContextMenuSubTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L18) (2 connections)
-- [ContextMenuTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx#L8) (2 connections)
+- [App.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L1) (9 connections)
+- [loadComponent()](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L38) (2 connections)
+- [_resolveComponent()](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L7) (2 connections)
+- [basePath](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L95) (1 connections)
+- [cancelled](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L33) (1 connections)
+- [[Component, setComponent]](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L29) (1 connections)
+- [[error, setError]](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L30) (1 connections)
+- [local](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L123) (1 connections)
+- [{ pathname }](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L122) (1 connections)
 
 ## Relationships
 
@@ -20,12 +20,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/context-menu.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\context-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/context-menu.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\App.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 28 (100%)
+- EXTRACTED: 19 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

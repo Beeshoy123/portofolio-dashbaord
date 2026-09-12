@@ -1,11 +1,12 @@
 # Community 95
 
-> 2 nodes · cohesion 1.00
+> 3 nodes · cohesion 0.67
 
 ## Key Concepts
 
-- [pool](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/dbPool.ts#L3) (1 connections)
-- [dbPool.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/dbPool.ts#L1) (1 connections)
+- [radio-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/radio-group.tsx#L1) (2 connections)
+- [RadioGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/radio-group.tsx#L6) (1 connections)
+- [RadioGroupItem](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/radio-group.tsx#L20) (1 connections)
 
 ## Relationships
 
@@ -13,11 +14,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\dbPool.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/dbPool.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\radio-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/radio-group.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 2 (100%)
+- EXTRACTED: 4 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

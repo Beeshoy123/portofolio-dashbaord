@@ -4,11 +4,11 @@
 
 ## Key Concepts
 
-- [alert-dialog.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/alert-dialog.tsx#L1) (3 connections)
-- [alert-dialog.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert-dialog.tsx#L1) (3 connections)
-- [AlertDialog](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert-dialog.tsx#L6) (2 connections)
-- [AlertDialogPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert-dialog.tsx#L10) (2 connections)
-- [AlertDialogTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert-dialog.tsx#L8) (2 connections)
+- [vite.config.ts](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/vite.config.ts#L1) (3 connections)
+- [vite.config.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/vite.config.ts#L1) (3 connections)
+- [basePath](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/vite.config.ts#L14) (2 connections)
+- [port](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/vite.config.ts#L8) (2 connections)
+- [rawPort](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/vite.config.ts#L7) (2 connections)
 
 ## Relationships
 
@@ -16,8 +16,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\alert-dialog.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/alert-dialog.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\alert-dialog.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert-dialog.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\vite.config.ts](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/vite.config.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\vite.config.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/vite.config.ts)
 
 ## Audit Trail
 

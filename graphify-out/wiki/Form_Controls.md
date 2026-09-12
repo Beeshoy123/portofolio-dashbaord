@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [Checkbox](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/checkbox.tsx#L6) (1 connections)
-- [checkbox.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/checkbox.tsx#L1) (1 connections)
+- [AuthGate()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/AuthGate.tsx#L6) (1 connections)
+- [AuthGate.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/AuthGate.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\checkbox.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/checkbox.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\AuthGate.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/AuthGate.tsx)
 
 ## Audit Trail
 

@@ -1,21 +1,21 @@
 # Community 22
 
-> 12 nodes · cohesion 0.17
+> 12 nodes · cohesion 0.24
 
 ## Key Concepts
 
-- [ai-bot-contracts.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L1) (11 connections)
-- [advisor](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L14) (1 connections)
-- [advisorRoute](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L11) (1 connections)
-- [auth](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L12) (1 connections)
-- [botRoute](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L27) (1 connections)
-- [dashboard](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L13) (1 connections)
-- [judge](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L9) (1 connections)
-- [migration](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L15) (1 connections)
-- [read()](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L7) (1 connections)
-- [root](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L6) (1 connections)
-- [scanner](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L76) (1 connections)
-- [scraperRoute](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L10) (1 connections)
+- [select.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L1) (10 connections)
+- [select.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/select.tsx#L1) (6 connections)
+- [Select](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L8) (2 connections)
+- [SelectGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L10) (2 connections)
+- [SelectScrollDownButton](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L51) (2 connections)
+- [SelectScrollUpButton](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L34) (2 connections)
+- [SelectTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L14) (2 connections)
+- [SelectValue](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L12) (2 connections)
+- [SelectContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L69) (1 connections)
+- [SelectItem](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L113) (1 connections)
+- [SelectLabel](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L101) (1 connections)
+- [SelectSeparator](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx#L135) (1 connections)
 
 ## Relationships
 
@@ -23,11 +23,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\scripts\ai-bot-contracts.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\select.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/select.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\select.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/select.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 22 (100%)
+- EXTRACTED: 32 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

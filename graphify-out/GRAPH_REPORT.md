@@ -1,12 +1,12 @@
-# Graph Report - G:\AI\portofolio-dashbaord  (2026-09-10)
+# Graph Report - G:\AI\portofolio-dashbaord  (2026-09-11)
 
 ## Corpus Check
-- 237 files · ~552,860 words
+- 238 files · ~693,306 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1278 nodes · 1625 edges · 157 communities detected
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 120 edges (avg confidence: 0.8)
+- 1295 nodes · 1637 edges · 158 communities detected
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 119 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -167,67 +167,68 @@
 - [[_COMMUNITY_Community 154|Community 154]]
 - [[_COMMUNITY_Community 155|Community 155]]
 - [[_COMMUNITY_Community 156|Community 156]]
+- [[_COMMUNITY_Community 157|Community 157]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `match` - 51 edges
-2. `judgeHolding()` - 22 edges
-3. `customFetch()` - 16 edges
-4. `buildDashboardHtml()` - 14 edges
+2. `customFetch()` - 16 edges
+3. `buildDashboardHtml()` - 15 edges
+4. `judgeHolding()` - 14 edges
 5. `query` - 13 edges
 6. `fetchOverview()` - 13 edges
-7. `toLocaleString()` - 10 edges
-8. `tryPlainFetch()` - 9 edges
+7. `tryPlainFetch()` - 9 edges
+8. `toLocaleString()` - 9 edges
 9. `judgeHolding()` - 9 edges
 10. `parseFundPage()` - 9 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `capturePortfolioValue()` --calls--> `query`  [INFERRED]
   G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\drawdownDb.ts → G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\verdicts.ts
-- `persistRunDiagnostics()` --calls--> `query`  [INFERRED]
-  G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\aiBot.ts → G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\verdicts.ts
-- `checkMarketCapSecondOpinion()` --calls--> `toLocaleString()`  [INFERRED]
-  G:\AI\portofolio-dashbaord\artifacts\api-server\judge\comparisonJudge.ts → G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\AiBotWorkspace.tsx
-- `judgeHolding()` --calls--> `query`  [INFERRED]
-  G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\comparisonJudge.ts → G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\verdicts.ts
+- `toLocaleString()` --calls--> `checkMarketCapSecondOpinion()`  [INFERRED]
+  G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\AiBotWorkspace.tsx → G:\AI\portofolio-dashbaord\attached_assets\comparisonJudge_1785632070487.ts
 - `printVerdict()` --calls--> `toLocaleString()`  [INFERRED]
   G:\AI\portofolio-dashbaord\artifacts\api-server\judge\printVerdicts.ts → G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\AiBotWorkspace.tsx
+- `buildDataBlock()` --calls--> `toLocaleString()`  [INFERRED]
+  G:\AI\portofolio-dashbaord\artifacts\api-server\src\advisor\buildPrompt.ts → G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\AiBotWorkspace.tsx
+- `suggestDepositAllocation()` --calls--> `findOpportunities()`  [INFERRED]
+  G:\AI\portofolio-dashbaord\artifacts\api-server\src\advisor\depositSuggestion.ts → G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\comparisonJudge.ts
 
 ## Communities
 
 ### Community 0 - "Community 0"
 
 Cohesion: 0.02
-Nodes (86): amount, asset, attempt, avgCostPerUnit, barLabel, body, candidateDuplicates, canonicalAsset (+78 more)
+Nodes (89): amount, asset, attempt, avgCostPerUnit, barLabel, body, candidateDuplicates, canonicalAsset (+81 more)
 
 ### Community 1 - "Community 1"
 
 Cohesion: 0.06
-Nodes (69): match, emptySnapshot(), extractCagr(), extractPercentNear(), extractPriceNear(), extractRiskLevel(), extractScoreNear(), FUND_PAGE_BASE (+61 more)
+Nodes (65): match, emptySnapshot(), extractCagr(), extractPercentNear(), extractPriceNear(), extractRiskLevel(), extractScoreNear(), FUND_PAGE_BASE (+57 more)
 
 ### Community 2 - "Community 2"
 
-Cohesion: 0.05
-Nodes (50): enrichHistoricalReturns(), fetchHistoricalReturns(), findCloseOnOrBefore(), percentageChange(), emptySnapshot(), extractCagr(), extractPercentNear(), extractPriceNear() (+42 more)
+Cohesion: 0.04
+Nodes (49): releaseAdvisoryLock(), alerts, calls, runId, summary, verdicts, acquired, BOT_LOCK_ID (+41 more)
 
 ### Community 3 - "Community 3"
 
-Cohesion: 0.06
-Nodes (49): assetRole(), buildGroup(), combineIntoFinalLabel(), computeRiskTier(), computeSignal(), computeTechnicalGrade(), findHeldLaggards(), findHeldOpportunities() (+41 more)
+Cohesion: 0.03
+Nodes (56): ASSET_ROLE_GLOSSARY, bodyHeight, bodyTop, bucketOrder, buckets, categoryLabel, confidence, confidenceMeta (+48 more)
 
 ### Community 4 - "Community 4"
-
-Cohesion: 0.03
-Nodes (53): ASSET_ROLE_GLOSSARY, bodyHeight, bodyTop, bucketOrder, buckets, confidence, confidenceMeta, confidenceTier (+45 more)
-
-### Community 5 - "Community 5"
 
 Cohesion: 0.06
 Nodes (53): createGoldTransaction(), createGrowthSnapshot(), getCreateGoldTransactionMutationOptions(), getCreateGoldTransactionUrl(), getCreateGrowthSnapshotMutationOptions(), getCreateGrowthSnapshotUrl(), getGetPortfolioQueryKey(), getGetPortfolioQueryOptions() (+45 more)
 
-### Community 6 - "Community 6"
+### Community 5 - "Community 5"
 
 Cohesion: 0.07
-Nodes (42): toLocaleString(), checkMarketCapSecondOpinion(), checkMarketCapSecondOpinion(), initDashboardBehavior(), allocInsight(), attribBar(), buildCohortAnalysis(), buildDashboardHtml() (+34 more)
+Nodes (48): assetRole(), combineIntoFinalLabel(), computeFundQualityGrade(), computeTechnicalGrade(), findHeldLaggards(), findHeldOpportunities(), findHeldWinners(), findOpportunities() (+40 more)
+
+### Community 6 - "Community 6"
+
+Cohesion: 0.08
+Nodes (41): toLocaleString(), initDashboardBehavior(), allocInsight(), attribBar(), buildAnnualizedReturnCard(), buildCohortAnalysis(), buildDashboardHtml(), buildDonutRing() (+33 more)
 
 ### Community 7 - "Community 7"
 
@@ -241,33 +242,33 @@ Nodes (31): buildAnalysisBasis(), buildDataBlock(), buildFundamentalsBlock(), bu
 
 ### Community 9 - "Community 9"
 
-Cohesion: 0.07
-Nodes (22): releaseAdvisoryLock(), alerts, calls, runId, summary, verdicts, acquired, BOT_LOCK_ID (+14 more)
+Cohesion: 0.13
+Nodes (25): cn(), Comp, contextValue, handleKeyDown(), isMobile, { isMobile, state, openMobile, setOpenMobile }, open, [_open, _setOpen] (+17 more)
 
 ### Community 10 - "Community 10"
 
-Cohesion: 0.13
-Nodes (25): cn(), Comp, contextValue, handleKeyDown(), isMobile, { isMobile, state, openMobile, setOpenMobile }, open, [_open, _setOpen] (+17 more)
+Cohesion: 0.11
+Nodes (18): buildGroup(), checkMarketCapSecondOpinion(), computeRiskTier(), computeSignal(), getHoldingCurrentValue(), getLatestSnapshots(), getReturn(), getWatchlist() (+10 more)
 
 ### Community 11 - "Community 11"
 
 Cohesion: 0.11
-Nodes (17): buildGroup(), computeRiskTier(), computeSignal(), getHoldingCurrentValue(), getLatestSnapshots(), getReturn(), getWatchlist(), judgeAllHoldings() (+9 more)
+Nodes (23): emptySnapshot(), extractCagr(), extractPercentNear(), extractPriceNear(), extractRiskLevel(), extractScoreNear(), FUND_PAGE_BASE, parseFundPage() (+15 more)
 
 ### Community 12 - "Community 12"
-
-Cohesion: 0.12
-Nodes (15): calculateDrawdown(), capturePortfolioValue(), computeDrawdown(), emptySnapshot(), extractCagr(), extractPercentNear(), extractPriceNear(), extractRiskLevel() (+7 more)
-
-### Community 13 - "Community 13"
 
 Cohesion: 0.17
 Nodes (17): ChartContainer, ChartContext, chartId, color, colorConfig, { config }, configLabelKey, indicatorColor (+9 more)
 
-### Community 14 - "Community 14"
+### Community 13 - "Community 13"
 
 Cohesion: 0.12
 Nodes (17): activeView, buildUsdReality(), cleanup, containerRef, createSnapshotMutation, { data: portfolio, isLoading, isError, error }, dataToRender, derived (+9 more)
+
+### Community 14 - "Community 14"
+
+Cohesion: 0.29
+Nodes (16): BASE_URL, emptyFundamentals(), extractChartReferencePrice(), extractLabeled(), extractLabeledAny(), extractPeRatio(), extractPercentageAfter(), fetchHistory() (+8 more)
 
 ### Community 15 - "Community 15"
 
@@ -281,143 +282,143 @@ Nodes (13): actionTypes, addToRemoveQueue(), count, dispatch(), genId(), listene
 
 ### Community 17 - "Community 17"
 
+Cohesion: 0.14
+Nodes (10): calculateGroupedXirr(), calculateXirr(), combined, combinedTransactions, funds, nominal, real, result (+2 more)
+
+### Community 18 - "Community 18"
+
 Cohesion: 0.13
 Nodes (14): certificatesTable, fundsTable, goldSettingsTable, goldTransactionsTable, growthSnapshotsTable, insertCertificateSchema, insertFundSchema, insertGoldSettingsSchema (+6 more)
 
-### Community 18 - "Community 18"
+### Community 19 - "Community 19"
 
 Cohesion: 0.23
 Nodes (11): body, { error, formItemId }, { error, formItemId, formDescriptionId, formMessageId }, { error, formMessageId }, Form, { formDescriptionId }, FormField, FormFieldContext (+3 more)
 
-### Community 19 - "Community 19"
+### Community 20 - "Community 20"
 
 Cohesion: 0.15
 Nodes (11): alertsByTicker, allTheses, allTimeStops, drawdown, router, runId, theses, thesis (+3 more)
 
-### Community 20 - "Community 20"
-
-Cohesion: 0.15
-Nodes (11): CreateGoldTransactionBody, CreateGoldTransactionResponse, CreateGrowthSnapshotBody, CreateGrowthSnapshotResponse, GetPortfolioResponse, HealthCheckResponse, UpdateFundBody, UpdateFundParams (+3 more)
-
 ### Community 21 - "Community 21"
 _Provides a user interface for selecting an item from a list, encapsulating trigger, value display, and scrollable content with grouping._
+Cohesion: 0.17
+Nodes (7): calculateDrawdown(), capturePortfolioValue(), computeDrawdown(), restore, result, snapshot, snapshots
+
+### Community 22 - "Community 22"
+
 Cohesion: 0.24
 Nodes (10): Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectScrollDownButton, SelectScrollUpButton, SelectSeparator (+2 more)
 
-### Community 22 - "Community 22"
+### Community 23 - "Community 23"
+
+Cohesion: 0.17
+Nodes (11): CreateGoldTransactionBody, CreateGoldTransactionResponse, CreateGrowthSnapshotBody, CreateGrowthSnapshotResponse, GetPortfolioResponse, HealthCheckResponse, UpdateFundBody, UpdateFundParams (+3 more)
+
+### Community 24 - "Community 24"
 
 Cohesion: 0.17
 Nodes (10): advisor, advisorRoute, auth, botRoute, dashboard, judge, migration, root (+2 more)
 
-### Community 23 - "Community 23"
+### Community 25 - "Community 25"
 
 Cohesion: 0.18
 Nodes (10): analysis, { analyzePortfolioOpportunities }, connectionString, envCandidates, envPath, { judgeAllHoldings }, latestRun, { Pool } (+2 more)
 
-### Community 24 - "Community 24"
+### Community 26 - "Community 26"
 
 Cohesion: 0.24
 Nodes (10): cache, extractKaratPrices(), FETCH_TIMEOUT_MS, getGoldPrices(), refresh(), REFRESH_INTERVAL_MS, scrape(), SCRAPE_URL (+2 more)
 
-### Community 25 - "Community 25"
-
-Cohesion: 0.2
-Nodes (9): { config }, { default: app }, __dirname, dotenvPath, dotenvPathCandidates, __filename, { logger }, port (+1 more)
-
-### Community 26 - "Community 26"
-
-Cohesion: 0.2
-Nodes (9): allowedBuckets, lastRunAt, normalizedBucket, rawBucket, result, router, runId, since (+1 more)
-
 ### Community 27 - "Community 27"
 _Handles sliding drawer UI, including overlay, content, trigger, close button, and title._
 Cohesion: 0.2
-Nodes (6): DrawerClose, DrawerContent, DrawerOverlay, DrawerPortal, DrawerTitle, DrawerTrigger
+Nodes (9): { config }, { default: app }, __dirname, dotenvPath, dotenvPathCandidates, __filename, { logger }, port (+1 more)
 
 ### Community 28 - "Community 28"
 
 Cohesion: 0.2
-Nodes (9): chosenDatabaseUrl, db, isLocalDatabase, isSupabasePooler, normalizedDatabaseUrl, parsedDbUrl, { Pool }, poolerEnv (+1 more)
+Nodes (9): allowedBuckets, lastRunAt, normalizedBucket, rawBucket, result, router, runId, since (+1 more)
 
 ### Community 29 - "Community 29"
+
+Cohesion: 0.2
+Nodes (6): DrawerClose, DrawerContent, DrawerOverlay, DrawerPortal, DrawerTitle, DrawerTrigger
+
+### Community 30 - "Community 30"
+
+Cohesion: 0.2
+Nodes (9): chosenDatabaseUrl, db, isLocalDatabase, isSupabasePooler, normalizedDatabaseUrl, parsedDbUrl, { Pool }, poolerEnv (+1 more)
+
+### Community 31 - "Community 31"
 
 Cohesion: 0.28
 Nodes (7): cache, FETCH_TIMEOUT_MS, fetchPrice(), QUOTES_URL, refresh(), REFRESH_INTERVAL_MS, startGlobalGoldScheduler()
 
-### Community 30 - "Community 30"
-
-Cohesion: 0.25
-Nodes (8): basePath, cancelled, [Component, setComponent], [error, setError], loadComponent(), local, { pathname }, _resolveComponent()
-
-### Community 31 - "Community 31"
-
-Cohesion: 0.39
-Nodes (7): Carousel, CarouselContext, { carouselRef, orientation }, { orientation }, { orientation, scrollNext, canScrollNext }, { orientation, scrollPrev, canScrollPrev }, useCarousel()
-
 ### Community 32 - "Community 32"
 _Provides UI components for context-sensitive dropdown menus with grouping, radio groups, submenus, and portal handling._
-Cohesion: 0.39
-Nodes (7): ContextMenu, ContextMenuGroup, ContextMenuPortal, ContextMenuRadioGroup, ContextMenuSub, ContextMenuSubTrigger, ContextMenuTrigger
+Cohesion: 0.25
+Nodes (8): basePath, cancelled, [Component, setComponent], [error, setError], loadComponent(), local, { pathname }, _resolveComponent()
 
 ### Community 33 - "Community 33"
 _Facilitates rendering and interaction of a contextual dropdown menu with support for groups, radios, submenus, and portal placement._
 Cohesion: 0.39
-Nodes (7): DropdownMenu, DropdownMenuGroup, DropdownMenuPortal, DropdownMenuRadioGroup, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuTrigger
+Nodes (7): Carousel, CarouselContext, { carouselRef, orientation }, { orientation }, { orientation, scrollNext, canScrollNext }, { orientation, scrollPrev, canScrollPrev }, useCarousel()
 
 ### Community 34 - "Community 34"
 
 Cohesion: 0.39
-Nodes (7): Pagination(), PaginationContent, PaginationEllipsis(), PaginationItem, PaginationLink(), PaginationNext(), PaginationPrevious()
+Nodes (7): ContextMenu, ContextMenuGroup, ContextMenuPortal, ContextMenuRadioGroup, ContextMenuSub, ContextMenuSubTrigger, ContextMenuTrigger
 
 ### Community 35 - "Community 35"
+
+Cohesion: 0.39
+Nodes (7): DropdownMenu, DropdownMenuGroup, DropdownMenuPortal, DropdownMenuRadioGroup, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuTrigger
+
+### Community 36 - "Community 36"
+
+Cohesion: 0.39
+Nodes (7): Pagination(), PaginationContent, PaginationEllipsis(), PaginationItem, PaginationLink(), PaginationNext(), PaginationPrevious()
+
+### Community 37 - "Community 37"
 
 Cohesion: 0.22
 Nodes (7): BAR_10G_GRAMS, BAR_5G_GRAMS, CASHBACK_21K_PER_GRAM, GOLD_POUND_GRAMS, MFG_FEE_10G_24K_PER_GRAM, MFG_FEE_5G_24K_PER_GRAM, MFG_FEE_GOLD_POUND_21K_PER_GRAM
 
-### Community 36 - "Community 36"
+### Community 38 - "Community 38"
 
 Cohesion: 0.29
 Nodes (6): API_URL, cache, FETCH_TIMEOUT_MS, refresh(), REFRESH_INTERVAL_MS, startEurEgpScheduler()
 
-### Community 37 - "Community 37"
-
+### Community 39 - "Community 39"
+_Encapsulates the visual layout and structure of a card or panel in a user interface, organizing its header, title, description, content, and footer._
 Cohesion: 0.29
 Nodes (6): API_URL, cache, FETCH_TIMEOUT_MS, refresh(), REFRESH_INTERVAL_MS, startUsdEgpScheduler()
 
-### Community 38 - "Community 38"
+### Community 40 - "Community 40"
 
 Cohesion: 0.25
 Nodes (6): NavigationMenu, NavigationMenuContent, NavigationMenuItem, NavigationMenuList, NavigationMenuTrigger, navigationMenuTriggerStyle
 
-### Community 39 - "Community 39"
-_Encapsulates the visual layout and structure of a card or panel in a user interface, organizing its header, title, description, content, and footer._
+### Community 41 - "Community 41"
+
 Cohesion: 0.29
 Nodes (6): Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle
 
-### Community 40 - "Community 40"
+### Community 42 - "Community 42"
 
 Cohesion: 0.48
 Nodes (5): cn(), Comp, ItemGroup(), ItemSeparator(), itemVariants
 
-### Community 41 - "Community 41"
-
-Cohesion: 0.38
-Nodes (4): extractChangePercentNear(), extractPointsNear(), findAllOccurrences(), INDICES_URL
-
-### Community 42 - "Community 42"
-
-Cohesion: 0.33
-Nodes (3): dnsResult, hosts, results
-
 ### Community 43 - "Community 43"
 _Enables expandable and collapsible sections of content in a UI, grouping sections under interactive triggers._
-Cohesion: 0.47
-Nodes (4): Accordion, AccordionContent, AccordionItem, AccordionTrigger
+Cohesion: 0.33
+Nodes (3): dnsResult, hosts, results
 
 ### Community 44 - "Community 44"
 
 Cohesion: 0.47
-Nodes (3): cn(), defaultClassNames, ref
+Nodes (4): Accordion, AccordionContent, AccordionItem, AccordionTrigger
 
 ### Community 45 - "Community 45"
 _It handles the display, opening, and closing of modal dialog interfaces within the application, using portal rendering and trigger elements._
@@ -426,18 +427,18 @@ Nodes (4): Dialog, DialogClose, DialogPortal, DialogTrigger
 
 ### Community 46 - "Community 46"
 _Handles creation, positioning, and visibility of overlay pop-up content triggered by an anchor element._
-Cohesion: 0.47
-Nodes (4): Popover, PopoverAnchor, PopoverContent, PopoverTrigger
+Cohesion: 0.53
+Nodes (4): Sheet, SheetClose, SheetPortal, SheetTrigger
 
 ### Community 47 - "Community 47"
 _This domain defines a reusable sliding sheet component that manages its display, trigger, close action, and portal rendering within a user interface._
-Cohesion: 0.53
-Nodes (4): Sheet, SheetClose, SheetPortal, SheetTrigger
+Cohesion: 0.47
+Nodes (4): Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
 
 ### Community 48 - "Community 48"
 _Manages the display, content, and trigger behavior of tooltip components._
 Cohesion: 0.47
-Nodes (4): Tooltip, TooltipContent, TooltipProvider, TooltipTrigger
+Nodes (3): cn(), defaultClassNames, ref
 
 ### Community 49 - "Community 49"
 _Unable to determine domain due to missing code entities._
@@ -446,53 +447,53 @@ Nodes (0):
 
 ### Community 50 - "Community 50"
 
-Cohesion: 0.33
-Nodes (5): dns, host, net, port, socket
+Cohesion: 0.47
+Nodes (4): Popover, PopoverAnchor, PopoverContent, PopoverTrigger
 
 ### Community 51 - "Community 51"
 
 Cohesion: 0.33
-Nodes (5): client, connectionString, message, migrationSql, result
+Nodes (5): dns, host, net, port, socket
 
 ### Community 52 - "Community 52"
+
+Cohesion: 0.33
+Nodes (5): client, connectionString, message, migrationSql, result
+
+### Community 53 - "Community 53"
 
 Cohesion: 0.4
 Nodes (4): client, { Pool }, res, uri
 
-### Community 53 - "Community 53"
+### Community 54 - "Community 54"
 
 Cohesion: 0.5
 Nodes (4): checkAllTheses(), checkThesis(), LOOKBACK_DAYS, SIGNAL_RANK
 
-### Community 54 - "Community 54"
-
-Cohesion: 0.6
-Nodes (4): checkAllTimeStops(), checkTimeStop(), sameVerdict(), STALE_DAYS
-
 ### Community 55 - "Community 55"
 _Configures the network listening endpoint for HTTP services._
 Cohesion: 0.6
-Nodes (3): basePath, port, rawPort
+Nodes (4): checkAllTimeStops(), checkTimeStop(), sameVerdict(), STALE_DAYS
 
 ### Community 56 - "Community 56"
 _Manages the display and behavior of modal alert dialogs through portal rendering and trigger mechanisms._
 Cohesion: 0.6
-Nodes (3): AlertDialog, AlertDialogPortal, AlertDialogTrigger
+Nodes (3): basePath, port, rawPort
 
 ### Community 57 - "Community 57"
 _Manages expandable and collapsible content sections via a trigger, often used in interfaces to hide or reveal information._
 Cohesion: 0.6
-Nodes (3): Collapsible, CollapsibleContent, CollapsibleTrigger
+Nodes (3): AlertDialog, AlertDialogPortal, AlertDialogTrigger
 
 ### Community 58 - "Community 58"
 _Handles the display of a preview card that appears when a user hovers over a trigger element._
 Cohesion: 0.6
-Nodes (3): HoverCard, HoverCardContent, HoverCardTrigger
+Nodes (3): Collapsible, CollapsibleContent, CollapsibleTrigger
 
 ### Community 59 - "Community 59"
 
-Cohesion: 0.4
-Nodes (1): cn()
+Cohesion: 0.6
+Nodes (3): HoverCard, HoverCardContent, HoverCardTrigger
 
 ### Community 60 - "Community 60"
 _Facilitates the grouping, state management, and coordinated behavior of toggle items within a single UI element._
@@ -502,67 +503,67 @@ Nodes (3): ToggleGroup, ToggleGroupContext, ToggleGroupItem
 ### Community 61 - "Community 61"
 _Manages content panels, switching based on user-selected tabs._
 Cohesion: 0.4
-Nodes (3): Tabs, TabsList, TabsTrigger
+Nodes (1): cn()
 
 ### Community 62 - "Community 62"
 
 Cohesion: 0.4
-Nodes (3): apiClientReactSrc, apiZodSrc, root
+Nodes (3): Tabs, TabsList, TabsTrigger
 
 ### Community 63 - "Community 63"
 _Manages user interactions, orchestrates business logic, and controls application flow._
-Cohesion: 0.5
-Nodes (1): app
+Cohesion: 0.4
+Nodes (3): apiClientReactSrc, apiZodSrc, root
 
 ### Community 64 - "Community 64"
 
 Cohesion: 0.5
-Nodes (3): result, router, runId
+Nodes (1): app
 
 ### Community 65 - "Community 65"
 
 Cohesion: 0.5
-Nodes (2): GENERATED_MODULE, MOCKUPS_DIR
+Nodes (3): result, router, runId
 
 ### Community 66 - "Community 66"
 _Provides a component that renders a profile image or fallback content when the image cannot be loaded._
 Cohesion: 0.5
-Nodes (3): Avatar, AvatarFallback, AvatarImage
+Nodes (2): GENERATED_MODULE, MOCKUPS_DIR
 
 ### Community 67 - "Community 67"
 _Handles the definition, display, and assignment of badge variants for user achievements._
-Cohesion: 0.83
-Nodes (2): Badge(), badgeVariants
+Cohesion: 0.5
+Nodes (2): Alert, alertVariants
 
 ### Community 68 - "Community 68"
 
-Cohesion: 0.67
-Nodes (2): buttonGroupVariants, cn()
+Cohesion: 0.5
+Nodes (3): Avatar, AvatarFallback, AvatarImage
 
 ### Community 69 - "Community 69"
 _Defines the visual styles or themes for buttons across the user interface._
-Cohesion: 0.67
-Nodes (1): buttonVariants
+Cohesion: 0.83
+Nodes (2): Badge(), badgeVariants
 
 ### Community 70 - "Community 70"
 _Handles user navigation through overflowing content by providing a scrollable area with corresponding scroll bars that update in response to content size or user input._
 Cohesion: 0.67
-Nodes (2): ScrollArea, ScrollBar
+Nodes (2): buttonGroupVariants, cn()
 
 ### Community 71 - "Community 71"
 _Provides switch functionality with customizable visual or behavioral variants._
 Cohesion: 0.67
-Nodes (2): Toggle, toggleVariants
+Nodes (1): buttonVariants
 
 ### Community 72 - "Community 72"
 
 Cohesion: 0.67
-Nodes (2): MOBILE_BREAKPOINT, useIsMobile()
+Nodes (2): { char, hasFakeCaret, isActive }, inputOTPContext
 
 ### Community 73 - "Community 73"
 _Displays contextual alert messages to inform users of events or errors._
-Cohesion: 0.5
-Nodes (2): Alert, alertVariants
+Cohesion: 0.67
+Nodes (2): ScrollArea, ScrollBar
 
 ### Community 74 - "Community 74"
 _Manages the display and state of navigation breadcrumbs and related UI components._
@@ -572,52 +573,52 @@ Nodes (2): Breadcrumb, Comp
 ### Community 75 - "Community 75"
 _Manages the state of a one-time password input field, including the typed character, placeholder display, and focus status._
 Cohesion: 0.67
-Nodes (2): { char, hasFakeCaret, isActive }, inputOTPContext
+Nodes (2): Label, labelVariants
 
 ### Community 76 - "Community 76"
 _Handles the creation, styling, and variant management of inline text labels within the user interface._
 Cohesion: 0.67
-Nodes (2): Label, labelVariants
+Nodes (2): Toggle, toggleVariants
 
 ### Community 77 - "Community 77"
 _Initializes the client to connect to the Supabase backend using the specified URL and anonymous key._
-Cohesion: 0.5
-Nodes (3): supabase, supabaseAnonKey, supabaseUrl
+Cohesion: 0.67
+Nodes (2): MOBILE_BREAKPOINT, useIsMobile()
 
 ### Community 78 - "Community 78"
 
 Cohesion: 0.5
-Nodes (1): DASHBOARD_HTML
+Nodes (3): supabase, supabaseAnonKey, supabaseUrl
 
 ### Community 79 - "Community 79"
 
-Cohesion: 0.67
-Nodes (1): artifactDir
+Cohesion: 0.5
+Nodes (1): DASHBOARD_HTML
 
 ### Community 80 - "Community 80"
 
-Cohesion: 0.67
-Nodes (2): isProduction, logger
+Cohesion: 0.5
+Nodes (3): FundHoldingType, TransactionHoldingType, TransactionTxType
 
 ### Community 81 - "Community 81"
 
 Cohesion: 0.67
-Nodes (2): data, router
+Nodes (1): artifactDir
 
 ### Community 82 - "Community 82"
 _Ensures media content maintains correct width-to-height proportions during rendering and layout._
 Cohesion: 0.67
-Nodes (1): AspectRatio
+Nodes (2): isProduction, logger
 
 ### Community 83 - "Community 83"
 
 Cohesion: 0.67
-Nodes (1): cn()
+Nodes (2): data, router
 
 ### Community 84 - "Community 84"
 
 Cohesion: 0.67
-Nodes (1): cn()
+Nodes (1): AspectRatio
 
 ### Community 85 - "Community 85"
 
@@ -627,142 +628,142 @@ Nodes (1): cn()
 ### Community 86 - "Community 86"
 
 Cohesion: 0.67
-Nodes (1): Skeleton()
+Nodes (1): cn()
 
 ### Community 87 - "Community 87"
 _It manages user input for a numeric range, presenting a visual handle that can be dragged to set a value within bounds._
 Cohesion: 0.67
-Nodes (1): Slider
+Nodes (1): cn()
 
 ### Community 88 - "Community 88"
 
 Cohesion: 0.67
-Nodes (1): Toaster()
+Nodes (1): Skeleton()
 
 ### Community 89 - "Community 89"
 _It provides storage, query, and maintenance of structured tabular data._
 Cohesion: 0.67
-Nodes (1): Table
+Nodes (1): Slider
 
 ### Community 90 - "Community 90"
 _Provides on-screen toast notifications for user interaction feedback._
 Cohesion: 0.67
-Nodes (1): ToastProvider
+Nodes (1): Toaster()
 
 ### Community 91 - "Community 91"
 _Manages the display of brief, transient messages to inform users of events or updates._
 Cohesion: 0.67
-Nodes (1): { toasts }
+Nodes (1): Table
 
 ### Community 92 - "Community 92"
 
 Cohesion: 0.67
-Nodes (1): cn()
+Nodes (1): ToastProvider
 
 ### Community 93 - "Community 93"
 _Controls a set of mutually exclusive options grouped as radio buttons within a form interface._
 Cohesion: 0.67
-Nodes (2): RadioGroup, RadioGroupItem
+Nodes (1): { toasts }
 
 ### Community 94 - "Community 94"
 _Unable to determine domain due to missing code entities._
-Cohesion: 1.0
-Nodes (0): 
+Cohesion: 0.67
+Nodes (1): cn()
 
 ### Community 95 - "Community 95"
 
-Cohesion: 1.0
-Nodes (1): pool
+Cohesion: 0.67
+Nodes (2): RadioGroup, RadioGroupItem
 
 ### Community 96 - "Community 96"
 _Routes network packets between hosts based on routing tables._
 Cohesion: 1.0
-Nodes (1): router
+Nodes (0): 
 
 ### Community 97 - "Community 97"
 
 Cohesion: 1.0
-Nodes (1): Menubar
+Nodes (1): pool
 
 ### Community 98 - "Community 98"
 _Unable to determine domain due to missing code entities._
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): router
 
 ### Community 99 - "Community 99"
 _QueryClient manages and caches query results to optimize data fetching and state synchronization._
 Cohesion: 1.0
-Nodes (1): queryClient
+Nodes (1): Menubar
 
 ### Community 100 - "Community 100"
 _Provides interactive UI elements that allow users to make selections within a form._
 Cohesion: 1.0
-Nodes (1): Checkbox
+Nodes (0): 
 
 ### Community 101 - "Community 101"
 _Handles the reporting and updating of operation or task progress to users or other system components._
 Cohesion: 1.0
-Nodes (1): Progress
+Nodes (1): queryClient
 
 ### Community 102 - "Community 102"
 _Manages OS‑dependent path separators, ensuring correct construction and normalization of file system paths._
 Cohesion: 1.0
-Nodes (1): Separator
+Nodes (1): Checkbox
 
 ### Community 103 - "Community 103"
 _Unable to determine domain due to missing code entities._
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Progress
 
 ### Community 104 - "Community 104"
 _It handles packet forwarding between ports within a local area network._
 Cohesion: 1.0
-Nodes (1): Switch
+Nodes (1): Separator
 
 ### Community 105 - "Community 105"
 _Handles multiline user text entry in web forms._
 Cohesion: 1.0
-Nodes (1): Textarea
+Nodes (0): 
 
 ### Community 106 - "Community 106"
 _Unable to determine domain due to missing code entities._
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): Switch
 
 ### Community 107 - "Community 107"
 
 Cohesion: 1.0
-Nodes (1): TransactionTxType
+Nodes (1): Textarea
 
 ### Community 108 - "Community 108"
 
 Cohesion: 1.0
-Nodes (1): TransactionTxType
+Nodes (0): 
 
 ### Community 109 - "Community 109"
 
 Cohesion: 1.0
-Nodes (1): schemaPath
+Nodes (1): FundHoldingType
 
 ### Community 110 - "Community 110"
 
 Cohesion: 1.0
-Nodes (1): advisorRecommendationsTable
+Nodes (1): TransactionHoldingType
 
 ### Community 111 - "Community 111"
 _Unable to determine domain due to missing code entities._
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): TransactionTxType
 
 ### Community 112 - "Community 112"
 _Unable to determine domain due to missing code entities._
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): schemaPath
 
 ### Community 113 - "Community 113"
 _Unable to determine domain due to missing code entities._
 Cohesion: 1.0
-Nodes (0): 
+Nodes (1): advisorRecommendationsTable
 
 ### Community 114 - "Community 114"
 _Unable to determine domain due to missing code entities._
@@ -979,132 +980,135 @@ _Unable to determine domain due to missing code entities._
 Cohesion: 1.0
 Nodes (0): 
 
+### Community 157 - "Community 157"
+_Unable to determine domain due to missing code entities._
+Cohesion: 1.0
+Nodes (0): 
+
 ## Knowledge Gaps
-- **476 isolated node(s):** `supabaseDbUrl`, `artifactDir`, `hosts`, `results`, `dnsResult` (+471 more)
+- **493 isolated node(s):** `supabaseDbUrl`, `artifactDir`, `hosts`, `results`, `dnsResult` (+488 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 94`** (2 nodes): `signalTrend.ts`, `getRecentSignalTrend()`
+- **Thin community `Community 96`** (2 nodes): `signalTrend.ts`, `getRecentSignalTrend()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (2 nodes): `pool`, `dbPool.ts`
+- **Thin community `Community 97`** (2 nodes): `pool`, `dbPool.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 96`** (2 nodes): `index.ts`, `router`
+- **Thin community `Community 98`** (2 nodes): `index.ts`, `router`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (2 nodes): `menubar.tsx`, `Menubar`
+- **Thin community `Community 99`** (2 nodes): `menubar.tsx`, `Menubar`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 98`** (2 nodes): `AuthGate()`, `AuthGate.tsx`
+- **Thin community `Community 100`** (2 nodes): `AuthGate()`, `AuthGate.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 99`** (2 nodes): `main.tsx`, `queryClient`
+- **Thin community `Community 101`** (2 nodes): `main.tsx`, `queryClient`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 100`** (2 nodes): `Checkbox`, `checkbox.tsx`
+- **Thin community `Community 102`** (2 nodes): `Checkbox`, `checkbox.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 101`** (2 nodes): `progress.tsx`, `Progress`
+- **Thin community `Community 103`** (2 nodes): `progress.tsx`, `Progress`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 102`** (2 nodes): `separator.tsx`, `Separator`
+- **Thin community `Community 104`** (2 nodes): `separator.tsx`, `Separator`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 103`** (2 nodes): `spinner.tsx`, `Spinner()`
+- **Thin community `Community 105`** (2 nodes): `spinner.tsx`, `Spinner()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 104`** (2 nodes): `switch.tsx`, `Switch`
+- **Thin community `Community 106`** (2 nodes): `switch.tsx`, `Switch`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 105`** (2 nodes): `textarea.tsx`, `Textarea`
+- **Thin community `Community 107`** (2 nodes): `textarea.tsx`, `Textarea`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 106`** (2 nodes): `not-found.tsx`, `NotFound()`
+- **Thin community `Community 108`** (2 nodes): `not-found.tsx`, `NotFound()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 107`** (2 nodes): `TransactionTxType`, `api.schemas.ts`
+- **Thin community `Community 109`** (2 nodes): `FundHoldingType`, `fundHoldingType.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 108`** (2 nodes): `transactionTxType.ts`, `TransactionTxType`
+- **Thin community `Community 110`** (2 nodes): `transactionHoldingType.ts`, `TransactionHoldingType`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 109`** (2 nodes): `schemaPath`, `drizzle.config.ts`
+- **Thin community `Community 111`** (2 nodes): `transactionTxType.ts`, `TransactionTxType`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 110`** (2 nodes): `advisorRecommendationsTable`, `advisor.ts`
+- **Thin community `Community 112`** (2 nodes): `schemaPath`, `drizzle.config.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 111`** (1 nodes): `types.ts`
+- **Thin community `Community 113`** (2 nodes): `advisorRecommendationsTable`, `advisor.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 112`** (1 nodes): `types.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 113`** (1 nodes): `types.ts`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 114`** (1 nodes): `fundamentalsTypes.ts`
+- **Thin community `Community 114`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 115`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 116`** (1 nodes): `types.ts`
+- **Thin community `Community 116`** (1 nodes): `fundamentalsTypes.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 117`** (1 nodes): `main.tsx`
+- **Thin community `Community 117`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 118`** (1 nodes): `checkbox.tsx`
+- **Thin community `Community 118`** (1 nodes): `types.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 119`** (1 nodes): `command.tsx`
+- **Thin community `Community 119`** (1 nodes): `main.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 120`** (1 nodes): `drawer.tsx`
+- **Thin community `Community 120`** (1 nodes): `checkbox.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (1 nodes): `input.tsx`
+- **Thin community `Community 121`** (1 nodes): `command.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (1 nodes): `progress.tsx`
+- **Thin community `Community 122`** (1 nodes): `drawer.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (1 nodes): `radio-group.tsx`
+- **Thin community `Community 123`** (1 nodes): `input.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (1 nodes): `resizable.tsx`
+- **Thin community `Community 124`** (1 nodes): `progress.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (1 nodes): `separator.tsx`
+- **Thin community `Community 125`** (1 nodes): `radio-group.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (1 nodes): `spinner.tsx`
+- **Thin community `Community 126`** (1 nodes): `resizable.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 127`** (1 nodes): `switch.tsx`
+- **Thin community `Community 127`** (1 nodes): `separator.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (1 nodes): `textarea.tsx`
+- **Thin community `Community 128`** (1 nodes): `spinner.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (1 nodes): `avatar.tsx`
+- **Thin community `Community 129`** (1 nodes): `switch.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 130`** (1 nodes): `card.tsx`
+- **Thin community `Community 130`** (1 nodes): `textarea.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 131`** (1 nodes): `command.tsx`
+- **Thin community `Community 131`** (1 nodes): `avatar.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 132`** (1 nodes): `input.tsx`
+- **Thin community `Community 132`** (1 nodes): `card.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 133`** (1 nodes): `resizable.tsx`
+- **Thin community `Community 133`** (1 nodes): `command.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 134`** (1 nodes): `main_1783761702249.tsx`
+- **Thin community `Community 134`** (1 nodes): `input.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 135`** (1 nodes): `types_(1)_1785632070486.ts`
+- **Thin community `Community 135`** (1 nodes): `resizable.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 136`** (1 nodes): `types_1785597361328.ts`
+- **Thin community `Community 136`** (1 nodes): `main_1783761702249.tsx`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (1 nodes): `types_1785632070487.ts`
+- **Thin community `Community 137`** (1 nodes): `types_(1)_1785632070486.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (1 nodes): `index.ts`
+- **Thin community `Community 138`** (1 nodes): `types_1785597361328.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 139`** (1 nodes): `index.ts`
+- **Thin community `Community 139`** (1 nodes): `types_1785632070487.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (1 nodes): `certificate.ts`
+- **Thin community `Community 140`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 141`** (1 nodes): `createGoldTransaction.ts`
+- **Thin community `Community 141`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 142`** (1 nodes): `createGrowthSnapshot.ts`
+- **Thin community `Community 142`** (1 nodes): `certificate.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 143`** (1 nodes): `fund.ts`
+- **Thin community `Community 143`** (1 nodes): `createGoldTransaction.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 144`** (1 nodes): `goldPosition.ts`
+- **Thin community `Community 144`** (1 nodes): `createGrowthSnapshot.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 145`** (1 nodes): `goldTransaction.ts`
+- **Thin community `Community 145`** (1 nodes): `fund.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 146`** (1 nodes): `growthSnapshot.ts`
+- **Thin community `Community 146`** (1 nodes): `goldPosition.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 147`** (1 nodes): `healthStatus.ts`
+- **Thin community `Community 147`** (1 nodes): `goldTransaction.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 148`** (1 nodes): `index.ts`
+- **Thin community `Community 148`** (1 nodes): `growthSnapshot.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 149`** (1 nodes): `portfolio.ts`
+- **Thin community `Community 149`** (1 nodes): `healthStatus.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 150`** (1 nodes): `portfolioSettings.ts`
+- **Thin community `Community 150`** (1 nodes): `index.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 151`** (1 nodes): `transaction.ts`
+- **Thin community `Community 151`** (1 nodes): `portfolio.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 152`** (1 nodes): `transactionAssetType.ts`
+- **Thin community `Community 152`** (1 nodes): `portfolioSettings.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 153`** (1 nodes): `updateFund.ts`
+- **Thin community `Community 153`** (1 nodes): `transaction.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 154`** (1 nodes): `updateGoldSettings.ts`
+- **Thin community `Community 154`** (1 nodes): `updateFund.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 155`** (1 nodes): `index.ts`
+- **Thin community `Community 155`** (1 nodes): `updateGoldSettings.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 156`** (1 nodes): `hello.ts`
+- **Thin community `Community 156`** (1 nodes): `index.ts`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 157`** (1 nodes): `hello.ts`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.

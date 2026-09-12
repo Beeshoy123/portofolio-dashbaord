@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [advisorRecommendationsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/advisor.ts#L12) (1 connections)
-- [advisor.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/advisor.ts#L1) (1 connections)
+- [transactionHoldingType.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/transactionHoldingType.ts#L1) (1 connections)
+- [TransactionHoldingType](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/transactionHoldingType.ts#L12) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\db\src\schema\advisor.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/advisor.ts)
+- [G:\AI\portofolio-dashbaord\lib\api-zod\src\generated\types\transactionHoldingType.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/types/transactionHoldingType.ts)
 
 ## Audit Trail
 

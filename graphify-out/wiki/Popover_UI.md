@@ -1,15 +1,15 @@
 # Popover UI
 
-> 6 nodes · cohesion 0.47
+> 6 nodes · cohesion 0.53
 
 ## Key Concepts
 
-- [popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L1) (4 connections)
-- [popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/popover.tsx#L1) (3 connections)
-- [Popover](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L5) (2 connections)
-- [PopoverAnchor](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L9) (2 connections)
-- [PopoverTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L7) (2 connections)
-- [PopoverContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L11) (1 connections)
+- [sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sheet.tsx#L1) (4 connections)
+- [sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L1) (4 connections)
+- [Sheet](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L9) (2 connections)
+- [SheetClose](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L13) (2 connections)
+- [SheetPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L15) (2 connections)
+- [SheetTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L11) (2 connections)
 
 ## Relationships
 
@@ -17,12 +17,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/popover.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sheet.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 14 (100%)
+- EXTRACTED: 16 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

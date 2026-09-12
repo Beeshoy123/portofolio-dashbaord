@@ -4,19 +4,19 @@
 
 ## Key Concepts
 
-- [api.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L1) (12 connections)
-- [CreateGoldTransactionBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L133) (1 connections)
-- [CreateGoldTransactionResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L143) (1 connections)
-- [CreateGrowthSnapshotBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L198) (1 connections)
-- [CreateGrowthSnapshotResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L202) (1 connections)
-- [GetPortfolioResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L26) (1 connections)
-- [HealthCheckResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L17) (1 connections)
-- [integer()](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L10) (1 connections)
-- [UpdateFundBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L177) (1 connections)
-- [UpdateFundParams](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L173) (1 connections)
-- [UpdateFundResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L182) (1 connections)
-- [UpdateGoldSettingsBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L98) (1 connections)
-- [UpdateGoldSettingsResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L102) (1 connections)
+- [alerts.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L1) (12 connections)
+- [alertsByTicker](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L89) (1 connections)
+- [allTheses](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L59) (1 connections)
+- [allTimeStops](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L58) (1 connections)
+- [drawdown](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L43) (1 connections)
+- [parseRunId()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L116) (1 connections)
+- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L10) (1 connections)
+- [runId](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L15) (1 connections)
+- [theses](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L30) (1 connections)
+- [thesis](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L63) (1 connections)
+- [ticker](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L54) (1 connections)
+- [timeStop](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L62) (1 connections)
+- [timeStops](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L17) (1 connections)
 
 ## Relationships
 
@@ -24,7 +24,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\api-zod\src\generated\api.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\alerts.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts)
 
 ## Audit Trail
 

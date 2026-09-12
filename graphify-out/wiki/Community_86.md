@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [Skeleton()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/skeleton.tsx#L3) (2 connections)
-- [skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/skeleton.tsx#L1) (1 connections)
-- [skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/skeleton.tsx#L1) (1 connections)
+- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/field.tsx#L13) (2 connections)
+- [field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/field.tsx#L1) (1 connections)
+- [field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/field.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/skeleton.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/skeleton.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/field.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/field.tsx)
 
 ## Audit Trail
 

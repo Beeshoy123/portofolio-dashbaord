@@ -1,27 +1,26 @@
 # Community 14
 
-> 18 nodes · cohesion 0.12
+> 17 nodes · cohesion 0.29
 
 ## Key Concepts
 
-- [App.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L1) (17 connections)
-- [buildUsdReality()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L76) (3 connections)
-- [getEarliestTransactionDate()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L54) (2 connections)
-- [invalidate()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L141) (2 connections)
-- [activeView](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L137) (1 connections)
-- [cleanup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L144) (1 connections)
-- [containerRef](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L115) (1 connections)
-- [createSnapshotMutation](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L114) (1 connections)
-- [{ data: portfolio, isLoading, isError, error }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L111) (1 connections)
-- [dataToRender](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L130) (1 connections)
-- [derived](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L138) (1 connections)
-- [EMPTY_PORTFOLIO](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L27) (1 connections)
-- [lastSuccessfulPortfolioRef](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L116) (1 connections)
-- [notSeeded](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L120) (1 connections)
-- [queryClient](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L112) (1 connections)
-- [retainedPortfolio](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L129) (1 connections)
-- [updateFundMutation](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L113) (1 connections)
-- [usdReality](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx#L132) (1 connections)
+- [parseStockAnalysis.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L1) (16 connections)
+- [fetchOverview()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L296) (13 connections)
+- [fetchStatistics()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L385) (8 connections)
+- [extractLabeled()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L262) (5 connections)
+- [parsePlainNumber()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L236) (5 connections)
+- [parseStockAnalysis()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L445) (5 connections)
+- [extractChartReferencePrice()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L152) (4 connections)
+- [extractLabeledAny()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L274) (4 connections)
+- [extractPercentageAfter()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L289) (4 connections)
+- [parseSuffixedNumber()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L220) (4 connections)
+- [parseWeek52Range()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L372) (4 connections)
+- [extractPeRatio()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L282) (3 connections)
+- [fetchHistory()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L157) (3 connections)
+- [parsePercent()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L244) (3 connections)
+- [percentageChange()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L147) (3 connections)
+- [emptyFundamentals()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L89) (2 connections)
+- [BASE_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts#L33) (1 connections)
 
 ## Relationships
 
@@ -29,12 +28,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\App.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/App.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\scraper\parseStockAnalysis.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseStockAnalysis.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 36 (95%)
-- INFERRED: 2 (5%)
+- EXTRACTED: 80 (92%)
+- INFERRED: 7 (8%)
 - AMBIGUOUS: 0 (0%)
 
 ---

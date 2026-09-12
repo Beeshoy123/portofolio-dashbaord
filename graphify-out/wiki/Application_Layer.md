@@ -1,13 +1,14 @@
 # Application Layer
 
-> 4 nodes · cohesion 0.50
+> 5 nodes · cohesion 0.40
 
 ## Key Concepts
 
-- [app.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L1) (3 connections)
-- [app](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L12) (1 connections)
-- [req()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L18) (1 connections)
-- [res()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts#L25) (1 connections)
+- [orval.config.ts](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L1) (4 connections)
+- [apiClientReactSrc](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L5) (1 connections)
+- [apiZodSrc](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L6) (1 connections)
+- [root](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L4) (1 connections)
+- [titleTransformer()](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L9) (1 connections)
 
 ## Relationships
 
@@ -15,11 +16,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\app.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/app.ts)
+- [G:\AI\portofolio-dashbaord\lib\api-spec\orval.config.ts](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 6 (100%)
+- EXTRACTED: 8 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

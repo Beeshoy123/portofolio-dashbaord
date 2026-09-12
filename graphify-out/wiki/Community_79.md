@@ -1,12 +1,13 @@
 # Community 79
 
-> 3 nodes · cohesion 0.67
+> 4 nodes · cohesion 0.50
 
 ## Key Concepts
 
-- [build.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs#L1) (2 connections)
-- [artifactDir](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs#L11) (1 connections)
-- [buildAll()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs#L13) (1 connections)
+- [app_1783761702247.tsx](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L1) (3 connections)
+- [App()](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L962) (1 connections)
+- [DASHBOARD_HTML](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L4) (1 connections)
+- [initDashboard()](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L444) (1 connections)
 
 ## Relationships
 
@@ -14,11 +15,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\build.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/build.mjs)
+- [G:\AI\portofolio-dashbaord\attached_assets\app_1783761702247.tsx](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 4 (100%)
+- EXTRACTED: 6 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

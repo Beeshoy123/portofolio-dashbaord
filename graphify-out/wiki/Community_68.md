@@ -1,13 +1,13 @@
 # Community 68
 
-> 4 nodes · cohesion 0.67
+> 4 nodes · cohesion 0.50
 
 ## Key Concepts
 
-- [buttonGroupVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx#L6) (2 connections)
-- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx#L68) (2 connections)
-- [button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/button-group.tsx#L1) (2 connections)
-- [button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx#L1) (2 connections)
+- [avatar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L1) (3 connections)
+- [Avatar](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L8) (1 connections)
+- [AvatarFallback](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L35) (1 connections)
+- [AvatarImage](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx#L23) (1 connections)
 
 ## Relationships
 
@@ -15,12 +15,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/button-group.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\button-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/button-group.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\avatar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/avatar.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 8 (100%)
+- EXTRACTED: 6 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

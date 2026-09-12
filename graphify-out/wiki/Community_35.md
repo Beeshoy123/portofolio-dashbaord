@@ -1,18 +1,18 @@
 # Community 35
 
-> 9 nodes · cohesion 0.22
+> 9 nodes · cohesion 0.39
 
 ## Key Concepts
 
-- [goldFeeSchedule.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L1) (8 connections)
-- [BAR_10G_GRAMS](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L35) (1 connections)
-- [BAR_5G_GRAMS](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L34) (1 connections)
-- [CASHBACK_21K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L24) (1 connections)
-- [GOLD_POUND_GRAMS](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L33) (1 connections)
-- [MFG_FEE_10G_24K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L17) (1 connections)
-- [MFG_FEE_5G_24K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L13) (1 connections)
-- [MFG_FEE_GOLD_POUND_21K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L21) (1 connections)
-- [purityFraction()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L29) (1 connections)
+- [dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/dropdown-menu.tsx#L1) (7 connections)
+- [dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L1) (7 connections)
+- [DropdownMenu](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L8) (2 connections)
+- [DropdownMenuGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L12) (2 connections)
+- [DropdownMenuPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L14) (2 connections)
+- [DropdownMenuRadioGroup](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L18) (2 connections)
+- [DropdownMenuSub](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L16) (2 connections)
+- [DropdownMenuSubTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L20) (2 connections)
+- [DropdownMenuTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx#L10) (2 connections)
 
 ## Relationships
 
@@ -20,11 +20,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\lib\goldFeeSchedule.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/dropdown-menu.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\dropdown-menu.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/dropdown-menu.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 16 (100%)
+- EXTRACTED: 28 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

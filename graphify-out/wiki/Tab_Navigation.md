@@ -4,11 +4,11 @@
 
 ## Key Concepts
 
-- [tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx#L1) (3 connections)
-- [Tabs](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tabs.tsx#L5) (2 connections)
-- [tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tabs.tsx#L1) (1 connections)
-- [TabsList](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx#L8) (1 connections)
-- [TabsTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx#L23) (1 connections)
+- [input-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-group.tsx#L1) (3 connections)
+- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-group.tsx#L13) (2 connections)
+- [input-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/input-group.tsx#L1) (1 connections)
+- [InputGroupInput()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-group.tsx#L128) (1 connections)
+- [InputGroupText()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-group.tsx#L116) (1 connections)
 
 ## Relationships
 
@@ -16,8 +16,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tabs.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\input-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/input-group.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\input-group.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-group.tsx)
 
 ## Audit Trail
 

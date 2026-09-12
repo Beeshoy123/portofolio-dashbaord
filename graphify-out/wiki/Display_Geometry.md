@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [AspectRatio](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/aspect-ratio.tsx#L3) (2 connections)
-- [aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/aspect-ratio.tsx#L1) (1 connections)
-- [aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/aspect-ratio.tsx#L1) (1 connections)
+- [logger.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts#L1) (2 connections)
+- [isProduction](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts#L3) (1 connections)
+- [logger](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts#L5) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/aspect-ratio.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/aspect-ratio.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\logger.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/logger.ts)
 
 ## Audit Trail
 

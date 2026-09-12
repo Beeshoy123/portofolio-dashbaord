@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [textarea.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/textarea.tsx#L1) (1 connections)
-- [Textarea](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/textarea.tsx#L4) (1 connections)
+- [spinner.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/spinner.tsx#L1) (1 connections)
+- [Spinner()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/spinner.tsx#L4) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\textarea.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/textarea.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\spinner.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/spinner.tsx)
 
 ## Audit Trail
 

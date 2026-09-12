@@ -1,24 +1,24 @@
 # Community 17
 
-> 15 nodes · cohesion 0.13
+> 15 nodes · cohesion 0.14
 
 ## Key Concepts
 
-- [portfolio.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L1) (14 connections)
-- [certificatesTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L91) (1 connections)
-- [fundsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L69) (1 connections)
-- [goldSettingsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L18) (1 connections)
-- [goldTransactionsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L36) (1 connections)
-- [growthSnapshotsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L123) (1 connections)
-- [insertCertificateSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L99) (1 connections)
-- [insertFundSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L84) (1 connections)
-- [insertGoldSettingsSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L26) (1 connections)
-- [insertGoldTransactionSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L60) (1 connections)
-- [insertGrowthSnapshotSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L129) (1 connections)
-- [insertPortfolioSettingsSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L145) (1 connections)
-- [insertTransactionSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L116) (1 connections)
-- [portfolioSettingsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L136) (1 connections)
-- [transactionsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L106) (1 connections)
+- [xirr.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L1) (9 connections)
+- [xirr.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/xirr.ts#L1) (6 connections)
+- [calculateGroupedXirr()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/xirr.ts#L85) (2 connections)
+- [calculateXirr()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/xirr.ts#L29) (2 connections)
+- [normalizeCashFlow()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/xirr.ts#L25) (1 connections)
+- [realReturnFromNominal()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/xirr.ts#L79) (1 connections)
+- [combined](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L47) (1 connections)
+- [combinedTransactions](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L63) (1 connections)
+- [funds](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L46) (1 connections)
+- [nominal](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L34) (1 connections)
+- [real](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L35) (1 connections)
+- [result](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L6) (1 connections)
+- [stocks](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L45) (1 connections)
+- [transactions](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs#L40) (1 connections)
+- [xnpv()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/xirr.ts#L18) (1 connections)
 
 ## Relationships
 
@@ -26,11 +26,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\db\src\schema\portfolio.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\lib\xirr.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/xirr.ts)
+- [G:\AI\portofolio-dashbaord\scripts\xirr.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/xirr.test.mjs)
 
 ## Audit Trail
 
-- EXTRACTED: 28 (100%)
+- EXTRACTED: 30 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

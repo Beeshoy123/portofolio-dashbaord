@@ -1,15 +1,15 @@
 # Community 50
 
-> 6 nodes · cohesion 0.33
+> 6 nodes · cohesion 0.47
 
 ## Key Concepts
 
-- [check-helium.js](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L1) (5 connections)
-- [dns](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L1) (1 connections)
-- [host](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L4) (1 connections)
-- [net](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L2) (1 connections)
-- [port](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L5) (1 connections)
-- [socket](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js#L19) (1 connections)
+- [popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L1) (4 connections)
+- [popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/popover.tsx#L1) (3 connections)
+- [Popover](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L5) (2 connections)
+- [PopoverAnchor](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L9) (2 connections)
+- [PopoverTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L7) (2 connections)
+- [PopoverContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx#L11) (1 connections)
 
 ## Relationships
 
@@ -17,11 +17,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\scripts\check-helium.js](file:///G:/AI/portofolio-dashbaord/scripts/check-helium.js)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/popover.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\popover.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/popover.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 10 (100%)
+- EXTRACTED: 14 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

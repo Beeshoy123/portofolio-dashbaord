@@ -1,20 +1,21 @@
 # Community 24
 
-> 11 nodes · cohesion 0.24
+> 12 nodes · cohesion 0.17
 
 ## Key Concepts
 
-- [goldPriceCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L1) (9 connections)
-- [refresh()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L118) (3 connections)
-- [scrape()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L75) (3 connections)
-- [extractKaratPrices()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L43) (2 connections)
-- [getGoldPrices()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L150) (2 connections)
-- [startGoldPriceScheduler()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L158) (2 connections)
-- [buildGoldPosition()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/portfolio.ts#L59) (2 connections)
-- [cache](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L35) (1 connections)
-- [FETCH_TIMEOUT_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L33) (1 connections)
-- [REFRESH_INTERVAL_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L32) (1 connections)
-- [SCRAPE_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts#L30) (1 connections)
+- [ai-bot-contracts.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L1) (11 connections)
+- [advisor](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L14) (1 connections)
+- [advisorRoute](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L11) (1 connections)
+- [auth](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L12) (1 connections)
+- [botRoute](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L27) (1 connections)
+- [dashboard](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L13) (1 connections)
+- [judge](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L9) (1 connections)
+- [migration](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L15) (1 connections)
+- [read()](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L7) (1 connections)
+- [root](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L6) (1 connections)
+- [scanner](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L76) (1 connections)
+- [scraperRoute](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs#L10) (1 connections)
 
 ## Relationships
 
@@ -22,13 +23,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\goldPriceCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/goldPriceCache.ts)
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\portfolio.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/portfolio.ts)
+- [G:\AI\portofolio-dashbaord\scripts\ai-bot-contracts.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/ai-bot-contracts.test.mjs)
 
 ## Audit Trail
 
-- EXTRACTED: 25 (93%)
-- INFERRED: 2 (7%)
+- EXTRACTED: 22 (100%)
+- INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 
 ---

@@ -1,30 +1,29 @@
 # Community 12
 
-> 21 nodes · cohesion 0.12
+> 20 nodes · cohesion 0.17
 
 ## Key Concepts
 
-- [parseFund.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L1) (9 connections)
-- [parser-alert.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs#L1) (9 connections)
-- [parseFundPage()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L109) (7 connections)
-- [extractCagr()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L49) (3 connections)
-- [extractPercentNear()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L21) (3 connections)
-- [extractPriceNear()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L60) (3 connections)
-- [extractScoreNear()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L82) (3 connections)
-- [calculateDrawdown()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/drawdown.ts#L27) (2 connections)
-- [capturePortfolioValue()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/drawdownDb.ts#L9) (2 connections)
-- [computeDrawdown()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/drawdownDb.ts#L20) (2 connections)
-- [drawdown.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/drawdown.ts#L1) (2 connections)
-- [drawdownDb.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/drawdownDb.ts#L1) (2 connections)
-- [emptySnapshot()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L189) (2 connections)
-- [extractRiskLevel()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L97) (2 connections)
-- [FUND_PAGE_BASE](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts#L13) (1 connections)
-- [fixture()](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs#L8) (1 connections)
-- [mockFetch()](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs#L10) (1 connections)
-- [restore](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs#L17) (1 connections)
-- [result](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs#L56) (1 connections)
-- [snapshot](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs#L19) (1 connections)
-- [snapshots](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs#L44) (1 connections)
+- [chart.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/chart.tsx#L1) (17 connections)
+- [chart.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L1) (15 connections)
+- [ChartContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L22) (2 connections)
+- [color](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L85) (2 connections)
+- [colorConfig](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L68) (2 connections)
+- [{ config }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L131) (2 connections)
+- [configLabelKey](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L337) (2 connections)
+- [indicatorColor](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L190) (2 connections)
+- [[item]](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L138) (2 connections)
+- [itemConfig](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L140) (2 connections)
+- [key](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L139) (2 connections)
+- [nestLabel](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L173) (2 connections)
+- [payloadPayload](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L330) (2 connections)
+- [THEMES](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L6) (2 connections)
+- [useChart()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L24) (2 connections)
+- [value](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L141) (2 connections)
+- [ChartContainer](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx#L34) (1 connections)
+- [chartId](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/chart.tsx#L44) (1 connections)
+- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/chart.tsx#L51) (1 connections)
+- [uniqueId](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/chart.tsx#L43) (1 connections)
 
 ## Relationships
 
@@ -32,15 +31,13 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\drawdown.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/drawdown.ts)
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\drawdownDb.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/drawdownDb.ts)
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\scraper\parseFund.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/scraper/parseFund.ts)
-- [G:\AI\portofolio-dashbaord\scripts\parser-alert.test.mjs](file:///G:/AI/portofolio-dashbaord/scripts/parser-alert.test.mjs)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\chart.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/chart.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\chart.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/chart.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 51 (88%)
-- INFERRED: 7 (12%)
+- EXTRACTED: 64 (100%)
+- INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 
 ---

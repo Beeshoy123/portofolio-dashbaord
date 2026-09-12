@@ -35,6 +35,41 @@
 			"command": "node --test --experimental-strip-types scripts/xirr.test.mjs",
 			"isBackground": false,
 			"group": "test"
+		},
+		{
+			"label": "Regenerate API zod schema",
+			"type": "shell",
+			"command": "pnpm --filter @workspace/api-spec run codegen",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Typecheck generated API zod libs",
+			"type": "shell",
+			"command": "pnpm -w run typecheck:libs",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Build API server",
+			"type": "shell",
+			"command": "cd '/g/AI/portofolio-dashbaord/artifacts/api-server' && pnpm run build",
+			"isBackground": false,
+			"group": "build"
+		},
+		{
+			"label": "Start backend with repo protocol",
+			"type": "shell",
+			"command": "cmd /c start-backend.bat",
+			"isBackground": true,
+			"group": "build"
+		},
+		{
+			"label": "Build API server with fixed zod schema",
+			"type": "shell",
+			"command": "cd /d G:\\AI\\portofolio-dashbaord\\artifacts\\api-server && pnpm run build",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

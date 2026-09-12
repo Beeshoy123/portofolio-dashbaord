@@ -192,6 +192,7 @@ results without recording secrets or real portfolio values.
 - 2026-09-07: Found that the inherited Windows shell `DATABASE_URL` pointed to `localhost:5432`, while the live API process used the Supabase pooler configured by the repository secrets. Applied `025_technical_range_levels.sql` to the live Supabase database and verified all three nullable numeric columns there; the API process was not restarted.
 - 2026-09-10: Cleared inherited database variables and verified the API loaded the Supabase pooler on port `8080`; the frontend loaded live AI run data on port `3001`.
 - 2026-09-10: Live UI check verified readable glossary popovers for Risk Tier, an incomplete-data fundamentals flag, and the translated Growth Fund asset role on a real entity.
+- 2026-09-11: Verified the startup blocker was a stale generated Zod schema (`zod.int()` in `lib/api-zod/src/generated/api.ts`), not a bad database configuration; after replacing it with `zod.number().int()` and rebuilding the API bundle, the backend started successfully with the Supabase host `aws-1-eu-west-1.pooler.supabase.com` on port `8080` and the frontend served the dashboard at `http://localhost:3001/`.
 
 ## Stack
 

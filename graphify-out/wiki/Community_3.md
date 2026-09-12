@@ -1,35 +1,35 @@
 # Community 3
 
-> 61 nodes · cohesion 0.06
+> 64 nodes · cohesion 0.03
 
 ## Key Concepts
 
-- [comparisonJudge.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L1) (33 connections)
-- [judgeHolding()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L418) (22 connections)
-- [comparisonJudge.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/comparisonJudge.ts#L1) (17 connections)
-- [judgeAllHoldingsUncached()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L669) (8 connections)
-- [judgeOneHolding()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L973) (8 connections)
-- [judgeAllHoldings()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L637) (7 connections)
-- [computeFinancialHealthGrade()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/financialHealth.ts#L69) (7 connections)
-- [financialHealth.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/financialHealth.ts#L1) (7 connections)
-- [findOpportunities()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L839) (6 connections)
-- [getLatestSnapshots()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L287) (5 connections)
-- [fundamentalsCheck.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/fundamentalsCheck.ts#L1) (5 connections)
-- [getPortfolioValueBreakdown()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L328) (4 connections)
-- [getWatchlistRows()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L225) (4 connections)
-- [loadPersistedVerdicts()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L247) (4 connections)
-- [numeric()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L155) (4 connections)
-- [buildFundamentalsFlags()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/fundamentalsCheck.ts#L122) (4 connections)
-- [assetRole()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L194) (3 connections)
-- [buildGroup()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L359) (3 connections)
-- [findHeldWinners()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L753) (3 connections)
-- [getTechnicalSignals()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L303) (3 connections)
-- [getWatchlist()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/comparisonJudge.ts#L81) (3 connections)
-- [isEmergencyReserveFund()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L185) (3 connections)
-- [returnFor()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts#L161) (3 connections)
-- [winsorize()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/financialHealth.ts#L39) (3 connections)
-- [buildFundamentalsSnapshot()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/fundamentalsCheck.ts#L208) (3 connections)
-- *... and 36 more nodes in this community*
+- [AiBotWorkspace.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1) (60 connections)
+- [supabaseAuth.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/supabaseAuth.ts#L1) (3 connections)
+- [getVerdictFlagMeta()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L473) (2 connections)
+- [status](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1172) (2 connections)
+- [VerdictFlagHint()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L490) (2 connections)
+- [requireAuth()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/supabaseAuth.ts#L29) (2 connections)
+- [ASSET_ROLE_GLOSSARY](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L365) (1 connections)
+- [bodyHeight](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L802) (1 connections)
+- [bodyTop](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L801) (1 connections)
+- [bucketOrder](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1194) (1 connections)
+- [buckets](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1203) (1 connections)
+- [categoryLabel](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1871) (1 connections)
+- [confidence](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2539) (1 connections)
+- [confidenceMeta](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2540) (1 connections)
+- [confidenceTier](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1316) (1 connections)
+- [decision](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2537) (1 connections)
+- [decisionMeta](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2538) (1 connections)
+- [flags](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2372) (1 connections)
+- [formatModelName()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2602) (1 connections)
+- [formatSignal()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2684) (1 connections)
+- [formatTrend()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1733) (1 connections)
+- [FUND_QUALITY_GLOSSARY](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L446) (1 connections)
+- [fundamentalsFlags](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1315) (1 connections)
+- [gapA](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2047) (1 connections)
+- [gapB](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2048) (1 connections)
+- *... and 39 more nodes in this community*
 
 ## Relationships
 
@@ -37,15 +37,13 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\judge\comparisonJudge.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/comparisonJudge.ts)
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\comparisonJudge.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/comparisonJudge.ts)
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\financialHealth.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/financialHealth.ts)
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\fundamentalsCheck.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/fundamentalsCheck.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\supabaseAuth.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/supabaseAuth.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\AiBotWorkspace.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 211 (93%)
-- INFERRED: 15 (7%)
+- EXTRACTED: 127 (98%)
+- INFERRED: 2 (2%)
 - AMBIGUOUS: 0 (0%)
 
 ---

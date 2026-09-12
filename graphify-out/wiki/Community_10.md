@@ -1,35 +1,35 @@
 # Community 10
 
-> 30 nodes · cohesion 0.13
+> 28 nodes · cohesion 0.11
 
 ## Key Concepts
 
-- [sidebar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L1) (28 connections)
-- [sidebar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sidebar.tsx#L1) (25 connections)
-- [SidebarMenuButton()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L498) (4 connections)
-- [handleKeyDown()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L97) (3 connections)
-- [sidebarMenuButtonVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L476) (3 connections)
-- [toggleSidebar](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L91) (3 connections)
-- [useSidebar()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L46) (3 connections)
-- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L140) (2 connections)
-- [Comp](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L401) (2 connections)
-- [contextValue](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L115) (2 connections)
-- [isMobile](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L68) (2 connections)
-- [{ isMobile, state, openMobile, setOpenMobile }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L165) (2 connections)
-- [open](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L74) (2 connections)
-- [[_open, _setOpen]](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L73) (2 connections)
-- [[openMobile, setOpenMobile]](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L69) (2 connections)
-- [setOpen](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L75) (2 connections)
-- [SIDEBAR_COOKIE_MAX_AGE](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L28) (2 connections)
-- [SIDEBAR_COOKIE_NAME](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L27) (2 connections)
-- [SIDEBAR_KEYBOARD_SHORTCUT](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L32) (2 connections)
-- [SIDEBAR_WIDTH](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L29) (2 connections)
-- [SIDEBAR_WIDTH_ICON](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L31) (2 connections)
-- [SIDEBAR_WIDTH_MOBILE](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L30) (2 connections)
-- [SidebarContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L44) (2 connections)
-- [SidebarMenu()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L454) (2 connections)
-- [SidebarMenuItem()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx#L465) (2 connections)
-- *... and 5 more nodes in this community*
+- [comparisonJudge_1785632070487.ts](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L1) (17 connections)
+- [judgeHolding()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L725) (9 connections)
+- [judgeAllHoldings()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L802) (6 connections)
+- [printVerdict()](file:///G:/AI/portofolio-dashbaord/attached_assets/printVerdicts_1785632070488.ts#L60) (4 connections)
+- [printVerdict()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/printVerdicts.ts#L54) (4 connections)
+- [getWatchlist()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L69) (3 connections)
+- [suggestDepositAllocation()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/advisor/depositSuggestion.ts#L33) (3 connections)
+- [printVerdicts.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/printVerdicts.ts#L1) (3 connections)
+- [printVerdicts_1785632070488.ts](file:///G:/AI/portofolio-dashbaord/attached_assets/printVerdicts_1785632070488.ts#L1) (3 connections)
+- [main()](file:///G:/AI/portofolio-dashbaord/attached_assets/printVerdicts_1785632070488.ts#L93) (3 connections)
+- [main()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/printVerdicts.ts#L98) (3 connections)
+- [buildGroup()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L493) (2 connections)
+- [checkMarketCapSecondOpinion()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L463) (2 connections)
+- [computeRiskTier()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L141) (2 connections)
+- [computeSignal()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L591) (2 connections)
+- [getHoldingCurrentValue()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L91) (2 connections)
+- [getLatestSnapshots()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L52) (2 connections)
+- [getReturn()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L112) (2 connections)
+- [formatGroup()](file:///G:/AI/portofolio-dashbaord/attached_assets/printVerdicts_1785632070488.ts#L10) (2 connections)
+- [formatGroup()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/printVerdicts.ts#L12) (2 connections)
+- [checkDividendYieldSecondOpinion()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L435) (1 connections)
+- [checkPeRatioSecondOpinion()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L383) (1 connections)
+- [checkRiskMismatch()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L210) (1 connections)
+- [checkSectorRankSecondOpinion()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L336) (1 connections)
+- [checkSignalSecondOpinion()](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts#L242) (1 connections)
+- *... and 3 more nodes in this community*
 
 ## Relationships
 
@@ -37,13 +37,15 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\sidebar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sidebar.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\sidebar.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sidebar.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\judge\printVerdicts.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/judge/printVerdicts.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\advisor\depositSuggestion.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/advisor/depositSuggestion.ts)
+- [G:\AI\portofolio-dashbaord\attached_assets\comparisonJudge_1785632070487.ts](file:///G:/AI/portofolio-dashbaord/attached_assets/comparisonJudge_1785632070487.ts)
+- [G:\AI\portofolio-dashbaord\attached_assets\printVerdicts_1785632070488.ts](file:///G:/AI/portofolio-dashbaord/attached_assets/printVerdicts_1785632070488.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 112 (100%)
-- INFERRED: 0 (0%)
+- EXTRACTED: 74 (88%)
+- INFERRED: 10 (12%)
 - AMBIGUOUS: 0 (0%)
 
 ---

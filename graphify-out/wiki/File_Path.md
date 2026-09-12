@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [separator.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/separator.tsx#L1) (1 connections)
-- [Separator](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/separator.tsx#L5) (1 connections)
+- [Checkbox](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/checkbox.tsx#L6) (1 connections)
+- [checkbox.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/checkbox.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\separator.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/separator.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\checkbox.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/checkbox.tsx)
 
 ## Audit Trail
 

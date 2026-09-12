@@ -1,15 +1,15 @@
 # Sheet UI
 
-> 6 nodes · cohesion 0.53
+> 6 nodes · cohesion 0.47
 
 ## Key Concepts
 
-- [sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sheet.tsx#L1) (4 connections)
-- [sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L1) (4 connections)
-- [Sheet](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L9) (2 connections)
-- [SheetClose](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L13) (2 connections)
-- [SheetPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L15) (2 connections)
-- [SheetTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx#L11) (2 connections)
+- [tooltip.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tooltip.tsx#L1) (4 connections)
+- [tooltip.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tooltip.tsx#L1) (3 connections)
+- [Tooltip](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tooltip.tsx#L9) (2 connections)
+- [TooltipProvider](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tooltip.tsx#L7) (2 connections)
+- [TooltipTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tooltip.tsx#L11) (2 connections)
+- [TooltipContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tooltip.tsx#L13) (1 connections)
 
 ## Relationships
 
@@ -17,12 +17,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sheet.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\sheet.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sheet.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\tooltip.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tooltip.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\tooltip.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tooltip.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 16 (100%)
+- EXTRACTED: 14 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

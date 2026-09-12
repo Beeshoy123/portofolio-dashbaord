@@ -1,18 +1,19 @@
 # Community 30
 
-> 9 nodes · cohesion 0.25
+> 10 nodes · cohesion 0.20
 
 ## Key Concepts
 
-- [App.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L1) (9 connections)
-- [loadComponent()](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L38) (2 connections)
-- [_resolveComponent()](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L7) (2 connections)
-- [basePath](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L95) (1 connections)
-- [cancelled](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L33) (1 connections)
-- [[Component, setComponent]](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L29) (1 connections)
-- [[error, setError]](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L30) (1 connections)
-- [local](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L123) (1 connections)
-- [{ pathname }](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx#L122) (1 connections)
+- [index.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L1) (9 connections)
+- [chosenDatabaseUrl](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L38) (1 connections)
+- [db](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L96) (1 connections)
+- [isLocalDatabase](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L76) (1 connections)
+- [isSupabasePooler](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L77) (1 connections)
+- [normalizedDatabaseUrl](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L74) (1 connections)
+- [parsedDbUrl](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L61) (1 connections)
+- [{ Pool }](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L28) (1 connections)
+- [poolerEnv](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L39) (1 connections)
+- [sslConfig](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts#L78) (1 connections)
 
 ## Relationships
 
@@ -20,11 +21,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\App.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/App.tsx)
+- [G:\AI\portofolio-dashbaord\lib\db\src\index.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/index.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 19 (100%)
+- EXTRACTED: 18 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

@@ -1,35 +1,49 @@
 # Community 4
 
-> 61 nodes · cohesion 0.03
+> 59 nodes · cohesion 0.06
 
 ## Key Concepts
 
-- [AiBotWorkspace.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1) (57 connections)
-- [supabaseAuth.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/supabaseAuth.ts#L1) (3 connections)
-- [getVerdictFlagMeta()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L466) (2 connections)
-- [status](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1165) (2 connections)
-- [VerdictFlagHint()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L483) (2 connections)
-- [requireAuth()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/supabaseAuth.ts#L29) (2 connections)
-- [ASSET_ROLE_GLOSSARY](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L363) (1 connections)
-- [bodyHeight](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L795) (1 connections)
-- [bodyTop](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L794) (1 connections)
-- [bucketOrder](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1187) (1 connections)
-- [buckets](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1196) (1 connections)
-- [confidence](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2523) (1 connections)
-- [confidenceMeta](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2524) (1 connections)
-- [confidenceTier](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1309) (1 connections)
-- [decision](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2521) (1 connections)
-- [decisionMeta](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2522) (1 connections)
-- [flags](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2356) (1 connections)
-- [formatModelName()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2586) (1 connections)
-- [formatSignal()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2668) (1 connections)
-- [formatTrend()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1726) (1 connections)
-- [fundamentalsFlags](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1308) (1 connections)
-- [gapA](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2031) (1 connections)
-- [gapB](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2032) (1 connections)
-- [gapMeta](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L2042) (1 connections)
-- [getConfidenceTier()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx#L1280) (1 connections)
-- *... and 36 more nodes in this community*
+- [custom-fetch.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L1) (28 connections)
+- [api.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L1) (27 connections)
+- [customFetch()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L325) (16 connections)
+- [parseErrorBody()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L254) (8 connections)
+- [inferResponseType()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L285) (5 connections)
+- [parseSuccessBody()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L293) (5 connections)
+- [applyBaseUrl()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L63) (4 connections)
+- [buildErrorMessage()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L151) (4 connections)
+- [resolveUrl()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L75) (4 connections)
+- [createGoldTransaction()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L301) (3 connections)
+- [createGrowthSnapshot()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L444) (3 connections)
+- [getGetPortfolioQueryKey()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L166) (3 connections)
+- [getGetPortfolioQueryOptions()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L173) (3 connections)
+- [getHealthCheckQueryOptions()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L95) (3 connections)
+- [getPortfolio()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L151) (3 connections)
+- [healthCheck()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L73) (3 connections)
+- [updateFund()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L372) (3 connections)
+- [updateGoldSettings()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L229) (3 connections)
+- [useGetPortfolio()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L199) (3 connections)
+- [useHealthCheck()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L121) (3 connections)
+- [withQueryKey()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts#L46) (3 connections)
+- [getMediaType()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L94) (3 connections)
+- [hasNoBody()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L120) (3 connections)
+- [isJsonMediaType()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L99) (3 connections)
+- [isRequest()](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts#L47) (3 connections)
+- *... and 34 more nodes in this community*
+
+## Class Diagram
+
+```mermaid
+classDiagram
+    class ApiError {
+        +custom-fetch.ts()
+        +.constructor()
+    }
+    class ResponseParseError {
+        +custom-fetch.ts()
+        +.constructor()
+    }
+```
 
 ## Relationships
 
@@ -37,13 +51,13 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\supabaseAuth.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/supabaseAuth.ts)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\AiBotWorkspace.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/AiBotWorkspace.tsx)
+- [G:\AI\portofolio-dashbaord\lib\api-client-react\src\custom-fetch.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/custom-fetch.ts)
+- [G:\AI\portofolio-dashbaord\lib\api-client-react\src\generated\api.ts](file:///G:/AI/portofolio-dashbaord/lib/api-client-react/src/generated/api.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 121 (98%)
-- INFERRED: 2 (2%)
+- EXTRACTED: 204 (94%)
+- INFERRED: 13 (6%)
 - AMBIGUOUS: 0 (0%)
 
 ---

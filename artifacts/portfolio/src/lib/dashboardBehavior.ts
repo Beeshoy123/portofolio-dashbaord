@@ -99,8 +99,8 @@ export function initDashboardBehavior(
       assetGroup: "gold",
     },
     liquid: {
-      label: "EG Stock assets · Bareeq & funds",
-      labelAr: "أسهم مصرية · بريقة والصناديق",
+      label: "Liquid assets · Bareeq & funds",
+      labelAr: "أصول سائلة · بريق والصناديق",
       cards: ["hero", "cohort", "annualized-return", "perf", "progress"],
       assetGroup: "liquid",
     },
@@ -215,7 +215,7 @@ export function initDashboardBehavior(
           : "down",
     },
     liquid: {
-      title: "EG Stock · Funds",    titleAr: "سهم مصري · صناديق",
+      title: "Liquid · Funds",    titleAr: "سائل · صناديق",
       sub: "Cost Basis · EGP",           subAr: "تكلفة الشراء · ج.م",
       val: `${fmt(derived.liquid.cost)} EGP`,
       chg:   `Market Value: ${fmt(derived.liquid.value)} EGP (net PnL ${derived.liquid.pnl >= 0 ? "+" : ""}${fmt(derived.liquid.pnl)} EGP, ${derived.liquid.pnlPct >= 0 ? "+" : ""}${derived.liquid.pnlPct.toFixed(1)}%)`,
@@ -725,7 +725,7 @@ export function initDashboardBehavior(
     };
     const SEGMENT_PILL_LABELS: Record<string, [string, string]> = {
       'segment-pill-gold':   ['🥇 Gold',      '🥇 ذهب'],
-      'segment-pill-liquid': ['💧 EG Stock',  '💧 سهم مصري'],
+      'segment-pill-liquid': ['💧 Liquid',    '💧 سائل'],
       'segment-pill-certs':  ['🏦 Certs',     '🏦 شهادات'],
     };
     Object.entries(NAV_LABELS).forEach(([id, [en, ar]]) => {

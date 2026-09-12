@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [index.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/index.ts#L1) (1 connections)
-- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/index.ts#L16) (1 connections)
+- [signalTrend.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/signalTrend.ts#L1) (1 connections)
+- [getRecentSignalTrend()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/signalTrend.ts#L20) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\index.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/index.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\judge\signalTrend.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/judge/signalTrend.ts)
 
 ## Audit Trail
 

@@ -1,13 +1,13 @@
 # User Notifications
 
-> 4 nodes · cohesion 0.50
+> 4 nodes · cohesion 0.67
 
 ## Key Concepts
 
-- [alertVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert.tsx#L5) (2 connections)
-- [alert.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert.tsx#L1) (2 connections)
-- [Alert](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert.tsx#L21) (1 connections)
-- [alert.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/alert.tsx#L1) (1 connections)
+- [scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/scroll-area.tsx#L1) (2 connections)
+- [scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx#L1) (2 connections)
+- [ScrollArea](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx#L5) (2 connections)
+- [ScrollBar](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx#L23) (2 connections)
 
 ## Relationships
 
@@ -15,12 +15,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\alert.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/alert.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\alert.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/alert.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/scroll-area.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\scroll-area.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/scroll-area.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 6 (100%)
+- EXTRACTED: 8 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

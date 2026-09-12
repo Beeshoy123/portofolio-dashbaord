@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/empty.tsx#L8) (2 connections)
-- [empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/empty.tsx#L1) (1 connections)
-- [empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/empty.tsx#L1) (1 connections)
+- [health.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts#L1) (2 connections)
+- [data](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts#L7) (1 connections)
+- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts#L4) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/empty.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/empty.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\health.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/health.ts)
 
 ## Audit Trail
 

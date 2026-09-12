@@ -4,11 +4,11 @@
 
 ## Key Concepts
 
-- [hover-card.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/hover-card.tsx#L1) (3 connections)
-- [hover-card.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/hover-card.tsx#L1) (3 connections)
-- [HoverCard](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/hover-card.tsx#L5) (2 connections)
-- [HoverCardContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/hover-card.tsx#L9) (2 connections)
-- [HoverCardTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/hover-card.tsx#L7) (2 connections)
+- [collapsible.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/collapsible.tsx#L1) (3 connections)
+- [collapsible.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/collapsible.tsx#L1) (3 connections)
+- [Collapsible](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/collapsible.tsx#L5) (2 connections)
+- [CollapsibleContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/collapsible.tsx#L9) (2 connections)
+- [CollapsibleTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/collapsible.tsx#L7) (2 connections)
 
 ## Relationships
 
@@ -16,8 +16,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\hover-card.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/hover-card.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\hover-card.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/hover-card.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\collapsible.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/collapsible.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\collapsible.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/collapsible.tsx)
 
 ## Audit Trail
 

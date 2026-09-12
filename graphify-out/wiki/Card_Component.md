@@ -1,16 +1,17 @@
 # Card Component
 
-> 7 nodes · cohesion 0.29
+> 8 nodes · cohesion 0.29
 
 ## Key Concepts
 
-- [card.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx#L1) (6 connections)
-- [Card](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx#L5) (1 connections)
-- [CardContent](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx#L56) (1 connections)
-- [CardDescription](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx#L44) (1 connections)
-- [CardFooter](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx#L64) (1 connections)
-- [CardHeader](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx#L20) (1 connections)
-- [CardTitle](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx#L32) (1 connections)
+- [usdEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L1) (7 connections)
+- [refresh()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L24) (2 connections)
+- [startUsdEgpScheduler()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L62) (2 connections)
+- [API_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L18) (1 connections)
+- [cache](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L22) (1 connections)
+- [FETCH_TIMEOUT_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L20) (1 connections)
+- [getUsdEgpRate()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L54) (1 connections)
+- [REFRESH_INTERVAL_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L19) (1 connections)
 
 ## Relationships
 
@@ -18,11 +19,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\card.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/card.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\usdEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 12 (100%)
+- EXTRACTED: 16 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

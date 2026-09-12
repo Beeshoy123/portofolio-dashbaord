@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/kbd.tsx#L7) (2 connections)
-- [kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/kbd.tsx#L1) (1 connections)
-- [kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/kbd.tsx#L1) (1 connections)
+- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/empty.tsx#L8) (2 connections)
+- [empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/empty.tsx#L1) (1 connections)
+- [empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/empty.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/kbd.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\kbd.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/kbd.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/empty.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\empty.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/empty.tsx)
 
 ## Audit Trail
 

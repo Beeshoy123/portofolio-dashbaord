@@ -1,23 +1,24 @@
 # Community 18
 
-> 14 nodes · cohesion 0.23
+> 15 nodes · cohesion 0.13
 
 ## Key Concepts
 
-- [form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L1) (11 connections)
-- [form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/form.tsx#L1) (10 connections)
-- [body](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L150) (2 connections)
-- [{ error, formItemId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L92) (2 connections)
-- [{ error, formItemId, formDescriptionId, formMessageId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L109) (2 connections)
-- [{ error, formMessageId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L149) (2 connections)
-- [Form](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L15) (2 connections)
-- [{ formDescriptionId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L132) (2 connections)
-- [FormField](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L28) (2 connections)
-- [FormFieldContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L24) (2 connections)
-- [FormItemContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L72) (2 connections)
-- [FormItem](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L74) (1 connections)
-- [id](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/form.tsx#L77) (1 connections)
-- [useFormField()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L41) (1 connections)
+- [portfolio.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L1) (14 connections)
+- [certificatesTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L92) (1 connections)
+- [fundsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L69) (1 connections)
+- [goldSettingsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L18) (1 connections)
+- [goldTransactionsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L36) (1 connections)
+- [growthSnapshotsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L126) (1 connections)
+- [insertCertificateSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L100) (1 connections)
+- [insertFundSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L85) (1 connections)
+- [insertGoldSettingsSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L26) (1 connections)
+- [insertGoldTransactionSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L60) (1 connections)
+- [insertGrowthSnapshotSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L132) (1 connections)
+- [insertPortfolioSettingsSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L148) (1 connections)
+- [insertTransactionSchema](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L119) (1 connections)
+- [portfolioSettingsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L139) (1 connections)
+- [transactionsTable](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts#L107) (1 connections)
 
 ## Relationships
 
@@ -25,12 +26,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/form.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx)
+- [G:\AI\portofolio-dashbaord\lib\db\src\schema\portfolio.ts](file:///G:/AI/portofolio-dashbaord/lib/db/src/schema/portfolio.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 42 (100%)
+- EXTRACTED: 28 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

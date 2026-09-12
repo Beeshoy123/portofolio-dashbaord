@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [Toaster()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sonner.tsx#L8) (2 connections)
-- [sonner.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sonner.tsx#L1) (1 connections)
-- [sonner.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sonner.tsx#L1) (1 connections)
+- [Skeleton()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/skeleton.tsx#L3) (2 connections)
+- [skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/skeleton.tsx#L1) (1 connections)
+- [skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/skeleton.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\sonner.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/sonner.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\sonner.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/sonner.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/skeleton.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\skeleton.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/skeleton.tsx)
 
 ## Audit Trail
 

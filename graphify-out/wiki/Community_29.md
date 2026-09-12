@@ -1,18 +1,19 @@
 # Community 29
 
-> 9 nodes · cohesion 0.28
+> 10 nodes · cohesion 0.20
 
 ## Key Concepts
 
-- [globalGoldCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L1) (8 connections)
-- [refresh()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L58) (3 connections)
-- [fetchPrice()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L29) (2 connections)
-- [startGlobalGoldScheduler()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L106) (2 connections)
-- [cache](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L23) (1 connections)
-- [FETCH_TIMEOUT_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L21) (1 connections)
-- [getGlobalGoldPrice()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L98) (1 connections)
-- [QUOTES_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L18) (1 connections)
-- [REFRESH_INTERVAL_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts#L20) (1 connections)
+- [drawer.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L1) (9 connections)
+- [Drawer()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L5) (1 connections)
+- [DrawerClose](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L20) (1 connections)
+- [DrawerContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L34) (1 connections)
+- [DrawerFooter()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L66) (1 connections)
+- [DrawerHeader()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L55) (1 connections)
+- [DrawerOverlay](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L22) (1 connections)
+- [DrawerPortal](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L18) (1 connections)
+- [DrawerTitle](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L77) (1 connections)
+- [DrawerTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx#L16) (1 connections)
 
 ## Relationships
 
@@ -20,11 +21,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\globalGoldCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/globalGoldCache.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\drawer.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/drawer.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 20 (100%)
+- EXTRACTED: 18 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

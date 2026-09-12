@@ -1,15 +1,15 @@
 # Accordion component
 
-> 6 nodes · cohesion 0.47
+> 6 nodes · cohesion 0.33
 
 ## Key Concepts
 
-- [accordion.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/accordion.tsx#L1) (4 connections)
-- [accordion.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/accordion.tsx#L1) (3 connections)
-- [Accordion](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/accordion.tsx#L6) (2 connections)
-- [AccordionItem](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/accordion.tsx#L8) (2 connections)
-- [AccordionTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/accordion.tsx#L20) (2 connections)
-- [AccordionContent](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/accordion.tsx#L40) (1 connections)
+- [db-host-check.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L1) (5 connections)
+- [connectOne()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L18) (1 connections)
+- [dnsOne()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L6) (1 connections)
+- [dnsResult](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L41) (1 connections)
+- [hosts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L4) (1 connections)
+- [results](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs#L39) (1 connections)
 
 ## Relationships
 
@@ -17,12 +17,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\accordion.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/accordion.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\accordion.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/accordion.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\db-host-check.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/db-host-check.mjs)
 
 ## Audit Trail
 
-- EXTRACTED: 14 (100%)
+- EXTRACTED: 10 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

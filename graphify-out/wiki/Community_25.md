@@ -1,19 +1,20 @@
 # Community 25
 
-> 10 nodes · cohesion 0.20
+> 11 nodes · cohesion 0.18
 
 ## Key Concepts
 
-- [index.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L1) (9 connections)
-- [{ config }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L17) (1 connections)
-- [{ default: app }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L33) (1 connections)
-- [__dirname](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L6) (1 connections)
-- [dotenvPath](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L15) (1 connections)
-- [dotenvPathCandidates](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L8) (1 connections)
-- [__filename](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L5) (1 connections)
-- [{ logger }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L34) (1 connections)
-- [port](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L37) (1 connections)
-- [rawPort](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts#L36) (1 connections)
+- [diagnose-opportunities.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L1) (10 connections)
+- [analysis](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L37) (1 connections)
+- [{ analyzePortfolioOpportunities }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L17) (1 connections)
+- [connectionString](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L19) (1 connections)
+- [envCandidates](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L5) (1 connections)
+- [envPath](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L10) (1 connections)
+- [{ judgeAllHoldings }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L16) (1 connections)
+- [latestRun](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L27) (1 connections)
+- [{ Pool }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L15) (1 connections)
+- [runId](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L28) (1 connections)
+- [verdicts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L35) (1 connections)
 
 ## Relationships
 
@@ -21,11 +22,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\index.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/index.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\api-server\diagnose-opportunities.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs)
 
 ## Audit Trail
 
-- EXTRACTED: 18 (100%)
+- EXTRACTED: 20 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

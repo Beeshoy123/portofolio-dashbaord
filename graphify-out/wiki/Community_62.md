@@ -4,11 +4,11 @@
 
 ## Key Concepts
 
-- [orval.config.ts](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L1) (4 connections)
-- [apiClientReactSrc](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L5) (1 connections)
-- [apiZodSrc](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L6) (1 connections)
-- [root](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L4) (1 connections)
-- [titleTransformer()](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts#L9) (1 connections)
+- [tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx#L1) (3 connections)
+- [Tabs](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tabs.tsx#L5) (2 connections)
+- [tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tabs.tsx#L1) (1 connections)
+- [TabsList](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx#L8) (1 connections)
+- [TabsTrigger](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx#L23) (1 connections)
 
 ## Relationships
 
@@ -16,7 +16,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\lib\api-spec\orval.config.ts](file:///G:/AI/portofolio-dashbaord/lib/api-spec/orval.config.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/tabs.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\tabs.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/tabs.tsx)
 
 ## Audit Trail
 

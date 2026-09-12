@@ -4,9 +4,9 @@
 
 ## Key Concepts
 
-- [cn()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/field.tsx#L13) (2 connections)
-- [field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/field.tsx#L1) (1 connections)
-- [field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/field.tsx#L1) (1 connections)
+- [AspectRatio](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/aspect-ratio.tsx#L3) (2 connections)
+- [aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/aspect-ratio.tsx#L1) (1 connections)
+- [aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/aspect-ratio.tsx#L1) (1 connections)
 
 ## Relationships
 
@@ -14,8 +14,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/field.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\field.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/field.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/aspect-ratio.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\aspect-ratio.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/aspect-ratio.tsx)
 
 ## Audit Trail
 

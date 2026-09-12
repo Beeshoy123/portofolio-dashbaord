@@ -1,17 +1,18 @@
 # Community 37
 
-> 8 nodes · cohesion 0.29
+> 9 nodes · cohesion 0.22
 
 ## Key Concepts
 
-- [usdEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L1) (7 connections)
-- [refresh()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L24) (2 connections)
-- [startUsdEgpScheduler()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L62) (2 connections)
-- [API_URL](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L18) (1 connections)
-- [cache](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L22) (1 connections)
-- [FETCH_TIMEOUT_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L20) (1 connections)
-- [getUsdEgpRate()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L54) (1 connections)
-- [REFRESH_INTERVAL_MS](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts#L19) (1 connections)
+- [goldFeeSchedule.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L1) (8 connections)
+- [BAR_10G_GRAMS](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L35) (1 connections)
+- [BAR_5G_GRAMS](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L34) (1 connections)
+- [CASHBACK_21K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L24) (1 connections)
+- [GOLD_POUND_GRAMS](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L33) (1 connections)
+- [MFG_FEE_10G_24K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L17) (1 connections)
+- [MFG_FEE_5G_24K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L13) (1 connections)
+- [MFG_FEE_GOLD_POUND_21K_PER_GRAM](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L21) (1 connections)
+- [purityFraction()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts#L29) (1 connections)
 
 ## Relationships
 
@@ -19,7 +20,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\lib\usdEgpCache.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/lib/usdEgpCache.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\lib\goldFeeSchedule.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/goldFeeSchedule.ts)
 
 ## Audit Trail
 

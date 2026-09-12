@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/label.tsx#L1) (2 connections)
-- [label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx#L1) (2 connections)
-- [Label](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx#L12) (2 connections)
-- [labelVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx#L8) (2 connections)
+- [toggle.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/toggle.tsx#L1) (2 connections)
+- [toggle.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/toggle.tsx#L1) (2 connections)
+- [Toggle](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/toggle.tsx#L28) (2 connections)
+- [toggleVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/toggle.tsx#L6) (2 connections)
 
 ## Relationships
 
@@ -15,8 +15,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/label.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\toggle.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/toggle.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\toggle.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/toggle.tsx)
 
 ## Audit Trail
 

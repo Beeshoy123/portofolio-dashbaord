@@ -1,6 +1,6 @@
 # buildDashboardHtml()
 
-> God node · 14 connections · [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\lib\dashboardHtml.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/dashboardHtml.ts#L464)
+> God node · 15 connections · [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\lib\dashboardHtml.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/dashboardHtml.ts#L510)
 
 ## Call Trace Diagram
 
@@ -26,11 +26,12 @@ sequenceDiagram
     participant P17 as signedFmt()
     participant P18 as pctStr()
     participant P19 as buildCohortAnalysis()
-    participant P20 as heatColor()
-    participant P21 as attribBar()
-    participant P22 as healthGrade()
-    participant P23 as buildDonutRing()
-    participant P24 as allocInsight()
+    participant P20 as buildAnnualizedReturnCard()
+    participant P21 as heatColor()
+    participant P22 as attribBar()
+    participant P23 as healthGrade()
+    participant P24 as buildDonutRing()
+    participant P25 as allocInsight()
     P0->>+ P1: calls
     P1-->>- P0: return
     P1->>+ P0: calls
@@ -93,6 +94,8 @@ sequenceDiagram
     P23-->>- P0: return
     P0->>+ P24: calls
     P24-->>- P0: return
+    P0->>+ P25: calls
+    P25-->>- P0: return
 ```
 
 ## Connections by Relation
@@ -106,6 +109,7 @@ sequenceDiagram
 - [[signedFmt()]] `EXTRACTED`
 - [[pctStr()]] `EXTRACTED`
 - [[buildCohortAnalysis()]] `EXTRACTED`
+- [[buildAnnualizedReturnCard()]] `EXTRACTED`
 - [[heatColor()]] `EXTRACTED`
 - [[attribBar()]] `EXTRACTED`
 - [[healthGrade()]] `EXTRACTED`

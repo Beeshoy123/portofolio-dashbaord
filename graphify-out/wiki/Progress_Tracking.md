@@ -4,8 +4,8 @@
 
 ## Key Concepts
 
-- [progress.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/progress.tsx#L1) (1 connections)
-- [Progress](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/progress.tsx#L7) (1 connections)
+- [main.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/main.tsx#L1) (1 connections)
+- [queryClient](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/main.tsx#L10) (1 connections)
 
 ## Relationships
 
@@ -13,7 +13,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\progress.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/progress.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\main.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/main.tsx)
 
 ## Audit Trail
 

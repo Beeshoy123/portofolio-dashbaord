@@ -1,22 +1,23 @@
 # Community 19
 
-> 13 nodes · cohesion 0.15
+> 14 nodes · cohesion 0.23
 
 ## Key Concepts
 
-- [alerts.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L1) (12 connections)
-- [alertsByTicker](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L89) (1 connections)
-- [allTheses](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L59) (1 connections)
-- [allTimeStops](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L58) (1 connections)
-- [drawdown](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L43) (1 connections)
-- [parseRunId()](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L116) (1 connections)
-- [router](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L10) (1 connections)
-- [runId](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L15) (1 connections)
-- [theses](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L30) (1 connections)
-- [thesis](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L63) (1 connections)
-- [ticker](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L54) (1 connections)
-- [timeStop](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L62) (1 connections)
-- [timeStops](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts#L17) (1 connections)
+- [form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L1) (11 connections)
+- [form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/form.tsx#L1) (10 connections)
+- [body](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L150) (2 connections)
+- [{ error, formItemId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L92) (2 connections)
+- [{ error, formItemId, formDescriptionId, formMessageId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L109) (2 connections)
+- [{ error, formMessageId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L149) (2 connections)
+- [Form](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L15) (2 connections)
+- [{ formDescriptionId }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L132) (2 connections)
+- [FormField](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L28) (2 connections)
+- [FormFieldContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L24) (2 connections)
+- [FormItemContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L72) (2 connections)
+- [FormItem](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L74) (1 connections)
+- [id](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/form.tsx#L77) (1 connections)
+- [useFormField()](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx#L41) (1 connections)
 
 ## Relationships
 
@@ -24,11 +25,12 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\src\routes\alerts.ts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/src/routes/alerts.ts)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/form.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\form.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/form.tsx)
 
 ## Audit Trail
 
-- EXTRACTED: 24 (100%)
+- EXTRACTED: 42 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

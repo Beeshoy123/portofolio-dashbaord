@@ -1,20 +1,21 @@
 # Community 23
 
-> 11 nodes · cohesion 0.18
+> 12 nodes · cohesion 0.17
 
 ## Key Concepts
 
-- [diagnose-opportunities.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L1) (10 connections)
-- [analysis](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L37) (1 connections)
-- [{ analyzePortfolioOpportunities }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L17) (1 connections)
-- [connectionString](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L19) (1 connections)
-- [envCandidates](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L5) (1 connections)
-- [envPath](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L10) (1 connections)
-- [{ judgeAllHoldings }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L16) (1 connections)
-- [latestRun](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L27) (1 connections)
-- [{ Pool }](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L15) (1 connections)
-- [runId](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L28) (1 connections)
-- [verdicts](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs#L35) (1 connections)
+- [api.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L1) (11 connections)
+- [CreateGoldTransactionBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L134) (1 connections)
+- [CreateGoldTransactionResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L144) (1 connections)
+- [CreateGrowthSnapshotBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L200) (1 connections)
+- [CreateGrowthSnapshotResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L204) (1 connections)
+- [GetPortfolioResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L24) (1 connections)
+- [HealthCheckResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L15) (1 connections)
+- [UpdateFundBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L178) (1 connections)
+- [UpdateFundParams](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L174) (1 connections)
+- [UpdateFundResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L183) (1 connections)
+- [UpdateGoldSettingsBody](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L99) (1 connections)
+- [UpdateGoldSettingsResponse](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts#L103) (1 connections)
 
 ## Relationships
 
@@ -22,11 +23,11 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\api-server\diagnose-opportunities.mjs](file:///G:/AI/portofolio-dashbaord/artifacts/api-server/diagnose-opportunities.mjs)
+- [G:\AI\portofolio-dashbaord\lib\api-zod\src\generated\api.ts](file:///G:/AI/portofolio-dashbaord/lib/api-zod/src/generated/api.ts)
 
 ## Audit Trail
 
-- EXTRACTED: 20 (100%)
+- EXTRACTED: 22 (100%)
 - INFERRED: 0 (0%)
 - AMBIGUOUS: 0 (0%)
 

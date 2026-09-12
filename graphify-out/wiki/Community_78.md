@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [app_1783761702247.tsx](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L1) (3 connections)
-- [App()](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L962) (1 connections)
-- [DASHBOARD_HTML](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L4) (1 connections)
-- [initDashboard()](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx#L444) (1 connections)
+- [supabaseClient.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/supabaseClient.ts#L1) (3 connections)
+- [supabase](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/supabaseClient.ts#L9) (1 connections)
+- [supabaseAnonKey](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/supabaseClient.ts#L4) (1 connections)
+- [supabaseUrl](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/supabaseClient.ts#L3) (1 connections)
 
 ## Relationships
 
@@ -15,7 +15,7 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\attached_assets\app_1783761702247.tsx](file:///G:/AI/portofolio-dashbaord/attached_assets/app_1783761702247.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\lib\supabaseClient.ts](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/lib/supabaseClient.ts)
 
 ## Audit Trail
 

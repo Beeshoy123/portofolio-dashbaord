@@ -4,10 +4,10 @@
 
 ## Key Concepts
 
-- [input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/input-otp.tsx#L1) (2 connections)
-- [input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx#L1) (2 connections)
-- [{ char, hasFakeCaret, isActive }](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx#L35) (2 connections)
-- [inputOTPContext](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx#L34) (2 connections)
+- [label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/label.tsx#L1) (2 connections)
+- [label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx#L1) (2 connections)
+- [Label](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx#L12) (2 connections)
+- [labelVariants](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx#L8) (2 connections)
 
 ## Relationships
 
@@ -15,8 +15,8 @@
 
 ## Source Files
 
-- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/input-otp.tsx)
-- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\input-otp.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/input-otp.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\mockup-sandbox\src\components\ui\label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/mockup-sandbox/src/components/ui/label.tsx)
+- [G:\AI\portofolio-dashbaord\artifacts\portfolio\src\components\ui\label.tsx](file:///G:/AI/portofolio-dashbaord/artifacts/portfolio/src/components/ui/label.tsx)
 
 ## Audit Trail
 
