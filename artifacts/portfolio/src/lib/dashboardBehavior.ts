@@ -25,6 +25,30 @@ export interface DashboardCallbacks {
 }
 
 type WindowFns = Record<string, unknown>;
+type DiagnosticEntity = {
+  ticker: string;
+  name: string;
+  entity_type: string;
+  is_held: boolean;
+  state: 'complete' | 'partial' | 'missing' | 'dash';
+  reason: string;
+  missing_fields: string[];
+  dash_fields: string[];
+  stages: Record<string, { present: boolean; usable: boolean }>;
+};
+type DiagnosticResponse = {
+  run: {
+    id: number;
+    status: string;
+    started_at: string;
+    completed_at: string | null;
+    error_message: string | null;
+    stage_counts: Record<string, StageCounts>;
+    stage_errors: Record<string, string[]>;
+  };
+  summary: { entity_count: number; complete: number; partial: number; missing: number; dash: number };
+  entities: DiagnosticEntity[];
+};
 
 // Wires up all the interactive behavior for the dashboard markup produced by
 // buildDashboardHtml(). Returns a cleanup function that removes the global
@@ -122,6 +146,96 @@ export function initDashboardBehavior(
     `<div class="math-line ${cls}"><span class="math-label">${label}</span><span class="math-calc">${calc}</span><span class="math-result">${result}</span></div>`;
   const divider = () => `<div class="math-divider"></div>`;
   const t = (key: string) => T[currentLang][key] ?? T.en[key] ?? key;
+  const escapeHtml = (value: unknown): string => String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+  let diagnosticStageFilter = 'all';
+  let diagnosticSearch = '';
+
+  function renderDiagnostics(data: DiagnosticResponse): void {
+    const content = el('ai-diagnostics-content');
+    const badge = el('ai-diagnostics-badge');
+    if (!content || !badge) return;
+
+    const incompleteCount = data.summary.partial + data.summary.missing + data.summary.dash;
+    badge.textContent = String(incompleteCount);
+    badge.style.display = incompleteCount > 0 ? 'block' : 'none';
+    const statusLabel = data.run.status === 'completed'
+      ? (currentLang === 'ar' ? 'مكتمل' : 'Completed')
+      : data.run.status === 'partial'
+        ? (currentLang === 'ar' ? 'جزئي' : 'Partial')
+        : data.run.status;
+    const stateLabel: Record<DiagnosticEntity['state'], string> = currentLang === 'ar'
+      ? { complete: 'مكتمل', partial: 'جزئي', missing: 'مفقود', dash: 'شرطة / قيمة مفقودة' }
+      : { complete: 'Complete', partial: 'Partial', missing: 'Missing', dash: 'Dash / unavailable' };
+    const stageLabels: Record<string, string> = {
+      priceChecker: currentLang === 'ar' ? 'الأسعار' : 'Prices',
+      chartReader: currentLang === 'ar' ? 'الرسم البياني' : 'Chart Reader',
+      comparisonJudge: currentLang === 'ar' ? 'حكم المقارنة' : 'Comparison Judge',
+      alerts: currentLang === 'ar' ? 'التنبيهات' : 'Alerts',
+      smartAdvisor: currentLang === 'ar' ? 'المستشار' : 'Advisor',
+    };
+    const stageMarkup = Object.entries(data.run.stage_counts).map(([stage, counts]) =>
+      `<div style="display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-top:1px solid var(--edge)"><span>${escapeHtml(stageLabels[stage] ?? stage)}</span><b>${counts.succeeded}/${counts.total} ${currentLang === 'ar' ? 'نجح' : 'succeeded'}${counts.failed ? ` · ${counts.failed} ${currentLang === 'ar' ? 'فشل' : 'failed'}` : ''}</b></div>`,
+    ).join('');
+    const entityFilter = (entity: DiagnosticEntity): boolean => {
+      const search = diagnosticSearch.trim().toLowerCase();
+      const matchesSearch = !search || `${entity.ticker} ${entity.name}`.toLowerCase().includes(search);
+      if (!matchesSearch) return false;
+      if (diagnosticStageFilter === 'issues') return entity.state !== 'complete';
+      if (diagnosticStageFilter === 'priceChecker') return !entity.stages.snapshot.usable;
+      if (diagnosticStageFilter === 'chartReader') return !entity.stages.technical.usable;
+      if (diagnosticStageFilter === 'comparisonJudge') return !entity.stages.verdict.usable;
+      if (diagnosticStageFilter === 'smartAdvisor') return !entity.stages.advisor.usable;
+      return true;
+    };
+    const filteredEntities = data.entities.filter(entityFilter);
+    const entityMarkup = filteredEntities.map((entity) => {
+      const issue = [...entity.missing_fields, ...entity.dash_fields].join(', ');
+      return `<div style="padding:9px 0;border-top:1px solid var(--edge)"><div style="display:flex;justify-content:space-between;gap:8px"><b>${escapeHtml(entity.ticker)} · ${escapeHtml(entity.name)}</b><span style="color:${entity.state === 'complete' ? 'var(--pnl-up)' : 'var(--warning-border)'};font-weight:700">${escapeHtml(stateLabel[entity.state])}</span></div><div style="margin-top:3px">${escapeHtml(entity.reason)}</div>${issue ? `<div style="margin-top:3px;color:var(--warning-border)">${escapeHtml(issue)}</div>` : ''}</div>`;
+    }).join('');
+    const filterLabels: Record<string, string> = currentLang === 'ar'
+      ? { all: 'الكل', issues: 'المشكلات', priceChecker: 'الأسعار', chartReader: 'الرسم', comparisonJudge: 'الحكم', smartAdvisor: 'المستشار', alerts: 'التنبيهات' }
+      : { all: 'All', issues: 'Issues', priceChecker: 'Prices', chartReader: 'Chart', comparisonJudge: 'Judge', smartAdvisor: 'Advisor', alerts: 'Alerts' };
+    const filterKeys = ['all', 'issues', 'priceChecker', 'chartReader', 'comparisonJudge', 'smartAdvisor', 'alerts'];
+    const filterMarkup = filterKeys.map((filter) => `<button type="button" data-diagnostic-filter="${filter}" style="border:1px solid ${diagnosticStageFilter === filter ? 'var(--accent)' : 'var(--edge)'};border-radius:999px;padding:4px 8px;background:${diagnosticStageFilter === filter ? 'var(--accent)' : 'transparent'};color:${diagnosticStageFilter === filter ? '#fff' : 'var(--ink)'};font-size:9px;cursor:pointer">${filterLabels[filter]}</button>`).join('');
+    const alertNote = diagnosticStageFilter === 'alerts'
+      ? `<div style="margin-top:8px;padding:8px;border:1px solid var(--edge);border-radius:7px;color:var(--dim)">${currentLang === 'ar' ? 'نتائج التنبيهات متاحة على مستوى التشغيل فقط.' : 'Alert results are available at run level only.'}</div>`
+      : '';
+    const entityTitle = diagnosticStageFilter === 'alerts'
+      ? ''
+      : `<div style="margin-top:10px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b>${currentLang === 'ar' ? 'الحالات حسب الأصل' : 'Entity results'}</b><small>${filteredEntities.length}/${data.entities.length}</small></div><div style="max-height:280px;overflow:auto;margin-top:4px">${entityMarkup || `<div style="padding:8px 0">${currentLang === 'ar' ? 'لا توجد كيانات مطابقة.' : 'No matching entities.'}</div>`}</div></div>`;
+    content.innerHTML = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:10px"><div><b>${data.summary.complete}</b><small style="display:block">${escapeHtml(stateLabel.complete)}</small></div><div><b>${data.summary.partial}</b><small style="display:block">${escapeHtml(stateLabel.partial)}</small></div><div><b>${data.summary.missing}</b><small style="display:block">${escapeHtml(stateLabel.missing)}</small></div><div><b>${data.summary.dash}</b><small style="display:block">${escapeHtml(stateLabel.dash)}</small></div></div><div style="margin-bottom:10px"><b>${currentLang === 'ar' ? 'التشغيل' : 'Run'} #${data.run.id} · ${escapeHtml(statusLabel)}</b>${data.run.error_message ? `<div style="color:var(--pnl-down);margin-top:3px">${escapeHtml(data.run.error_message)}</div>` : ''}</div><div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px">${filterMarkup}</div><input id="ai-diagnostics-search" type="search" value="${escapeHtml(diagnosticSearch)}" placeholder="${currentLang === 'ar' ? 'بحث عن أصل…' : 'Search entity…'}" style="box-sizing:border-box;width:100%;margin-bottom:10px;padding:7px 8px;border:1px solid var(--edge);border-radius:7px;background:transparent;color:var(--ink);font-size:10px"><div style="margin-bottom:10px"><b>${currentLang === 'ar' ? 'المراحل' : 'Stages'}</b>${stageMarkup || `<div style="margin-top:4px">${currentLang === 'ar' ? 'لا توجد بيانات مراحل.' : 'No stage data recorded.'}</div>`}</div>${alertNote}${entityTitle}`;
+    content.querySelectorAll<HTMLButtonElement>('[data-diagnostic-filter]').forEach((button) => {
+      button.addEventListener('click', () => {
+        diagnosticStageFilter = button.dataset.diagnosticFilter ?? 'all';
+        renderDiagnostics(data);
+      });
+    });
+    content.querySelector<HTMLInputElement>('#ai-diagnostics-search')?.addEventListener('input', (event) => {
+      diagnosticSearch = (event.target as HTMLInputElement).value;
+      renderDiagnostics(data);
+      const searchInput = content.querySelector<HTMLInputElement>('#ai-diagnostics-search');
+      searchInput?.focus();
+      searchInput?.setSelectionRange(diagnosticSearch.length, diagnosticSearch.length);
+    });
+  }
+
+  async function loadDiagnostics(runId?: number | null): Promise<void> {
+    const content = el('ai-diagnostics-content');
+    if (content) content.textContent = currentLang === 'ar' ? 'جارٍ تحميل التشخيص…' : 'Loading diagnostics…';
+    try {
+      const suffix = runId === undefined || runId === null ? '' : `?runId=${encodeURIComponent(runId)}`;
+      const response = await authenticatedFetch(`/api/ai-bot/diagnostics${suffix}`);
+      if (!response.ok) throw new Error(`Diagnostics unavailable (${response.status})`);
+      renderDiagnostics(await response.json() as DiagnosticResponse);
+    } catch (error) {
+      if (content) content.textContent = error instanceof Error ? error.message : (currentLang === 'ar' ? 'تعذر تحميل التشخيص.' : 'Could not load diagnostics.');
+    }
+  }
 
   function heroMath(view: string): string {
     if (view === "gold") {
@@ -244,6 +358,19 @@ export function initDashboardBehavior(
     down: "var(--pnl-down)",
     neutral: "var(--pnl-up)",
   };
+
+  const diagnosticsButton = el('ai-diagnostics-btn');
+  const diagnosticsPopover = el('ai-diagnostics-popover');
+  diagnosticsButton?.addEventListener('click', () => {
+    if (!diagnosticsPopover) return;
+    const willOpen = diagnosticsPopover.style.display === 'none' || !diagnosticsPopover.style.display;
+    diagnosticsPopover.style.display = willOpen ? 'block' : 'none';
+    if (willOpen) void loadDiagnostics();
+  });
+  el('ai-diagnostics-close')?.addEventListener('click', () => {
+    if (diagnosticsPopover) diagnosticsPopover.style.display = 'none';
+  });
+  void loadDiagnostics();
 
   win.setView = (view: string) => {
     currentView = view;
@@ -1505,6 +1632,7 @@ export function initDashboardBehavior(
     } finally {
       if (btn) btn.disabled = false;
       if (label) label.textContent = t('ai.refresh_prices');
+      void loadDiagnostics();
     }
   };
 

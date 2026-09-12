@@ -93,6 +93,56 @@ export const GetPortfolioResponse = zod.object({
 
 
 /**
+ * Returns stage outcomes and per-entity data completeness for the latest run or a requested run.
+ * @summary Get read-only AI bot run diagnostics
+ */
+
+
+
+export const GetAiBotDiagnosticsQueryParams = zod.object({
+  "runId": zod.coerce.number().int().min(1).optional()
+})
+
+export const GetAiBotDiagnosticsResponse = zod.object({
+  "run": zod.object({
+  "id": zod.number().int(),
+  "status": zod.string(),
+  "started_at": zod.coerce.date(),
+  "completed_at": zod.coerce.date().nullable(),
+  "error_message": zod.string().nullable(),
+  "stage_counts": zod.record(zod.string(), zod.object({
+  "succeeded": zod.number().int(),
+  "failed": zod.number().int(),
+  "total": zod.number().int()
+})),
+  "stage_errors": zod.record(zod.string(), zod.array(zod.string()))
+}),
+  "summary": zod.object({
+  "entity_count": zod.number().int(),
+  "complete": zod.number().int(),
+  "partial": zod.number().int(),
+  "missing": zod.number().int(),
+  "dash": zod.number().int()
+}),
+  "entities": zod.array(zod.object({
+  "ticker": zod.string(),
+  "name": zod.string(),
+  "entity_type": zod.string(),
+  "is_held": zod.boolean(),
+  "state": zod.enum(['complete', 'partial', 'missing', 'dash']),
+  "reason": zod.string(),
+  "diagnostic_messages": zod.array(zod.string()),
+  "missing_fields": zod.array(zod.string()),
+  "dash_fields": zod.array(zod.string()),
+  "stages": zod.record(zod.string(), zod.object({
+  "present": zod.boolean(),
+  "usable": zod.boolean()
+}))
+}))
+})
+
+
+/**
  * Grams held, cost basis and avg cost per gram are always derived live from gold transaction history and cannot be set directly.
  * @summary Update gold settings (currently just the cashback rate)
  */

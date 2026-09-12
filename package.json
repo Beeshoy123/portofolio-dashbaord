@@ -6,6 +6,7 @@
     "preinstall": "node -e \"if(!process.env.npm_config_user_agent?.includes('pnpm')){console.error('Use pnpm instead');process.exit(1)}\"",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "test:ai-bot": "node --test scripts/*.test.mjs",
+    "test:diagnostics": "node --test --experimental-strip-types scripts/diagnostic.test.mjs",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },

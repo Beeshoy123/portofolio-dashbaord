@@ -353,6 +353,8 @@ export const T: Record<Lang, Record<string, string>> = {
     'ai.stage.judge'      : '3. Comparison Judge',
     'ai.stage.alerts'     : '4. Alerts',
     'ai.stage.advisor'    : '5. Advisor',
+    'ai.diagnostics.title': 'Backend run diagnostics',
+    'ai.diagnostics.open' : 'Open to inspect the latest run.',
   },
 
   ar: {
@@ -690,6 +692,8 @@ export const T: Record<Lang, Record<string, string>> = {
     'ai.stage.judge'      : '٣. حكم المقارنة',
     'ai.stage.alerts'     : '٤. التنبيهات',
     'ai.stage.advisor'    : '٥. المستشار',
+    'ai.diagnostics.title': 'تشخيص تشغيل الواجهة الخلفية',
+    'ai.diagnostics.open' : 'افتح لمراجعة أحدث تشغيل.',
   },
 };
 

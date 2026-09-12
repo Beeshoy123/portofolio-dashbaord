@@ -22,6 +22,8 @@ type TechnicalSignal = {
   recent_low: number | null;
   range_position_percent: number | null;
   candles: Candle[];
+  data_source: "yahoo" | "stockanalysis" | null;
+  failure_reason: string | null;
 };
 
 type YahooChartResponse = {
@@ -172,14 +174,34 @@ async function fetchStockAnalysisCandles(ticker: string, expectedName: string): 
 }
 
 async function analyzeEntity(row: { id: number; ticker: string; name: string; yahoo_ticker: string }, runId: number): Promise<TechnicalSignal> {
+  let yahooFailureReason: string | null = null;
+  let dataSource: TechnicalSignal["data_source"] = null;
   try {
     let candles: Candle[];
     try {
-      candles = await fetchYahooCandles(row.yahoo_ticker, row.name);
-      if (candles.length < 20) throw new Error("not enough OHLC history");
+      const yahooTickers = [...new Set([row.yahoo_ticker, `${row.ticker}.CA`])];
+      const yahooErrors: string[] = [];
+      candles = [];
+      for (const yahooTicker of yahooTickers) {
+        try {
+          const candidateCandles = await fetchYahooCandles(yahooTicker, row.name);
+          if (candidateCandles.length < 20) {
+            yahooErrors.push(`${yahooTicker}: not enough OHLC history (${candidateCandles.length} candles)`);
+            continue;
+          }
+          candles = candidateCandles;
+          dataSource = "yahoo";
+          break;
+        } catch (error) {
+          yahooErrors.push(`${yahooTicker}: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      if (candles.length < 20) throw new Error(yahooErrors.join("; ") || "not enough OHLC history");
     } catch (yahooError) {
       console.warn(`[technical] ${row.ticker}: Yahoo unavailable, using StockAnalysis`, yahooError);
+      yahooFailureReason = yahooError instanceof Error ? yahooError.message : String(yahooError);
       candles = await fetchStockAnalysisCandles(row.ticker, row.name);
+      dataSource = "stockanalysis";
     }
     if (candles.length < 20) throw new Error("not enough OHLC history");
     let matches: Array<{ index: number; pattern: string }> = [];
@@ -207,10 +229,13 @@ async function analyzeEntity(row: { id: number; ticker: string; name: string; ya
       reversal_risk: reversalRisk,
       ...range,
       candles: candles.slice(-250),
+      data_source: dataSource,
+      failure_reason: null,
     };
   } catch (error) {
     console.warn(`[technical] ${row.yahoo_ticker}: unavailable`, error);
-    return { watchlist_id: row.id, run_id: runId, candle_date: null, trend: "unknown", patterns: [], confidence: null, raw_fetch_ok: false, reversal_risk: "none", recent_high: null, recent_low: null, range_position_percent: null, candles: [] };
+    const failureReason = error instanceof Error ? error.message : String(error);
+    return { watchlist_id: row.id, run_id: runId, candle_date: null, trend: "unknown", patterns: [], confidence: null, raw_fetch_ok: false, reversal_risk: "none", recent_high: null, recent_low: null, range_position_percent: null, candles: [], data_source: dataSource, failure_reason: yahooFailureReason ? `Yahoo: ${yahooFailureReason}; StockAnalysis: ${failureReason}` : failureReason };
   }
 }
 
@@ -232,7 +257,7 @@ async function runWithConcurrency<T>(
   await Promise.all(workers);
 }
 
-export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]): Promise<{ succeeded: number; failed: number; total: number; failed_tickers: string[]; failure_messages: string[] }> {
+export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]): Promise<{ succeeded: number; failed: number; total: number; failed_tickers: string[]; failure_messages: string[]; fallback_messages: string[] }> {
   const result = await pool.query<{ id: number; ticker: string; name: string; yahoo_ticker: string | null; entity_type: string; is_held: boolean; funds_table_key: string | null }>(
     `SELECT id, ticker, name, yahoo_ticker, entity_type, is_held, funds_table_key
      FROM comparison_watchlist
@@ -251,6 +276,7 @@ export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]
   let succeeded = 0;
   const failedTickers: string[] = [];
   const failureMessages: string[] = [];
+  const fallbackMessages: string[] = [];
   await runWithConcurrency(rows, CHART_READER_CONCURRENCY, async (row) => {
     try {
       const signal = await analyzeEntity({ id: row.id, ticker: row.ticker, name: row.name, yahoo_ticker: row.yahoo_ticker! }, runId);
@@ -258,13 +284,20 @@ export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]
         `DELETE FROM technical_signals WHERE watchlist_id = $1 AND run_id = $2`,
         [signal.watchlist_id, signal.run_id],
       );
+      if (!signal.raw_fetch_ok) {
+        failedTickers.push(row.ticker);
+        failureMessages.push(`${row.ticker}: ${signal.failure_reason ?? "technical history unavailable"}`);
+        return;
+      }
+      if (signal.data_source === "stockanalysis") {
+        fallbackMessages.push(`${row.ticker}: Yahoo unavailable; used StockAnalysis fallback`);
+      }
       await pool.query(
         `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, recent_high, recent_low, range_position_percent, candles)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, signal.recent_high, signal.recent_low, signal.range_position_percent, JSON.stringify(signal.candles)],
       );
-      if (signal.raw_fetch_ok) succeeded++;
-      else failedTickers.push(row.ticker);
+      succeeded++;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       failedTickers.push(row.ticker);
@@ -272,5 +305,5 @@ export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]
       console.error(`[technical] ${row.ticker}: could not persist signal`, error);
     }
   });
-  return { succeeded, failed: rows.length - succeeded, total: rows.length, failed_tickers: failedTickers, failure_messages: failureMessages };
+  return { succeeded, failed: rows.length - succeeded, total: rows.length, failed_tickers: failedTickers, failure_messages: failureMessages, fallback_messages: fallbackMessages };
 }

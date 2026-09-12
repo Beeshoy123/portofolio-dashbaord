@@ -20,9 +20,11 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AiBotDiagnostics,
   CreateGoldTransaction,
   CreateGrowthSnapshot,
   Fund,
+  GetAiBotDiagnosticsParams,
   GoldPosition,
   GrowthSnapshot,
   HealthStatus,
@@ -202,6 +204,91 @@ export function useGetPortfolio<TData = Awaited<ReturnType<typeof getPortfolio>>
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetPortfolioQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetAiBotDiagnosticsUrl = (params?: GetAiBotDiagnosticsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/ai-bot/diagnostics?${stringifiedParams}` : `/api/ai-bot/diagnostics`
+}
+
+/**
+ * Returns stage outcomes and per-entity data completeness for the latest run or a requested run.
+ * @summary Get read-only AI bot run diagnostics
+ */
+export const getAiBotDiagnostics = async (params?: GetAiBotDiagnosticsParams, options?: Parameters<typeof customFetch>[1]): Promise<AiBotDiagnostics> => {
+
+  return customFetch<AiBotDiagnostics>(getGetAiBotDiagnosticsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAiBotDiagnosticsQueryKey = (params?: GetAiBotDiagnosticsParams,) => {
+    return [
+    `/api/ai-bot/diagnostics`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAiBotDiagnosticsQueryOptions = <TData = Awaited<ReturnType<typeof getAiBotDiagnostics>>, TError = ErrorType<void>>(params?: GetAiBotDiagnosticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiBotDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAiBotDiagnosticsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAiBotDiagnostics>>> = ({ signal }) => getAiBotDiagnostics(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAiBotDiagnostics>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAiBotDiagnosticsQueryResult = NonNullable<Awaited<ReturnType<typeof getAiBotDiagnostics>>>
+export type GetAiBotDiagnosticsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get read-only AI bot run diagnostics
+ */
+
+export function useGetAiBotDiagnostics<TData = Awaited<ReturnType<typeof getAiBotDiagnostics>>, TError = ErrorType<void>>(
+ params?: GetAiBotDiagnosticsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAiBotDiagnostics>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAiBotDiagnosticsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

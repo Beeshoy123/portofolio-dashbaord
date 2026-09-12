@@ -6,11 +6,22 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './aiBotDiagnosticEntity';
+export * from './aiBotDiagnosticEntityStages';
+export * from './aiBotDiagnosticEntityState';
+export * from './aiBotDiagnostics';
+export * from './aiBotDiagnosticsRun';
+export * from './aiBotDiagnosticsRunStageCounts';
+export * from './aiBotDiagnosticsRunStageErrors';
+export * from './aiBotDiagnosticsSummary';
+export * from './aiBotDiagnosticStage';
+export * from './aiBotStageCounts';
 export * from './certificate';
 export * from './createGoldTransaction';
 export * from './createGrowthSnapshot';
 export * from './fund';
 export * from './fundHoldingType';
+export * from './getAiBotDiagnosticsParams';
 export * from './goldPosition';
 export * from './goldTransaction';
 export * from './growthSnapshot';

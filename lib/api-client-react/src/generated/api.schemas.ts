@@ -147,3 +147,74 @@ export interface Portfolio {
   settings: PortfolioSettings;
 }
 
+export interface AiBotStageCounts {
+  succeeded: number;
+  failed: number;
+  total: number;
+}
+
+export interface AiBotDiagnosticStage {
+  present: boolean;
+  usable: boolean;
+}
+
+export type AiBotDiagnosticEntityState = typeof AiBotDiagnosticEntityState[keyof typeof AiBotDiagnosticEntityState];
+
+
+export const AiBotDiagnosticEntityState = {
+  complete: 'complete',
+  partial: 'partial',
+  missing: 'missing',
+  dash: 'dash',
+} as const;
+
+export type AiBotDiagnosticEntityStages = {[key: string]: AiBotDiagnosticStage};
+
+export interface AiBotDiagnosticEntity {
+  ticker: string;
+  name: string;
+  entity_type: string;
+  is_held: boolean;
+  state: AiBotDiagnosticEntityState;
+  reason: string;
+  diagnostic_messages: string[];
+  missing_fields: string[];
+  dash_fields: string[];
+  stages: AiBotDiagnosticEntityStages;
+}
+
+export type AiBotDiagnosticsRunStageCounts = {[key: string]: AiBotStageCounts};
+
+export type AiBotDiagnosticsRunStageErrors = {[key: string]: string[]};
+
+export type AiBotDiagnosticsRun = {
+  id: number;
+  status: string;
+  started_at: string;
+  completed_at: string | null;
+  error_message: string | null;
+  stage_counts: AiBotDiagnosticsRunStageCounts;
+  stage_errors: AiBotDiagnosticsRunStageErrors;
+};
+
+export type AiBotDiagnosticsSummary = {
+  entity_count: number;
+  complete: number;
+  partial: number;
+  missing: number;
+  dash: number;
+};
+
+export interface AiBotDiagnostics {
+  run: AiBotDiagnosticsRun;
+  summary: AiBotDiagnosticsSummary;
+  entities: AiBotDiagnosticEntity[];
+}
+
+export type GetAiBotDiagnosticsParams = {
+/**
+ * @minimum 1
+ */
+runId?: number;
+};
+

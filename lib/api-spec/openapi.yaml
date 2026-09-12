@@ -39,6 +39,30 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Portfolio"
+  /ai-bot/diagnostics:
+    get:
+      operationId: getAiBotDiagnostics
+      tags: [ai-bot]
+      summary: Get read-only AI bot run diagnostics
+      description: Returns stage outcomes and per-entity data completeness for the latest run or a requested run.
+      parameters:
+        - name: runId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Run and entity diagnostics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiBotDiagnostics"
+        "404":
+          description: Run not found
+        "500":
+          description: Diagnostics unavailable
   /portfolio/gold/settings:
     patch:
       operationId: updateGoldSettings
@@ -430,3 +454,104 @@ components:
         - transactions
         - snapshots
         - settings
+    AiBotStageCounts:
+      type: object
+      properties:
+        succeeded:
+          type: integer
+        failed:
+          type: integer
+        total:
+          type: integer
+      required: [succeeded, failed, total]
+    AiBotDiagnosticStage:
+      type: object
+      properties:
+        present:
+          type: boolean
+        usable:
+          type: boolean
+      required: [present, usable]
+    AiBotDiagnosticEntity:
+      type: object
+      properties:
+        ticker:
+          type: string
+        name:
+          type: string
+        entity_type:
+          type: string
+        is_held:
+          type: boolean
+        state:
+          type: string
+          enum: [complete, partial, missing, dash]
+        reason:
+          type: string
+        diagnostic_messages:
+          type: array
+          items:
+            type: string
+        missing_fields:
+          type: array
+          items:
+            type: string
+        dash_fields:
+          type: array
+          items:
+            type: string
+        stages:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/AiBotDiagnosticStage"
+      required: [ticker, name, entity_type, is_held, state, reason, diagnostic_messages, missing_fields, dash_fields, stages]
+    AiBotDiagnostics:
+      type: object
+      properties:
+        run:
+          type: object
+          properties:
+            id:
+              type: integer
+            status:
+              type: string
+            started_at:
+              type: string
+              format: date-time
+            completed_at:
+              type: string
+              format: date-time
+              nullable: true
+            error_message:
+              type: string
+              nullable: true
+            stage_counts:
+              type: object
+              additionalProperties:
+                $ref: "#/components/schemas/AiBotStageCounts"
+            stage_errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+          required: [id, status, started_at, completed_at, error_message, stage_counts, stage_errors]
+        summary:
+          type: object
+          properties:
+            entity_count:
+              type: integer
+            complete:
+              type: integer
+            partial:
+              type: integer
+            missing:
+              type: integer
+            dash:
+              type: integer
+          required: [entity_count, complete, partial, missing, dash]
+        entities:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiBotDiagnosticEntity"
+      required: [run, summary, entities]

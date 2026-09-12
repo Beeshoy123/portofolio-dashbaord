@@ -5,34 +5,41 @@ A personal finance dashboard that tracks gold holdings, money-market/property fu
 ---
 
 > 🚨 **MANDATORY ABSOLUTE RULE: CONNECT TO SUPABASE DATABASE ON STARTUP**
-> 
+>
 > **Whenever starting or restarting this application, the backend MUST connect to the remote Supabase PostgreSQL database (`aws-1-eu-west-1.pooler.supabase.com`). It MUST NEVER connect to empty local PostgreSQL or default to `localhost` / `0 EGP`.**
-> 
-> ### The 4-Step Mandatory Startup Protocol:
+>
+> ## The 4-Step Mandatory Startup Protocol
+>
 > 1. **ALWAYS UNSET INHERITED ENVIRONMENT VARIABLES** before starting the backend:
+>
 >    ```bash
 >    cd '/g/AI/portofolio-dashbaord/artifacts/api-server'
 >    unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY PORTFOLIO_OWNER_USER_ID USE_POOLER
 >    PORT=8080 node --enable-source-maps ./dist/index.mjs
 >    ```
->    *(Or execute `start-backend.bat` / `start-local.bat`, which performs this automatically).*
-> 
+>
+>    _(Or execute `start-backend.bat` / `start-local.bat`, which performs this automatically)._
+>
 > 2. **ALWAYS VERIFY THE STARTUP LOG OUTPUT**:
 >    You **MUST** confirm the backend console explicitly prints:
->    ```
+>
+>    ```text
 >    Loaded environment from G:\AI\portofolio-dashbaord\.secrets\api-server.env
 >    { chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' } Using database host
 >    Server listening port: 8080
 >    ```
+>
 >    ❌ **IF IT SAYS `chosenDatabaseUrl: 'localhost'` OR `127.0.0.1`**: **KILL THE PROCESS IMMEDIATELY.** It will show `0 EGP` / empty database state. Unset the variables and restart.
-> 
+>
 > 3. **START FRONTEND**:
+>
 >    ```bash
 >    cd '/g/AI/portofolio-dashbaord/artifacts/portfolio'
 >    PORT=3001 pnpm run dev
 >    ```
->    *(Or execute `start-frontend.bat`)*
-> 
+>
+>    _(Or execute `start-frontend.bat`)_
+>
 > 4. **VERIFY LIVE DATA ON DASHBOARD**:
 >    Open `http://localhost:3001/`. Confirm live portfolio data (gold holdings, funds, certificates, and transactions) loads from Supabase and NOT a placeholder warning.
 
@@ -55,12 +62,15 @@ The **Project** run button executes these steps in order every time — not just
 **Supabase Database Connection (Primary & Authoritative):** All real portfolio data (gold transactions, funds, 25 certificates, historical transactions, settings) is stored in the remote Supabase PostgreSQL database configured in `.secrets/api-server.env` (`aws-1-eu-west-1.pooler.supabase.com`).
 
 **Preventing the "Database is empty / 0 EGP" State:**
-If the dashboard ever displays *"⚠️ No data found — the database is empty"* or placeholder zeros (0 EGP), it means the backend was started with an inherited environment variable pointing to an empty local database instead of Supabase.
+If the dashboard ever displays _"⚠️ No data found — the database is empty"_ or placeholder zeros (0 EGP), it means the backend was started with an inherited environment variable pointing to an empty local database instead of Supabase.
 To fix:
+
 1. Always clear inherited database environment variables before starting the backend:
+
    ```bash
    unset DATABASE_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY PORTFOLIO_OWNER_USER_ID USE_POOLER
    ```
+
 2. Start the backend: `PORT=8080 node --enable-source-maps ./dist/index.mjs` (or use `start-backend.bat`).
 3. Verify the startup log confirms: `{ chosenDatabaseUrl: 'aws-1-eu-west-1.pooler.supabase.com' } Using database host`.
 4. Refresh the frontend at `http://localhost:3001/` and log in via Supabase.
@@ -194,6 +204,7 @@ results without recording secrets or real portfolio values.
 - 2026-09-10: Live UI check verified readable glossary popovers for Risk Tier, an incomplete-data fundamentals flag, and the translated Growth Fund asset role on a real entity.
 - 2026-09-11: Verified the startup blocker was a stale generated Zod schema (`zod.int()` in `lib/api-zod/src/generated/api.ts`), not a bad database configuration; after replacing it with `zod.number().int()` and rebuilding the API bundle, the backend started successfully with the Supabase host `aws-1-eu-west-1.pooler.supabase.com` on port `8080` and the frontend served the dashboard at `http://localhost:3001/`.
 - 2026-09-12: Removed the inactive `ESRS` / `Ezz Steel` watchlist row from the source migration files and the live `comparison_watchlist` table so it no longer participates in the active EGX stock set. The app-specific translation label remains only as a legacy display fallback, not as an active watchlist entity.
+- 2026-09-12: Added the authenticated read-only `/api/ai-bot/diagnostics` endpoint and the AI Insights bell popover beside Refresh prices; verified live diagnostics against the Supabase-backed API on port `8080` and frontend on port `3001`.
 
 ## Stack
 
@@ -254,7 +265,7 @@ _Populate as you build — explicit user instructions worth remembering across s
 - These two artifacts (`api-server`, `portfolio`) had `artifact.toml` files on disk but no workflows registered yet when work resumed on this project — they had to be (re)created with `configureWorkflow` using the exact command/PORT/BASE_PATH from each `artifact.toml`.
 - The gold schema migrated from a single aggregate snapshot (`gold_holdings`: grams_held/avg_cost/market_price) to a per-transaction ledger (`gold_settings` + `gold_transactions`). An old-format backup (`gold_holdings` shape) is not compatible as-is — per-purchase gold rows must be reshaped into `gold_transactions` (karat, `manufacturing_fee_per_gram` separated from spot price), not restored verbatim.
 - **Backup/export file policy — temporary is fine, permanent is not.** The rule is about permanence, not existence. For imports: wait for the user to upload their own offline SQL backup, pipe it directly into Postgres via `psql`, delete the uploaded file immediately after — never leave it in `attached_assets/` or anywhere else. For exports: when the user explicitly asks, generate a temporary `.sql` dump, present it for download, then delete it right after. Never commit a dump to git or leave one sitting in the project. Never type real balances, prices, or transaction amounts as literals into `.ts`/`.tsx`/route files, even "temporarily" — if you ever find a real financial number hardcoded in source, replace it with a live DB-backed value or explicit error state.
-- **Replit's checkpoint system is a separate, private backup — not GitHub.** Every checkpoint (auto-created as work happens) snapshots the codebase *and* the Replit-managed Postgres database, but it lives inside this repl only; it is not pushed to GitHub and not visible to anyone the repo is shared with. Do not conflate "restore from git history" with "restore from a checkpoint" — they cover different data (git has no DB rows) and different audiences (checkpoints are private to this repl, GitHub history is whatever was pushed). If the user asks to roll back data, clarify which system they mean before acting.
+- **Replit's checkpoint system is a separate, private backup — not GitHub.** Every checkpoint (auto-created as work happens) snapshots the codebase _and_ the Replit-managed Postgres database, but it lives inside this repl only; it is not pushed to GitHub and not visible to anyone the repo is shared with. Do not conflate "restore from git history" with "restore from a checkpoint" — they cover different data (git has no DB rows) and different audiences (checkpoints are private to this repl, GitHub history is whatever was pushed). If the user asks to roll back data, clarify which system they mean before acting.
 
 ## Pointers
 
@@ -298,6 +309,7 @@ The health check should return `200`. The protected AI Bot route should return
 `404` means the wrong process or stale bundle is serving the port. A startup
 failure with `EADDRINUSE` means another process already owns the port; stop it
 before restarting the API.
+
 - PostgreSQL 16 must be running locally. Service name: postgresql-x64-16. Set to auto-start via: Set-Service -Name postgresql-x64-16 -StartupType Automatic (run as Administrator).
 - Local PostgreSQL uses no SSL; the DB client now disables SSL automatically for `localhost`, `127.0.0.1`, and `::1`. Remote Supabase/Replit database connections continue to use SSL.
 - If the local app says "connectivity issue", "VPN required", or the API returns HTTP 500 with `The server does not support SSL connections`, this is usually not a VPN problem. It means a local PostgreSQL URL is being used with SSL enabled. Confirm the database host is local, use the current DB client that disables SSL for local hosts, rebuild the API, and restart it.
@@ -334,6 +346,7 @@ you use a remote Supabase Postgres connection through `DATABASE_URL`.
 ### 1. Create `.env` files for both frontend and backend
 
 **Backend (.env in `artifacts/api-server/`):**
+
 ```env
 DATABASE_URL=postgresql://username:password@db.supabase.co:5432/postgres
 VITE_SUPABASE_URL=https://your-project.supabase.co
@@ -344,12 +357,14 @@ NODE_ENV=development
 ```
 
 **Frontend (.env in `artifacts/portfolio/`):**
+
 ```env
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
 ### 2. Get Your Supabase Credentials
+
 1. Go to your Supabase project dashboard
 2. Click **Settings** → **Database**
 3. Copy connection string → paste into `DATABASE_URL`
@@ -357,6 +372,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 5. Copy **URL** and **Anon Key** → paste into the .env files
 
 ### 3. Get Your Google Gemini API Key
+
 1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
 2. Create a new API key
 3. Paste into `GOOGLE_GENAI_API_KEY` in api-server `.env`
@@ -366,17 +382,20 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ## Key Features
 
 ### Smart Advisor Panel (Right Sidebar)
+
 - **Auto-generates** AI recommendations when dashboard loads
 - **Shows alerts**: Time Stop (stagnant positions), Thesis Check (signal reversed), Drawdown alerts
 - **Manual refresh** button to generate new recommendations
 - **Auto-refreshes** every 5 minutes
 
 ### Price Refresh
+
 - Click "Refresh Prices" in the dashboard to run the scraper
 - Fetches fund NAVs from FoudaLens (works ✅)
 - Fetches stock prices from Yahoo Finance (requires yahoo_ticker mapping — **see `to do list.md`**)
 
 ### Comparison Judge
+
 - Analyzes portfolio rotation verdicts
 - Compares holdings against benchmarks
 - Generates buy/sell/hold signals
@@ -386,6 +405,7 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ## ⚠️ Stock Data Issue
 
 **Problem:** Egyptian stocks (ETEL, EGCH, AMOC, etc.) show dashes in price column
+
 - FoudaLens works for Canadian funds but not Egyptian stocks
 - Stock prices must come from Yahoo Finance
 
@@ -398,7 +418,9 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 ## Smart Advisor Integration Progress
 
 ### ✅ Step 1: Database Tables (COMPLETED)
+
 Created schema for AI recommendation storage:
+
 - **File:** `lib/db/src/schema/advisor.ts` - Drizzle ORM schema
 - **SQL:** `migrations/006_advisor_recommendations.sql` - Direct SQL migration
 - **Table:** `advisor_recommendations` with fields:
@@ -409,6 +431,7 @@ Created schema for AI recommendation storage:
   - `generated_at` & `updated_at` (timestamps)
 
 **To apply in Supabase:**
+
 ```sql
 CREATE TABLE IF NOT EXISTS "advisor_recommendations" (
   "id" serial PRIMARY KEY,
@@ -425,7 +448,9 @@ CREATE INDEX IF NOT EXISTS "idx_advisor_recommendations_generated_at"
 ```
 
 ### ✅ Step 2: Frontend UI Component (COMPLETED)
+
 Built Smart Advisor dashboard panel with:
+
 - **File:** `src/components/SmartAdvisorPanel.tsx`
 - **Integration:** Added to `src/App.tsx` as a sidebar panel (w-96)
 - **Features:**
@@ -438,12 +463,15 @@ Built Smart Advisor dashboard panel with:
   - Styled with shadcn/ui Card component to match the rest of the app
 
 ### ✅ Step 4: Auto-generation Wiring (COMPLETED)
+
 Smart Advisor now automatically generates recommendations when:
+
 - **Dashboard first loads** — if no recommendations exist yet
 - **Cooldown period passes** — once per hour max (configurable in SmartAdvisorPanel.tsx)
 - **User clicks Generate button** — manual trigger always available
 
 **Implementation details:**
+
 - Uses `localStorage` to track `advisor_last_generation_time`
 - Prevents spam with 1-hour cooldown between auto-generations
 - Shows "Last generated" timestamp and "Next auto-generation" countdown
@@ -461,32 +489,32 @@ for it. Do not use the overlapping legacy SQL under
 
 ### Complete migration inventory
 
-| Order | File | Purpose |
-| --- | --- | --- |
-| 001 | `migrations/001_create_comparison_snapshots.sql` | Comparison snapshots |
-| 002 | `migrations/002_seed_watchlist.sql` | Initial comparison watchlist |
-| 004 | `migrations/004_add_egx30_expansion.sql` | EGX30 watchlist expansion |
-| 005 | `migrations/005_yahoo_ticker_mapping.sql` | Yahoo ticker mappings |
-| 006 | `migrations/006_advisor_recommendations.sql` | Advisor recommendations |
-| 007 | `migrations/007_stockanalysis_fundamentals.sql` | Stock fundamentals |
-| 008 | `migrations/008_alert_history.sql` | Alert history |
-| 009 | `migrations/009_bot_runs.sql` | Shared bot runs |
-| 010 | `migrations/010_engine_run_links.sql` | Engine-to-run links |
-| 011 | `migrations/011_advisor_run_idempotency.sql` | Advisor run idempotency |
-| 012 | `migrations/012_technical_signals.sql` | Chart Reader technical signals |
-| 013 | `migrations/013_index_60_session_return.sql` | Index 60-session returns |
-| 014 | `migrations/014_advisor_structured_output.sql` | Structured advisor output |
-| 015 | `migrations/015_portfolio_summary.sql` | Portfolio summaries |
-| 016 | `migrations/016_advisor_recommendation_type.sql` | Recommendation type |
-| 017 | `migrations/017_advisor_opportunities.sql` | Advisor opportunities |
-| 018 | `migrations/018_technical_reversal_risk.sql` | Technical reversal risk |
-| 019 | `migrations/019_advisor_watch_triggers.sql` | Advisor watch triggers |
-| 020 | `migrations/020_portfolio_summary_aggregates.sql` | Summary aggregates |
-| 021 | `migrations/021_portfolio_summary_value_weights.sql` | Summary value weights |
-| 022 | `migrations/022_portfolio_summary_decision.sql` | Summary decision output |
-| 023 | `migrations/023_portfolio_summary_final_labels.sql` | Summary final-label buckets |
-| 024 | `migrations/024_bot_run_stage_diagnostics.sql` | Bot stage diagnostics |
-| 025 | `migrations/025_technical_range_levels.sql` | Chart Reader range levels |
+| Order | File                                                 | Purpose                        |
+| ----- | ---------------------------------------------------- | ------------------------------ |
+| 001   | `migrations/001_create_comparison_snapshots.sql`     | Comparison snapshots           |
+| 002   | `migrations/002_seed_watchlist.sql`                  | Initial comparison watchlist   |
+| 004   | `migrations/004_add_egx30_expansion.sql`             | EGX30 watchlist expansion      |
+| 005   | `migrations/005_yahoo_ticker_mapping.sql`            | Yahoo ticker mappings          |
+| 006   | `migrations/006_advisor_recommendations.sql`         | Advisor recommendations        |
+| 007   | `migrations/007_stockanalysis_fundamentals.sql`      | Stock fundamentals             |
+| 008   | `migrations/008_alert_history.sql`                   | Alert history                  |
+| 009   | `migrations/009_bot_runs.sql`                        | Shared bot runs                |
+| 010   | `migrations/010_engine_run_links.sql`                | Engine-to-run links            |
+| 011   | `migrations/011_advisor_run_idempotency.sql`         | Advisor run idempotency        |
+| 012   | `migrations/012_technical_signals.sql`               | Chart Reader technical signals |
+| 013   | `migrations/013_index_60_session_return.sql`         | Index 60-session returns       |
+| 014   | `migrations/014_advisor_structured_output.sql`       | Structured advisor output      |
+| 015   | `migrations/015_portfolio_summary.sql`               | Portfolio summaries            |
+| 016   | `migrations/016_advisor_recommendation_type.sql`     | Recommendation type            |
+| 017   | `migrations/017_advisor_opportunities.sql`           | Advisor opportunities          |
+| 018   | `migrations/018_technical_reversal_risk.sql`         | Technical reversal risk        |
+| 019   | `migrations/019_advisor_watch_triggers.sql`          | Advisor watch triggers         |
+| 020   | `migrations/020_portfolio_summary_aggregates.sql`    | Summary aggregates             |
+| 021   | `migrations/021_portfolio_summary_value_weights.sql` | Summary value weights          |
+| 022   | `migrations/022_portfolio_summary_decision.sql`      | Summary decision output        |
+| 023   | `migrations/023_portfolio_summary_final_labels.sql`  | Summary final-label buckets    |
+| 024   | `migrations/024_bot_run_stage_diagnostics.sql`       | Bot stage diagnostics          |
+| 025   | `migrations/025_technical_range_levels.sql`          | Chart Reader range levels      |
 
 For a fresh database, execute `001`, `002`, `004`, then `005` through `025`
 in that order. Existing databases should be checked with
@@ -508,8 +536,10 @@ are intended to be additive and use `IF NOT EXISTS` where appropriate.
 ## Troubleshooting
 
 ### "Cannot find @tailwindcss/oxide"
+
 **Cause:** Windows + pnpm native module issue
 **Fix:**
+
 ```bash
 cd g:\AI\portofolio-dashbaord
 rm -r node_modules pnpm-lock.yaml
@@ -517,42 +547,51 @@ pnpm install --no-frozen-lockfile
 ```
 
 ### "Port 3000 already in use"
+
 **Fix:** Change port in the start command:
+
 ```bash
 PORT=3001 pnpm run dev
 ```
 
 ### "Port 8080 already in use"
+
 **Fix:** Kill the existing process or use a different port:
+
 ```bash
 PORT=8081 pnpm run start
 ```
 
 ### "Cannot connect to Supabase"
+
 **Check:**
+
 1. Is `DATABASE_URL` in `.env` correct?
 2. Is your Supabase project active?
 3. Is your IP whitelisted in Supabase firewall settings?
 4. Try: `psql $DATABASE_URL -c "SELECT 1"` to test connection
 
 ### "AI recommendations not generating"
+
 **Check:**
+
 1. Is `GOOGLE_GENAI_API_KEY` set in backend `.env`?
 2. Is API key valid on Google AI Studio?
 3. Check backend logs for errors
 
 ### "Stock prices still showing dashes"
+
 **Solution:** Complete the 3 steps in [`to do list.md`](to%20do%20list.md) to set up yahoo_ticker mappings
 
 ---
 
 ## Quick Reference
 
-| Component | Port | Status | Start Command |
-|-----------|------|--------|----------------|
-| Frontend | 3001 | ✅ | `cd portfolio && PORT=3001 pnpm run dev` |
-| Backend | 8080 | ✅ | `cd api-server && PORT=8080 pnpm run start` |
-| Supabase | 5432 | ✅ | Use DATABASE_URL in .env |
+| Component | Port | Status | Start Command                               |
+| --------- | ---- | ------ | ------------------------------------------- |
+| Frontend  | 3001 | ✅     | `cd portfolio && PORT=3001 pnpm run dev`    |
+| Backend   | 8080 | ✅     | `cd api-server && PORT=8080 pnpm run start` |
+| Supabase  | 5432 | ✅     | Use DATABASE_URL in .env                    |
 
 ---
 
@@ -564,4 +603,3 @@ PORT=8081 pnpm run start
 - **Scraper Logic:** `artifacts/api-server/src/scraper/runScraper.ts`
 - **Yahoo Enrichment:** `artifacts/api-server/src/judge/enrichReturnsFromYahoo.ts`
 - **Next Steps:** `to do list.md` (MUST READ after startup)
-

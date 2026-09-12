@@ -128,9 +128,11 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
         try {
           const result = await runTechnicalAnalysis(runId);
           status.chart_reader_failures = result.failed_tickers;
-          status.chart_reader_errors = result.failure_messages;
+          status.chart_reader_errors = [...result.failure_messages, ...result.fallback_messages];
           stageCounts.chartReader = { succeeded: result.succeeded, failed: result.failed, total: result.total };
-          if (result.failure_messages.length > 0) stageErrors.chartReader = result.failure_messages;
+          if (result.failure_messages.length > 0 || result.fallback_messages.length > 0) {
+            stageErrors.chartReader = [...result.failure_messages, ...result.fallback_messages];
+          }
           await persistProgress();
           status.stages.chartReader = result.total > 0 && result.succeeded === 0
             ? "failed"
@@ -650,10 +652,12 @@ async function runBot(lockClient: PoolClient, runId: number): Promise<void> {
         }
       },
     });
+    const stageFailureCount = Object.values(stageCounts).reduce((total, stage) => total + stage.failed, 0);
+    const runFailedCount = Math.max(summary.failed, stageFailureCount);
     await pool.query(
       `UPDATE bot_runs SET status = $1, completed_at = now(), succeeded_count = $2,
        failed_count = $3, total_count = $4, stage_counts = $6::jsonb, stage_errors = $7::jsonb WHERE id = $5`,
-      [summary.failed ? "partial" : "completed", summary.succeeded, summary.failed, summary.total, summary.runId, JSON.stringify(stageCounts), JSON.stringify(stageErrors)],
+      [runFailedCount ? "partial" : "completed", summary.succeeded, runFailedCount, summary.total, summary.runId, JSON.stringify(stageCounts), JSON.stringify(stageErrors)],
     );
   } catch (err) {
     status.error = err instanceof Error ? err.message : "AI Bot run failed";

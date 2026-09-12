@@ -629,6 +629,8 @@ async function judgeHolding(
       ? "no_chart_data"
       : "insufficient_trend_history"
     : undefined;
+  const technicalDataComplete = technicalSignal?.raw_fetch_ok === true && technicalSignal.trend !== "unknown";
+  if (!technicalDataComplete) flags.push("incomplete_technical_data");
   const finalLabel = combineIntoFinalLabel(
     performanceGrade,
     financialHealthGrade,
@@ -694,7 +696,7 @@ async function judgeHolding(
     ...(cautionReason ? { caution_reason: cautionReason } : {}),
     coverage_percent: coveragePercent,
     flags,
-    data_completeness_warning: holdingReturn === null || groups.some((group) => group.incomplete_count > 0),
+    data_completeness_warning: holdingReturn === null || !technicalDataComplete || groups.some((group) => group.incomplete_count > 0),
     fundamentals_flags_found,
     is_held: Boolean(holding.is_held),
     comparables_beaten: beats,
