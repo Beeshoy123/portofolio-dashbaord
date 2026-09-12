@@ -48,7 +48,12 @@ type TechnicalSignal = {
   candle_date: string | null;
   patterns: Array<{ name: string; date?: string; direction: string }>;
   reversal_risk?: "none" | "watch" | "elevated";
+  recent_high?: number | null;
+  recent_low?: number | null;
+  range_position_percent?: number | null;
   raw_fetch_ok?: boolean;
+  data_source?: "yahoo" | "stockanalysis" | null;
+  failure_reason?: string | null;
   candles: Candle[];
   created_at?: string;
 };
@@ -900,7 +905,12 @@ function TechnicalEvidence({ signal, lang, open, onToggle }: { signal: Technical
         <span><label>{lang === 'ar' ? 'الاتجاه' : 'Trend'}</label><b>{signal ? formatTrend(signal.trend, lang) : unavailableValue(lang)}</b></span>
         <span><label>{lang === 'ar' ? 'تاريخ الشمعة' : 'Candle date'}</label><b>{signal?.candle_date || unavailableValue(lang)}</b></span>
         <span><label>{lang === 'ar' ? 'مخاطر الانعكاس' : 'Reversal risk'}</label><b>{technicalRiskLabel(signal?.reversal_risk, lang)}</b></span>
-        <span><label>{lang === 'ar' ? 'حالة الجلب الخام' : 'Raw fetch status'}</label><b>{signal?.raw_fetch_ok === undefined ? unavailableValue(lang) : signal.raw_fetch_ok ? (lang === 'ar' ? 'تم بنجاح' : 'Fetched') : (lang === 'ar' ? 'فشل الجلب' : 'Fetch failed')}</b></span>
+        <span><label>{lang === 'ar' ? 'المصدر' : 'Source'}</label><b>{signal?.data_source ? (signal.data_source === 'stockanalysis' ? (lang === 'ar' ? 'StockAnalysis' : 'StockAnalysis') : (lang === 'ar' ? 'Yahoo' : 'Yahoo')) : unavailableValue(lang)}</b></span>
+        <span><label>{lang === 'ar' ? 'أعلى حديثاً' : 'Recent high'}</label><b>{signal?.recent_high !== null && signal?.recent_high !== undefined ? Number(signal.recent_high).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US', { maximumFractionDigits: 2 }) : unavailableValue(lang)}</b></span>
+        <span><label>{lang === 'ar' ? 'أدنى حديثاً' : 'Recent low'}</label><b>{signal?.recent_low !== null && signal?.recent_low !== undefined ? Number(signal.recent_low).toLocaleString(lang === 'ar' ? 'ar-EG' : 'en-US', { maximumFractionDigits: 2 }) : unavailableValue(lang)}</b></span>
+        <span><label>{lang === 'ar' ? 'موضع النطاق' : 'Range position'}</label><b>{signal?.range_position_percent !== null && signal?.range_position_percent !== undefined ? `${Number(signal.range_position_percent).toFixed(1)}%` : unavailableValue(lang)}</b></span>
+        <span><label>{lang === 'ar' ? 'حالة الجلب' : 'Fetch status'}</label><b>{signal?.raw_fetch_ok === undefined ? unavailableValue(lang) : signal.raw_fetch_ok ? (lang === 'ar' ? 'تم بنجاح' : 'Fetched') : (lang === 'ar' ? 'فشل الجلب' : 'Fetch failed')}</b></span>
+        {signal?.failure_reason ? <span className="ai-bot-technical-failure"><label>{lang === 'ar' ? 'سبب الفشل' : 'Failure reason'}</label><b>{signal.failure_reason}</b></span> : null}
       </div>
       <div className="ai-bot-patterns">
         <strong>{lang === 'ar' ? 'النماذج المكتشفة' : 'Detected patterns'}</strong>
@@ -1321,6 +1331,19 @@ export function AiBotWorkspace() {
       : !signal
         ? (lang === 'ar' ? 'لم يُرجع قارئ الرسم البياني إشارة لهذا الأصل.' : 'Chart Reader returned no signal for this entity.')
         : null;
+  const chartPatternSummary = signal?.patterns?.length
+    ? signal.patterns.slice(0, 3).map((pattern) => pattern.name || unavailableValue(lang)).join(' · ')
+    : (lang === 'ar' ? 'لا توجد أنماط مكتشفة في أحدث الشموع.' : 'No patterns detected in the latest candles.');
+  const chartRangePosition = signal?.range_position_percent !== null && signal?.range_position_percent !== undefined
+    ? `${Number(signal.range_position_percent).toFixed(1)}%`
+    : unavailableValue(lang);
+  const chartSourceBadge = signal?.data_source === 'stockanalysis'
+    ? 'StockAnalysis'
+    : signal?.data_source === 'yahoo'
+      ? 'Yahoo'
+      : unavailableValue(lang);
+  const chartTrendBadge = formatTrend(signal?.trend, lang);
+  const chartRiskBadge = technicalRiskLabel(signal?.reversal_risk, lang);
   // Analyze strong unheld entities as opportunities
   const opportunities = useMemo(() => {
     const tierWeight: Record<'high' | 'moderate' | 'low', number> = {
@@ -1768,22 +1791,44 @@ export function AiBotWorkspace() {
             {chartReaderMessage ? (
               <div className="ai-bot-chart-empty" role="status">{chartReaderMessage}</div>
             ) : signal ? (
-              <MiniCandleChart candles={signal.candles} lang={lang} />
+              <>
+                <div className="ai-bot-chart-overview">
+                  <div className="ai-bot-chart-chips">
+                    <span className={`ai-bot-chart-badge ai-bot-chart-badge--${signal.trend || 'unknown'}`}>{chartTrendBadge}</span>
+                    <span className={`ai-bot-chart-risk-badge ai-bot-chart-risk-badge--${signal.reversal_risk ?? 'none'}`}>{chartRiskBadge}</span>
+                    <span className="ai-bot-chart-source-badge">{chartSourceBadge}</span>
+                  </div>
+                  <p className="ai-bot-chart-summary">
+                    {signal.patterns.length > 0
+                      ? (lang === 'ar'
+                        ? `${signal.patterns.length} نمط${signal.patterns.length === 1 ? '' : 'ات'} · ${chartPatternSummary}`
+                        : `${signal.patterns.length} pattern${signal.patterns.length === 1 ? '' : 's'} · ${chartPatternSummary}`)
+                      : chartPatternSummary}
+                  </p>
+                </div>
+                <MiniCandleChart candles={signal.candles} lang={lang} />
+                <div className="ai-bot-chart-inspector">
+                  <div className="ai-bot-chart-inspector-row">
+                    <label>{lang === 'ar' ? 'موضع النطاق' : 'Range position'}</label>
+                    <strong>{chartRangePosition}</strong>
+                  </div>
+                  <div className="ai-bot-chart-inspector-row">
+                    <label>{lang === 'ar' ? 'تاريخ الشمعة' : 'Candle date'}</label>
+                    <strong>{signal.candle_date ?? (lang === 'ar' ? 'لا يوجد' : 'None')}</strong>
+                  </div>
+                  <div className="ai-bot-chart-inspector-row ai-bot-chart-inspector-row--wide">
+                    <label>{lang === 'ar' ? 'ملخص النمط' : 'Pattern summary'}</label>
+                    <strong>{chartPatternSummary}</strong>
+                  </div>
+                  <div className="ai-bot-chart-inspector-row ai-bot-chart-inspector-row--wide">
+                    <label>{lang === 'ar' ? 'مخاطر الانعكاس' : 'Reversal risk'}</label>
+                    <strong className={`ai-bot-chart-risk-text ai-bot-chart-risk-text--${signal.reversal_risk ?? 'none'}`}>{chartRiskBadge}</strong>
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="ai-bot-chart-empty" role="status">{lang === 'ar' ? 'لم يُرجع قارئ الرسم البياني إشارة لهذا الأصل.' : 'Chart Reader returned no signal for this entity.'}</div>
             )}
-            <div className="ai-bot-chart-footer">
-              <span
-                className={trendDown ? 'ai-negative' : 'ai-positive'}
-                title={signal?.reversal_risk && signal.reversal_risk !== 'none' ? (lang === 'ar' ? 'ملاحظة مبنية على النماذج الفنية وليست توقعاً حتمياً.' : 'Pattern-based observation, not a prediction.') : undefined}
-              >
-                {formatTrend(signal?.trend, lang)}
-                {signal?.reversal_risk && signal.reversal_risk !== 'none'
-                  ? ` · ${lang === 'ar' ? (signal.reversal_risk === 'watch' ? 'مراقبة انعكاس' : 'تحذير انعكاس') : `Reversal ${signal.reversal_risk === 'watch' ? 'Watch' : 'Alert'}`}`
-                  : ''}
-              </span>
-              <span>{signal?.candle_date ?? (lang === 'ar' ? 'لا يوجد تاريخ شمعة' : 'No candle date')}</span>
-            </div>
             <TechnicalEvidence signal={signal ?? null} lang={lang} open={isTechnicalEvidenceExpanded} onToggle={setIsTechnicalEvidenceExpanded} />
           </article>
         </div>

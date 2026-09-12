@@ -99,12 +99,18 @@ export interface Derived {
   health: {
     goldConcentrationPct: number;
     diversityScore: number;
+    hhi: number;
+    assetCount: number;
+    largestAssetPct: number;
+    largestAssetName: string;
     emergencyFundPct: number;
     emergencyFundScore: number;
+    emergencyFundCurrent: number;
     blendedYieldPct: number;
     yieldScore: number;
     liquidityPct: number;
     liquidityScore: number;
+    liquidHoldingsValue: number;
     overallScore: number;
   };
   allocation: {
@@ -246,21 +252,103 @@ export function computeDerived(portfolio: Portfolio): Derived {
     incomePnl > 0 ? (annualYield / incomePnl) * 100 : 0;
 
   const goldConcentrationPct = totalValue > 0 ? (goldValueForTotals / totalValue) * 100 : 0;
-  const diversityScore = Math.max(0, Math.min(100, 100 - goldConcentrationPct));
 
-  const emergencyFundTarget = portfolio.settings.emergencyFundTarget;
+  // ── 1. True Multi-Asset Diversification (Herfindahl-Hirschman Index) ─────
+  // Evaluates concentration across all active asset classes and holdings:
+  // (Gold, Certificates, Liquid/Money Market Funds, Real Estate, Equities).
+  // HHI ranges from 1/N (perfectly spread) to 1.0 (100% in a single asset).
+  const assetHoldings: { name: string; value: number }[] = [];
+  if (goldValueForTotals > 0) {
+    assetHoldings.push({ name: "Gold 24K", value: goldValueForTotals });
+  }
+  if (totalPrincipal > 0) {
+    assetHoldings.push({ name: "Certificates", value: totalPrincipal });
+  }
+  portfolio.funds.forEach((f) => {
+    const val = f.unitsHeld * f.nav;
+    if (val > 0) {
+      assetHoldings.push({ name: f.name || f.ticker || f.key, value: val });
+    }
+  });
+
+  const assetCount = assetHoldings.length;
+  let hhi = 1.0;
+  let diversityScore = 0;
+  let largestAssetPct = 0;
+  let largestAssetName = "";
+
+  if (totalValue > 0 && assetHoldings.length > 0) {
+    let sumSquares = 0;
+    for (const holding of assetHoldings) {
+      const weight = holding.value / totalValue;
+      sumSquares += weight * weight;
+      const weightPct = weight * 100;
+      if (weightPct > largestAssetPct) {
+        largestAssetPct = weightPct;
+        largestAssetName = holding.name;
+      }
+    }
+    hhi = sumSquares;
+    // An ideal balanced allocation across >= 4 asset classes has HHI <= 0.25.
+    // Normalized score scales (1 - HHI) against (1 - 1/4) = 0.75 target spread.
+    // Single asset (HHI = 1.0) scores 0. 4 equal holdings score 100.
+    const normalizedDiversity = ((1 - hhi) / 0.75) * 100;
+    diversityScore = Math.max(0, Math.min(100, Math.round(normalizedDiversity)));
+  }
+
+  /**
+   * ── 2. EMERGENCY FUND RATIONALE & POLICY ────────────────────────────────
+   * Target: 60,000 EGP, representing 6 months of living expenses (10,000 EGP/month).
+   * Strategy: These reserves are intentionally held in Al Ahly Bareeq Money Market Fund (ABR)
+   * rather than uninvested cash to generate daily compound yield and hedge against inflation
+   * while preserving same-day liquidity for financial emergencies.
+   */
+  const defaultEmergencyTarget = 60000;
+  const emergencyFundTarget =
+    portfolio.settings.emergencyFundTarget > 0
+      ? portfolio.settings.emergencyFundTarget
+      : defaultEmergencyTarget;
+  // Use live market value of Bareeq fund if available, falling back to cost basis
+  const emergencyFundCurrent = abrValue > 0 ? abrValue : abrCostBasisTotal;
   const emergencyFundPct =
-    emergencyFundTarget > 0 ? (abrCostBasisTotal / emergencyFundTarget) * 100 : 0;
+    emergencyFundTarget > 0 ? (emergencyFundCurrent / emergencyFundTarget) * 100 : 0;
   const emergencyFundScore = Math.max(0, Math.min(100, emergencyFundPct));
 
+  // ── 3. Blended Yield Benchmark Scoring ──────────────────────────────────
+  // Compares annual yield against prevailing Egyptian risk-free / CBE corridor rate (27%).
   const blendedYieldPct = totalValue > 0 ? ((fundAnnualIncome + annualYield) / totalValue) * 100 : 0;
   const yieldScore = Math.max(
     0,
-    Math.min(100, (blendedYieldPct / YIELD_BENCHMARK_PCT) * 100),
+    Math.min(100, Math.round((blendedYieldPct / YIELD_BENCHMARK_PCT) * 100)),
   );
 
-  const liquidityPct = totalValue > 0 ? (abrValue / totalValue) * 100 : 0;
-  const liquidityScore = Math.max(0, Math.min(100, liquidityPct));
+  // ── 4. Sensible Liquidity Buffer Scoring ────────────────────────────────
+  // Evaluates liquidity against a healthy financial target (10%–25% of total portfolio).
+  // Holding 0% liquid is dangerous (score 0), while 15%–25% is optimal (score 100).
+  // Extreme cash hoarding (> 30%) gently tapers to reflect cash drag / inflation loss.
+  const liquidHoldings = portfolio.funds.filter(
+    (f) =>
+      f.key === "abr" ||
+      f.name.toLowerCase().includes("bareeq") ||
+      f.name.toLowerCase().includes("money market") ||
+      f.name.toLowerCase().includes("liquid"),
+  );
+  const liquidHoldingsValue =
+    liquidHoldings.length > 0
+      ? liquidHoldings.reduce((sum, f) => sum + f.unitsHeld * f.nav, 0)
+      : abrValue;
+
+  const liquidityPct = totalValue > 0 ? (liquidHoldingsValue / totalValue) * 100 : 0;
+  let liquidityScore = 0;
+  if (liquidityPct <= 15) {
+    liquidityScore = Math.round((liquidityPct / 15) * 100);
+  } else if (liquidityPct <= 30) {
+    liquidityScore = 100; // Optimal 15% - 30% liquidity buffer
+  } else {
+    // Slight penalty for excessive cash drag above 30%
+    liquidityScore = Math.max(50, Math.round(100 - (liquidityPct - 30) * 1.5));
+  }
+  liquidityScore = Math.max(0, Math.min(100, liquidityScore));
 
   const overallScore = Math.round(
     (diversityScore + emergencyFundScore + yieldScore + liquidityScore) / 4,
@@ -333,12 +421,18 @@ export function computeDerived(portfolio: Portfolio): Derived {
     health: {
       goldConcentrationPct,
       diversityScore,
+      hhi,
+      assetCount,
+      largestAssetPct,
+      largestAssetName,
       emergencyFundPct,
       emergencyFundScore,
+      emergencyFundCurrent,
       blendedYieldPct,
       yieldScore,
       liquidityPct,
       liquidityScore,
+      liquidHoldingsValue,
       overallScore,
     },
     allocation: {
@@ -376,3 +470,10 @@ export function fmt2(n: number): string {
 export function signed(n: number): string {
   return n >= 0 ? `+${fmt(n)}` : fmt(n);
 }
+
+export function getScoreColor(score: number): string {
+  if (score >= 70) return "var(--pnl-up)";
+  if (score >= 40) return "var(--warning-border)";
+  return "var(--pnl-down)";
+}
+

@@ -295,9 +295,9 @@ export async function runTechnicalAnalysis(runId: number, onlyTickers?: string[]
         fallbackMessages.push(`${row.ticker}: Yahoo unavailable; used StockAnalysis fallback`);
       }
       await pool.query(
-        `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, recent_high, recent_low, range_position_percent, candles)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-        [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, signal.recent_high, signal.recent_low, signal.range_position_percent, JSON.stringify(signal.candles)],
+        `INSERT INTO technical_signals (watchlist_id, run_id, candle_date, trend, patterns, confidence, raw_fetch_ok, reversal_risk, recent_high, recent_low, range_position_percent, data_source, failure_reason, candles)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [signal.watchlist_id, signal.run_id, signal.candle_date, signal.trend, JSON.stringify(signal.patterns), signal.confidence, signal.raw_fetch_ok, signal.reversal_risk, signal.recent_high, signal.recent_low, signal.range_position_percent, signal.data_source, signal.failure_reason, JSON.stringify(signal.candles)],
       );
       succeeded++;
     } catch (error) {

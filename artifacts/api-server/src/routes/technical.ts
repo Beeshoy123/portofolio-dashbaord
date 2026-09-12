@@ -10,7 +10,9 @@ router.get("/technical-signals", async (req, res) => {
     const result = await pool.query(
       `SELECT DISTINCT ON (ts.watchlist_id)
          ts.watchlist_id, cw.ticker, cw.name, cw.entity_type,
-         ts.candle_date, ts.trend, ts.patterns, ts.confidence, ts.raw_fetch_ok, ts.candles, ts.created_at
+         ts.candle_date, ts.trend, ts.patterns, ts.confidence, ts.raw_fetch_ok,
+         ts.reversal_risk, ts.recent_high, ts.recent_low, ts.range_position_percent,
+         ts.data_source, ts.failure_reason, ts.candles, ts.created_at
        FROM technical_signals ts
        JOIN comparison_watchlist cw ON cw.id = ts.watchlist_id
        WHERE ($1::bigint IS NULL OR ts.run_id = $1::bigint)

@@ -180,8 +180,8 @@ body.dark .auth-error {
   --gold:       #c8922a;
   --gold-soft:  rgba(200, 146, 42, 0.13);
   --purple:     #7a5fa0;
-  --warning-bg: rgba(217, 154, 43, 0.1);
-  --warning-border: rgba(217, 154, 43, 0.25);
+  --warning-bg: rgba(244, 192, 96, 0.18);
+  --warning-border: rgba(244, 192, 96, 0.8);
   --banner-bg: #3a2a12;
   --banner-border: #6b4a1a;
   --banner-text: #f0c675;
@@ -728,6 +728,29 @@ html[lang="ar"] .sort-popover {
 .ai-bot-candle b.is-down { background: #f06f68; box-shadow: 0 0 0 1px rgba(240, 111, 104, .2); }
 .ai-bot-chart-dates { position: absolute; right: 10px; bottom: 7px; left: 10px; display: flex; justify-content: space-between; color: #587a73; font-size: 9px; }
 .ai-bot-chart-footer { display: flex; justify-content: space-between; margin-top: 9px; color: #78948f; font-size: 10px; }
+.ai-bot-chart-overview { display: grid; gap: 6px; margin-bottom: 10px; }
+.ai-bot-chart-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.ai-bot-chart-badge,
+.ai-bot-chart-risk-badge,
+.ai-bot-chart-source-badge { display: inline-flex; align-items: center; justify-content: center; min-height: 20px; padding: 3px 8px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.ai-bot-chart-badge--uptrend { background: rgba(79, 210, 160, .12); border-color: rgba(79, 210, 160, .32); color: #6bf2b7; }
+.ai-bot-chart-badge--downtrend { background: rgba(240, 111, 104, .12); border-color: rgba(240, 111, 104, .32); color: #ff8a80; }
+.ai-bot-chart-badge--sideways { background: rgba(135, 170, 239, .12); border-color: rgba(135, 170, 239, .32); color: #9bb7f3; }
+.ai-bot-chart-badge--unknown { background: rgba(157, 165, 180, .10); border-color: rgba(157, 165, 180, .28); color: #c9d1dc; }
+.ai-bot-chart-risk-badge--none { background: rgba(157, 165, 180, .10); border-color: rgba(157, 165, 180, .24); color: #c0ccd4; }
+.ai-bot-chart-risk-badge--watch { background: rgba(217, 154, 43, .12); border-color: rgba(217, 154, 43, .28); color: #f0bd58; }
+.ai-bot-chart-risk-badge--elevated { background: rgba(224, 90, 80, .12); border-color: rgba(224, 90, 80, .28); color: #f08078; }
+.ai-bot-chart-source-badge { background: rgba(100, 150, 180, .12); border-color: rgba(100, 150, 180, .22); color: #8bb5d6; }
+.ai-bot-chart-summary { margin: 0; color: #9fc0b7; font-size: 10px; line-height: 1.45; }
+.ai-bot-chart-inspector { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+.ai-bot-chart-inspector-row { display: grid; gap: 3px; min-width: 0; padding: 6px 8px; border: 1px solid rgba(255, 255, 255, .08); border-radius: 6px; background: rgba(255, 255, 255, .025); }
+.ai-bot-chart-inspector-row--wide { grid-column: 1 / -1; }
+.ai-bot-chart-inspector-row label { color: #78948f; font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.ai-bot-chart-inspector-row strong { color: #d5e5e0; font-size: 10px; line-height: 1.4; }
+.ai-bot-chart-risk-text { display: inline-flex; align-items: center; }
+.ai-bot-chart-risk-text--none { color: #c0ccd4; }
+.ai-bot-chart-risk-text--watch { color: #f0bd58; }
+.ai-bot-chart-risk-text--elevated { color: #f08078; }
 .ai-bot-chart-empty { display: grid; height: 100%; place-items: center; color: #78948f; font-size: 11px; }
 .ai-bot-chart-full { height: 260px; margin-top: 12px; }
 .ai-bot-chart-full .ai-bot-candles { align-items: stretch; padding-bottom: 0; }

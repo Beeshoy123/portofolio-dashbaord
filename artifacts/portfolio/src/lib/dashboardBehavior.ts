@@ -1,6 +1,6 @@
 import type { Portfolio } from "@workspace/api-client-react";
 import type { Derived, DerivedCertificate } from "./portfolioMath";
-import { fmt, fmt2 } from "./portfolioMath";
+import { fmt, fmt2, getScoreColor } from "./portfolioMath";
 import { T, type Lang, getSavedLang, saveLang } from "./i18n";
 import { allocInsight, buildInsights, healthGrade } from "./dashboardHtml";
 import { supabase } from "./supabaseClient";
@@ -2310,7 +2310,6 @@ export function initDashboardBehavior(
       yield: "wh-yield-bar",
       liq: "wh-liq-bar",
     };
-    const colors = { div: "var(--pnl-down)", ef: "var(--pnl-down)", yield: "var(--pnl-up)", liq: "var(--pnl-down)" };
     setTimeout(() => {
       (Object.keys(scores) as (keyof typeof scores)[]).forEach((key) => {
         const score = scores[key];
@@ -2325,7 +2324,7 @@ export function initDashboardBehavior(
         const bar = el(bars[key]);
         if (bar) {
           (bar as HTMLElement).style.width = score + "%";
-          (bar as HTMLElement).style.background = colors[key];
+          (bar as HTMLElement).style.background = getScoreColor(score);
         }
       });
     }, 300);
